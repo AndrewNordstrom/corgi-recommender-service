@@ -1,0 +1,377 @@
+openapi: 3.0.3
+info:
+  title: Corgi Recommender Service API
+  description: |
+    API for the Corgi Recommender Service, a personalized recommendations system
+    for Mastodon posts. The API handles user interactions, preferences, and generates
+    personalized timelines.
+  version: 1.0.0
+  contact:
+    name: Corgi Service Team
+    email: support@corgi-recommender.example.com
+
+servers:
+  - url: http://localhost:5001
+    description: Local development server
+  - url: https://api.corgi-recommender.example.com
+    description: Production server
+
+paths:
+  /api/v1/interactions:
+    post:
+      summary: Log a user interaction with a post
+      description: |
+        Records user actions like favorites, bookmarks, or post feedback.
+        This data is used to improve future recommendations.
+      operationId: logInteraction
+      tags:
+        - interactions
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InteractionRequest'
+      responses:
+        '200':
+          description: Interaction logged successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /api/v1/interactions/{post_id}:
+    get:
+      summary: Get interactions for a specific post
+      description: Retrieves all recorded interactions for a single post
+      operationId: getPostInteractions
+      tags:
+        - interactions
+      parameters:
+        - name: post_id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The ID of the post to retrieve interactions for
+      responses:
+        '200':
+          description: Interactions for the post
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  post_id:
+                    type: string
+                  interaction_counts:
+                    $ref: '#/components/schemas/InteractionCounts'
+                  interactions:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        action_type:
+                          type: string
+                        count:
+                          type: integer
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /api/v1/timelines/recommended:
+    get:
+      summary: Get personalized recommended timeline
+      description: |
+        Returns a list of recommended posts for the user, sorted by ranking score.
+        The posts follow the Mastodon-compatible format and can be directly
+        integrated into client applications.
+      operationId: getRecommendedTimeline
+      tags:
+        - recommendations
+      parameters:
+        - name: user_id
+          in: query
+          required: true
+          schema:
+            type: string
+          description: The user ID to get recommendations for
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 20
+            minimum: 1
+            maximum: 40
+          description: Maximum number of recommendations to return
+      responses:
+        '200':
+          description: Recommended posts in Mastodon-compatible format
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/MastodonPost'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /api/v1/privacy:
+    get:
+      summary: Get user privacy settings
+      description: Retrieves the current privacy settings for a user
+      operationId: getPrivacySettings
+      tags:
+        - privacy
+      parameters:
+        - name: user_id
+          in: query
+          required: true
+          schema:
+            type: string
+          description: The user ID to get privacy settings for
+      responses:
+        '200':
+          description: User privacy settings
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user_id:
+                    type: string
+                  tracking_level:
+                    $ref: '#/components/schemas/TrackingLevel'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    post:
+      summary: Update user privacy settings
+      description: |
+        Updates a user's privacy settings, controlling how much data is collected
+        and how it's used for recommendations.
+      operationId: updatePrivacySettings
+      tags:
+        - privacy
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - user_id
+                - tracking_level
+              properties:
+                user_id:
+                  type: string
+                  description: The user ID to update privacy settings for
+                tracking_level:
+                  $ref: '#/components/schemas/TrackingLevel'
+      responses:
+        '200':
+          description: Privacy settings updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user_id:
+                    type: string
+                  tracking_level:
+                    $ref: '#/components/schemas/TrackingLevel'
+                  status:
+                    type: string
+                    example: ok
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+components:
+  schemas:
+    InteractionRequest:
+      type: object
+      required:
+        - user_alias
+        - post_id
+        - action_type
+      properties:
+        user_alias:
+          type: string
+          description: Unique identifier for the user
+        post_id:
+          type: string
+          description: Unique identifier for the post
+        action_type:
+          type: string
+          description: The type of interaction
+          enum:
+            - favorite
+            - bookmark
+            - reblog
+            - more_like_this
+            - less_like_this
+        context:
+          type: object
+          description: Additional context about the interaction
+          properties:
+            source:
+              type: string
+              description: Source of the interaction (e.g., timeline_home)
+
+    InteractionCounts:
+      type: object
+      properties:
+        favorites:
+          type: integer
+          default: 0
+        reblogs:
+          type: integer
+          default: 0
+        replies:
+          type: integer
+          default: 0
+        bookmarks:
+          type: integer
+          default: 0
+
+    MastodonPost:
+      type: object
+      required:
+        - id
+        - content
+        - created_at
+        - account
+      properties:
+        id:
+          type: string
+          description: Unique identifier for the post
+        content:
+          type: string
+          description: HTML content of the post
+        created_at:
+          type: string
+          format: date-time
+          description: Creation timestamp in ISO 8601 format
+        language:
+          type: string
+          description: ISO language code (e.g., "en")
+        account:
+          type: object
+          required:
+            - id
+            - username
+            - display_name
+          properties:
+            id:
+              type: string
+              description: Unique identifier for the account
+            username:
+              type: string
+              description: Username of the account
+            display_name:
+              type: string
+              description: Display name of the account
+            followers_count:
+              type: integer
+              description: Number of followers
+            following_count:
+              type: integer
+              description: Number of accounts following
+            statuses_count:
+              type: integer
+              description: Number of posted statuses
+            url:
+              type: string
+              format: uri
+              description: URL to the account's profile
+        replies_count:
+          type: integer
+          description: Number of replies to this post
+        reblogs_count:
+          type: integer
+          description: Number of reblogs of this post
+        favourites_count:
+          type: integer
+          description: Number of favorites for this post
+        url:
+          type: string
+          format: uri
+          description: URL to the post
+        ranking_score:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+          description: Recommendation ranking score (0.0 to 1.0)
+        recommendation_reason:
+          type: string
+          description: Human-readable reason for recommendation
+        is_real_mastodon_post:
+          type: boolean
+          description: Whether this is a real Mastodon post (vs. synthetic)
+        is_synthetic:
+          type: boolean
+          description: Whether this is a synthetic post
+
+    TrackingLevel:
+      type: string
+      description: |
+        Privacy level controlling data collection and usage:
+        - full: All interaction data is collected and used for personalization
+        - limited: Only aggregated data is stored, with limited personalization
+        - none: No tracking of interactions, only basic functionality
+      enum:
+        - full
+        - limited
+        - none
+
+  responses:
+    BadRequest:
+      description: Bad request due to invalid parameters or payload
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+              received:
+                type: object
+                additionalProperties: true
+
+    NotFound:
+      description: The requested resource was not found
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+
+    ServerError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+              type:
+                type: string
