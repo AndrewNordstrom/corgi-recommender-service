@@ -57,3 +57,8 @@ ALGORITHM_CONFIG = {
 
 # Health Check Settings
 HEALTH_CHECK_TIMEOUT = int(os.getenv("HEALTH_CHECK_TIMEOUT", "5"))
+
+# Proxy Settings
+DEFAULT_MASTODON_INSTANCE = os.getenv("DEFAULT_MASTODON_INSTANCE", "https://mastodon.social")
+RECOMMENDATION_BLEND_RATIO = float(os.getenv("RECOMMENDATION_BLEND_RATIO", "0.3"))
+PROXY_TIMEOUT = int(os.getenv("PROXY_TIMEOUT", "10"))

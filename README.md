@@ -2,10 +2,20 @@
 
 A microservice for handling post recommendations and user interaction tracking for Mastodon clients.
 
-## ✅ Phase 1 Complete — Next Steps
-- [ ] Fix validator path prefix to align with /api/v1
+## ✅ Phase 1 Complete (4/17/25) — Next Steps
+- [x] Fix validator path prefix to align with /api/v1
 - [ ] Run validator against live DB (not dry-run)
-- [ ] Begin Phase 2: middleware proxy integration for Elk/Mastodon
+- [x] Begin Phase 2: middleware proxy integration for Elk/Mastodon
+
+## 🔄 Phase 2: Middleware Proxy Integration
+
+The service now includes a transparent proxy layer that allows Mastodon clients to connect through Corgi instead of directly to a Mastodon instance. This enables:
+
+- Seamless injection of recommendations into standard Mastodon timelines
+- No client-side changes needed for existing Mastodon clients
+- Privacy-aware personalization based on user preferences
+
+See [Proxy Documentation](docs/proxy.md) for setup and configuration details.
 
 ## Quick Start for New Repository Setup
 

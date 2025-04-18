@@ -30,6 +30,7 @@ from routes.posts import posts_bp
 from routes.recommendations import recommendations_bp
 from routes.privacy import privacy_bp
 from routes.analytics import analytics_bp
+from routes.proxy import proxy_bp
 
 # Configure logging based on environment
 log_format = '%(asctime)s [%(levelname)s] [%(name)s] [request_id=%(request_id)s] %(message)s'
@@ -112,6 +113,10 @@ def create_app():
     app.register_blueprint(recommendations_bp, url_prefix=f"{API_PREFIX}/recommendations")
     app.register_blueprint(privacy_bp, url_prefix=f"{API_PREFIX}/privacy")
     app.register_blueprint(analytics_bp, url_prefix=f"{API_PREFIX}/analytics")
+    
+    # Register proxy blueprint - this should be registered last to catch all other routes
+    # The proxy will handle any requests that aren't handled by the specific blueprints above
+    app.register_blueprint(proxy_bp, url_prefix=API_PREFIX)
     
     # Register error handlers
     @app.errorhandler(404)
