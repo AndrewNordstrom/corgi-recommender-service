@@ -7,7 +7,7 @@ Corgi provides personalized recommendations for Mastodon users while respecting 
 Corgi consists of several interconnected components that work together to provide a seamless recommendation experience:
 
 ```mermaid
-graph TD
+flowchart TD
     A[Mastodon Client] -->|API Requests| B[Proxy Middleware]
     B -->|User Interactions| C[Interaction Tracker]
     C -->|Interaction Data| D[Recommendation Engine]

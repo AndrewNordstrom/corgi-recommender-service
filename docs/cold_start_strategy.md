@@ -156,7 +156,7 @@ As users begin to follow accounts and interact with content, their timeline natu
 This creates a smooth onboarding experience that guides users from their first interaction to a fully personalized timeline.
 
 ```mermaid
-graph LR
+flowchart LR
     subgraph "User Journey Timeline"
         A[New User] --> B[Cold Start Content]
         B --> C[First Follows]

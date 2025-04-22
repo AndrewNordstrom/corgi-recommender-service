@@ -17,7 +17,7 @@ Our approach to privacy is guided by these principles:
 Corgi gives users three distinct privacy levels that control data collection and personalization:
 
 ```mermaid
-graph TD
+flowchart TD
     subgraph "Privacy Levels"
         A[User Privacy Setting]
         A --> B[Full]

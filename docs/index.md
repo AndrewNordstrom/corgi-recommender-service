@@ -80,7 +80,7 @@ Enhance your Mastodon timeline with personalized recommendations:
 Corgi transparently proxies your Mastodon API requests, analyzing your interactions to learn your preferences. When you request your home timeline, Corgi enhances it with personalized recommendations, seamlessly blended with your regular feed.
 
 ```mermaid
-graph LR
+flowchart LR
     A[Mastodon Client] -->|API Requests| B[Corgi Middleware]
     B -->|Enhanced Responses| A
     B -->|Original Requests| C[Mastodon Instance]
