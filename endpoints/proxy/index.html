@@ -1,0 +1,2775 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="A privacy-aware recommendation engine for the Fediverse">
+      
+      
+        <meta name="author" content="Corgi Team">
+      
+      
+        <link rel="canonical" href="https://andrewnordstrom.github.io/corgi-recommender-service/endpoints/proxy/">
+      
+      
+        <link rel="prev" href="../privacy/">
+      
+      
+        <link rel="next" href="../timeline_injection/">
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.6.12">
+    
+    
+      
+        <title>Proxy - Corgi</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.2afb09e1.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.06af60db.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Inter:300,300i,400,400i,700,700i%7CJetBrains+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Inter";--md-code-font:"JetBrains Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../stylesheets/extra.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+  
+
+
+  
+  
+
+<script id="__analytics">function __md_analytics(){function e(){dataLayer.push(arguments)}window.dataLayer=window.dataLayer||[],e("js",new Date),e("config",""),document.addEventListener("DOMContentLoaded",(function(){document.forms.search&&document.forms.search.query.addEventListener("blur",(function(){this.value&&e("event","search",{search_term:this.value})}));document$.subscribe((function(){var t=document.forms.feedback;if(void 0!==t)for(var a of t.querySelectorAll("[type=submit]"))a.addEventListener("click",(function(a){a.preventDefault();var n=document.location.pathname,d=this.getAttribute("data-md-value");e("event","feedback",{page:n,data:d}),t.firstElementChild.disabled=!0;var r=t.querySelector(".md-feedback__note [data-md-value='"+d+"']");r&&(r.hidden=!1)})),t.hidden=!1})),location$.subscribe((function(t){e("config","",{page_path:t.pathname})}))}));var t=document.createElement("script");t.async=!0,t.src="https://www.googletagmanager.com/gtag/js?id=",document.getElementById("__analytics").insertAdjacentElement("afterEnd",t)}</script>
+  
+    <script>if("undefined"!=typeof __md_analytics){var consent=__md_get("__consent");consent&&consent.analytics&&__md_analytics()}</script>
+  
+
+    
+    
+    
+  
+  
+  <link rel="apple-touch-icon" sizes="180x180" href="https://andrewnordstrom.github.io/corgi-recommender-service/assets/favicon/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="https://andrewnordstrom.github.io/corgi-recommender-service/assets/favicon/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="https://andrewnordstrom.github.io/corgi-recommender-service/assets/favicon/favicon-16x16.png">
+  <link rel="manifest" href="https://andrewnordstrom.github.io/corgi-recommender-service/assets/favicon/site.webmanifest">
+  <link rel="shortcut icon" href="https://andrewnordstrom.github.io/corgi-recommender-service/assets/favicon/favicon.ico">
+  <script src="https://andrewnordstrom.github.io/corgi-recommender-service/assets/js/diagram-zoom.js"></script>
+  
+  <script>
+    // Global Mermaid configuration for all diagrams throughout the site
+    document.addEventListener('DOMContentLoaded', function() {
+      if (typeof window.mermaid !== 'undefined') {
+        // Detect dark mode
+        const isDarkMode = document.body.getAttribute('data-md-color-scheme') === 'slate';
+        
+        // Define colors for different themes
+        const darkTextOnAmber = '#000000';
+        const brightAmber = '#ffc107';
+        
+        window.mermaid.initialize({
+          // Base theme for diagrams
+          theme: isDarkMode ? 'dark' : 'default',
+          
+          // Standard diagram types
+          flowchart: {
+            htmlLabels: true,
+            useMaxWidth: true,
+            curve: 'basis',
+            // Make yellow boxes have black text
+            htmlLabels: true
+          },
+          sequence: {
+            useMaxWidth: true,
+            boxMargin: 10,
+            messageAlign: 'center', 
+            noteFontWeight: '500',
+            actorFontWeight: 'bold',
+            noteFontColor: darkTextOnAmber
+          },
+          gantt: {
+            useMaxWidth: true
+          },
+          class: {
+            useMaxWidth: true
+          },
+          state: {
+            useMaxWidth: true
+          },
+          er: {
+            useMaxWidth: true
+          },
+          journey: {
+            useMaxWidth: true
+          },
+          pie: {
+            useMaxWidth: true,
+            textPosition: 0.5
+          },
+          
+          // Global theme variables
+          themeVariables: {
+            // Ensure dark text on amber/yellow regardless of theme
+            primaryColor: '#ffb300',
+            primaryTextColor: darkTextOnAmber,
+            primaryBorderColor: '#ff8f00',
+            primaryFontWeight: 'bold',
+            
+            // Sequence diagram colors
+            actorBkg: isDarkMode ? brightAmber : '#FFECB3',
+            actorTextColor: darkTextOnAmber,
+            noteBkgColor: isDarkMode ? brightAmber : '#FFECB3',
+            noteTextColor: darkTextOnAmber,
+            
+            // Flowchart colors
+            nodeBorder: isDarkMode ? '#FFA000' : '#FF8F00',
+            clusterBkg: isDarkMode ? brightAmber : '#FFECB3',
+            clusterBorder: isDarkMode ? '#FFA000' : '#FF8F00',
+            
+            // Various text elements
+            edgeLabel: {
+              color: isDarkMode ? '#f8f8f8' : '#333333'
+            },
+            
+            // Class diagram
+            classText: isDarkMode ? '#f8f8f8' : '#333333',
+            
+            // Entity relationship diagram
+            entityBorder: isDarkMode ? '#FFA000' : '#FF8F00'
+          }
+        });
+      }
+      
+      // Fix text color on amber/yellow backgrounds in dark mode - Ultra aggressive approach
+      if (document.body.getAttribute('data-md-color-scheme') === 'slate') {
+        // Function to process diagrams once they're rendered 
+        function fixAllMermaidDiagrams() {
+          console.log("Fixing all Mermaid diagrams for dark mode...");
+          
+          const diagrams = document.querySelectorAll('.mermaid svg');
+          diagrams.forEach(svg => {
+            // 1. Handle any element with amber/yellow fill
+            const allElements = svg.querySelectorAll('*');
+            allElements.forEach(el => {
+              const fill = el.getAttribute('fill');
+              if (fill && (fill.toLowerCase().startsWith('#ff') || fill.toLowerCase().startsWith('rgb(255'))) {
+                // Find all text elements within this element
+                const textElements = el.querySelectorAll('text');
+                textElements.forEach(text => {
+                  text.setAttribute('fill', '#000000');
+                  text.style.fontWeight = 'bold';
+                });
+                
+                // If this element itself is text with a yellow fill
+                if (el.tagName.toLowerCase() === 'text') {
+                  el.setAttribute('fill', '#000000');
+                  el.style.fontWeight = 'bold';
+                }
+                
+                // Also style any HTML content in foreign objects
+                const divs = el.querySelectorAll('foreignObject div');
+                divs.forEach(div => {
+                  div.style.color = '#000000';
+                  div.style.fontWeight = 'bold';
+                });
+              }
+              
+              // 2. Check if element has style with fill:#ff color
+              const style = el.getAttribute('style');
+              if (style && (
+                  style.includes('fill:#ff') || 
+                  style.includes('fill:#FF') || 
+                  style.includes('fill:rgb(255')
+                )) {
+                const textElements = el.querySelectorAll('text');
+                textElements.forEach(text => {
+                  text.setAttribute('fill', '#000000');
+                  text.style.fontWeight = 'bold'; 
+                });
+                
+                // Target any elements with amber fill and color:#000
+                if (style.includes('color:#000')) {
+                  el.style.color = '#000000';
+                  el.style.fill = '#000000';
+                  el.style.fontWeight = 'bold';
+                  
+                  // Also update any child text nodes
+                  const textNodes = el.querySelectorAll('text');
+                  textNodes.forEach(text => {
+                    text.setAttribute('fill', '#000000');
+                    text.style.fontWeight = 'bold';
+                  });
+                }
+              }
+            });
+            
+            // 3. Handle flowchart special cases
+            const nodes = svg.querySelectorAll('.node');
+            nodes.forEach(node => {
+              const rect = node.querySelector('rect');
+              if (rect) {
+                const fill = rect.getAttribute('fill');
+                if (fill && (fill.toLowerCase().startsWith('#ff') || fill.toLowerCase().startsWith('rgb(255'))) {
+                  const text = node.querySelector('text');
+                  if (text) {
+                    text.setAttribute('fill', '#000000');
+                    text.style.fontWeight = 'bold';
+                  }
+                }
+              }
+            });
+            
+            // 4. Handle cluster labels specifically
+            const clusters = svg.querySelectorAll('.cluster');
+            clusters.forEach(cluster => {
+              const rect = cluster.querySelector('rect');
+              if (rect) {
+                const fill = rect.getAttribute('fill');
+                if (fill && (fill.toLowerCase().startsWith('#ff') || fill.toLowerCase().startsWith('rgb(255'))) {
+                  const label = cluster.querySelector('.cluster-label');
+                  if (label) {
+                    const text = label.querySelector('text');
+                    if (text) {
+                      text.setAttribute('fill', '#000000');
+                      text.style.fontWeight = 'bold';
+                    }
+                  }
+                }
+              }
+            });
+          });
+        }
+        
+        // Process diagrams with multiple attempts to catch late renderings
+        setTimeout(fixAllMermaidDiagrams, 200);
+        setTimeout(fixAllMermaidDiagrams, 500);
+        setTimeout(fixAllMermaidDiagrams, 1000);
+        setTimeout(fixAllMermaidDiagrams, 2000);
+        
+        // Also watch for any future updates to the DOM
+        const observer = new MutationObserver(function(mutations) {
+          let diagramsChanged = false;
+          
+          mutations.forEach(function(mutation) {
+            if (mutation.type === 'childList' && 
+                (mutation.target.closest('.mermaid') || 
+                 Array.from(mutation.addedNodes).some(node => 
+                   node.nodeType === 1 && (node.classList.contains('mermaid') || node.querySelector('.mermaid'))
+                 ))) {
+              diagramsChanged = true;
+            }
+          });
+          
+          if (diagramsChanged) {
+            setTimeout(fixAllMermaidDiagrams, 200);
+          }
+        });
+        
+        observer.observe(document.body, { 
+          childList: true, 
+          subtree: true,
+          attributes: true,
+          attributeFilter: ['fill', 'style', 'class']
+        });
+      }
+    });
+  </script>
+
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="amber" data-md-color-accent="deep-orange">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#proxy-api" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+        <aside class="md-banner">
+          <div class="md-banner__inner md-grid md-typeset">
+            
+            
+  <a href="/demo/">
+    ✨ Try our new <strong>interactive demo</strong> to see Corgi in action!
+  </a>
+
+          </div>
+          
+        </aside>
+      
+    </div>
+    
+      <div data-md-color-scheme="default" data-md-component="outdated" hidden>
+        
+      </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="Corgi" class="md-header__button md-logo" aria-label="Corgi" data-md-component="logo">
+      
+  <img src="../../assets/logo-icon.png" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Corgi
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Proxy
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="amber" data-md-color-accent="deep-orange"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m17.75 4.09-2.53 1.94.91 3.06-2.63-1.81-2.63 1.81.91-3.06-2.53-1.94L12.44 4l1.06-3 1.06 3zm3.5 6.91-1.64 1.25.59 1.98-1.7-1.17-1.7 1.17.59-1.98L15.75 11l2.06-.05L18.5 9l.69 1.95zm-2.28 4.95c.83-.08 1.72 1.1 1.19 1.85-.32.45-.66.87-1.08 1.27C15.17 23 8.84 23 4.94 19.07c-3.91-3.9-3.91-10.24 0-14.14.4-.4.82-.76 1.27-1.08.75-.53 1.93.36 1.85 1.19-.27 2.86.69 5.83 2.89 8.02a9.96 9.96 0 0 0 8.02 2.89m-1.64 2.02a12.08 12.08 0 0 1-7.8-3.47c-2.17-2.19-3.33-5-3.49-7.82-2.81 3.14-2.7 7.96.31 10.98 3.02 3.01 7.84 3.12 10.98.31"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="amber" data-md-color-accent="deep-orange"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3m0-7 2.39 3.42C13.65 5.15 12.84 5 12 5s-1.65.15-2.39.42zM3.34 7l4.16-.35A7.2 7.2 0 0 0 5.94 8.5c-.44.74-.69 1.5-.83 2.29zm.02 10 1.76-3.77a7.131 7.131 0 0 0 2.38 4.14zM20.65 7l-1.77 3.79a7.02 7.02 0 0 0-2.38-4.15zm-.01 10-4.14.36c.59-.51 1.12-1.14 1.54-1.86.42-.73.69-1.5.83-2.29zM12 22l-2.41-3.44c.74.27 1.55.44 2.41.44.82 0 1.63-.17 2.37-.44z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/AndrewNordstrom/corgi-recommender-service" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.7.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8M97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    AndrewNordstrom/corgi-recommender-service
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="Corgi" class="md-nav__button md-logo" aria-label="Corgi" data-md-component="logo">
+      
+  <img src="../../assets/logo-icon.png" alt="logo">
+
+    </a>
+    Corgi
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/AndrewNordstrom/corgi-recommender-service" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.7.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8M97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    AndrewNordstrom/corgi-recommender-service
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Introduction
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Getting Started
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../quickstart/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Quickstart
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../demo/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Live Demo
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../pitch/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Pitch Deck
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    Concepts
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            Concepts
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    How Corgi Works
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Architecture
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/privacy/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Privacy Design
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/proxy/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Proxy Architecture
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/recommendations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Recommendation Engine
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/self-hosting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Self-Hosting
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    Recommender System
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            Recommender System
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cold_start_strategy/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Cold Start Strategy
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cold_start_adaptive/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Adaptive Cold Start
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    API Reference
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_8">
+            <span class="md-nav__icon md-icon"></span>
+            API Reference
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Overview
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api-documentation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Documentation Guide
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8_3" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_8_3" id="__nav_8_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Endpoints
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_8_3_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_8_3">
+            <span class="md-nav__icon md-icon"></span>
+            Endpoints
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../timelines/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Timelines
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../recommendations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Recommendations
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../interactions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Interactions
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../feedback/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Feedback
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../posts/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Posts
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../privacy/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Privacy Settings
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    Proxy
+    
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    Proxy
+    
+  </span>
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#endpoints" class="md-nav__link">
+    <span class="md-ellipsis">
+      Endpoints
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#instance-resolution" class="md-nav__link">
+    <span class="md-ellipsis">
+      Instance Resolution
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      Configuration
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Configuration">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#environment-variables" class="md-nav__link">
+    <span class="md-ellipsis">
+      Environment Variables
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#configuration-api" class="md-nav__link">
+    <span class="md-ellipsis">
+      Configuration API
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#testing-the-proxy" class="md-nav__link">
+    <span class="md-ellipsis">
+      Testing the Proxy
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#debugging-tips" class="md-nav__link">
+    <span class="md-ellipsis">
+      Debugging Tips
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Debugging Tips">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#common-issues" class="md-nav__link">
+    <span class="md-ellipsis">
+      Common Issues
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#proxy-headers" class="md-nav__link">
+    <span class="md-ellipsis">
+      Proxy Headers
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#client-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      Client Configuration
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Client Configuration">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#configuring-elk" class="md-nav__link">
+    <span class="md-ellipsis">
+      Configuring Elk
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#configuring-ivory" class="md-nav__link">
+    <span class="md-ellipsis">
+      Configuring Ivory
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#related-resources" class="md-nav__link">
+    <span class="md-ellipsis">
+      Related Resources
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../timeline_injection/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Timeline Injection
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_9" >
+        
+          
+          <label class="md-nav__link" for="__nav_9" id="__nav_9_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    Integrations
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_9_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_9">
+            <span class="md-nav__icon md-icon"></span>
+            Integrations
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../elk_integration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Elk Integration
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../proxy/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Mastodon Proxy
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+          
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_10" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../client/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    Guides
+    
+  </span>
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_10" id="__nav_10_label" tabindex="">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_10_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_10">
+            <span class="md-nav__icon md-icon"></span>
+            Guides
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../deployment/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Deployment
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agent_guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Agent Framework
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../validator-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Validator
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_11" >
+        
+          
+          <label class="md-nav__link" for="__nav_11" id="__nav_11_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    Examples
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_11_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_11">
+            <span class="md-nav__icon md-icon"></span>
+            Examples
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../examples/elk/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Elk Integration
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../examples/python/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Python Client
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../examples/cli/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    CLI Tool
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../COMPATIBILITY/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Compatibility
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../faq/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    FAQ
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#endpoints" class="md-nav__link">
+    <span class="md-ellipsis">
+      Endpoints
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#instance-resolution" class="md-nav__link">
+    <span class="md-ellipsis">
+      Instance Resolution
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      Configuration
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Configuration">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#environment-variables" class="md-nav__link">
+    <span class="md-ellipsis">
+      Environment Variables
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#configuration-api" class="md-nav__link">
+    <span class="md-ellipsis">
+      Configuration API
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#testing-the-proxy" class="md-nav__link">
+    <span class="md-ellipsis">
+      Testing the Proxy
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#debugging-tips" class="md-nav__link">
+    <span class="md-ellipsis">
+      Debugging Tips
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Debugging Tips">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#common-issues" class="md-nav__link">
+    <span class="md-ellipsis">
+      Common Issues
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#proxy-headers" class="md-nav__link">
+    <span class="md-ellipsis">
+      Proxy Headers
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#client-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      Client Configuration
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Client Configuration">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#configuring-elk" class="md-nav__link">
+    <span class="md-ellipsis">
+      Configuring Elk
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#configuring-ivory" class="md-nav__link">
+    <span class="md-ellipsis">
+      Configuring Ivory
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#related-resources" class="md-nav__link">
+    <span class="md-ellipsis">
+      Related Resources
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="proxy-api">Proxy API<a class="headerlink" href="#proxy-api" title="Permanent link">&para;</a></h1>
+<p>The Proxy API provides endpoints for monitoring and configuring Corgi's transparent proxy functionality. These endpoints help you understand how the proxy is working and troubleshoot any issues.</p>
+<h2 id="endpoints">Endpoints<a class="headerlink" href="#endpoints" title="Permanent link">&para;</a></h2>
+<div class="corgi-endpoint">
+  <div class="corgi-endpoint-header">
+    <span class="corgi-endpoint-method get">GET</span>
+    <span class="corgi-endpoint-path">/api/v1/proxy/status</span>
+  </div>
+  <div class="corgi-endpoint-body">
+    <p>Returns the current status of the proxy service.</p>
+
+    <h4>Response</h4>
+    <p>Returns basic information about the proxy's status and configuration.</p>
+
+    <div class="corgi-response-example">
+      <div class="corgi-response-example-header">Example Response</div>
+      <pre><code class="language-json">{
+  "status": "ok",
+  "proxy": "active",
+  "default_instance": "https://mastodon.social",
+  "version": "1.2.0",
+  "uptime": "3d 4h 12m",
+  "recommendation_blend_ratio": 0.3,
+  "proxy_timeout": 10
+}</code></pre>
+    </div>
+  </div>
+</div>
+
+<div class="corgi-endpoint">
+  <div class="corgi-endpoint-header">
+    <span class="corgi-endpoint-method get">GET</span>
+    <span class="corgi-endpoint-path">/api/v1/proxy/instance</span>
+  </div>
+  <div class="corgi-endpoint-body">
+    <p>Shows what Mastodon instance would be detected for the current request. This is useful for debugging instance resolution issues.</p>
+
+    <h4>Response</h4>
+    <p>Returns information about the detected instance and how it was determined.</p>
+
+    <div class="corgi-response-example">
+      <div class="corgi-response-example-header">Example Response</div>
+      <pre><code class="language-json">{
+  "detected_instance": "https://mastodon.social",
+  "detection_method": "oauth_token_lookup",
+  "user_id": "pseudonymized_id_123",
+  "headers": {
+    "authorization": "[REDACTED]",
+    "user-agent": "Elk/1.0"
+  },
+  "args": {
+    "limit": "20"
+  }
+}</code></pre>
+    </div>
+  </div>
+</div>
+
+<div class="corgi-endpoint">
+  <div class="corgi-endpoint-header">
+    <span class="corgi-endpoint-method get">GET</span>
+    <span class="corgi-endpoint-path">/api/v1/proxy/metrics</span>
+  </div>
+  <div class="corgi-endpoint-body">
+    <p>Returns metrics about proxy usage and performance.</p>
+
+    <h4>Query Parameters</h4>
+    <table class="corgi-param-table">
+      <thead>
+        <tr>
+          <th>Parameter</th>
+          <th>Type</th>
+          <th>Default</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>reset</td>
+          <td>string</td>
+          <td>"false"</td>
+          <td>If "true", resets metrics after retrieval</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h4>Response</h4>
+    <p>Returns detailed metrics about proxy usage.</p>
+
+    <div class="corgi-response-example">
+      <div class="corgi-response-example-header">Example Response</div>
+      <pre><code class="language-json">{
+  "total_requests": 12483,
+  "successful_requests": 12450,
+  "failed_requests": 33,
+  "timeline_requests": 2841,
+  "enriched_timelines": 2418,
+  "total_recommendations": 7254,
+  "avg_latency_seconds": 0.328,
+  "enrichment_rate": 0.851,
+  "uptime_seconds": 259243,
+  "instance_distribution": {
+    "mastodon.social": 7890,
+    "fosstodon.org": 2145,
+    "hachyderm.io": 1203,
+    "other": 1245
+  },
+  "recent_errors": [
+    {
+      "timestamp": "2025-03-15T15:23:45.000Z",
+      "path": "/api/v1/timelines/home",
+      "status_code": 500,
+      "error": "Timeout connecting to instance",
+      "instance": "slow.instance.example"
+    }
+  ]
+}</code></pre>
+    </div>
+  </div>
+</div>
+
+<div class="corgi-endpoint">
+  <div class="corgi-endpoint-header">
+    <span class="corgi-endpoint-method post">POST</span>
+    <span class="corgi-endpoint-path">/api/v1/proxy/accounts/link</span>
+  </div>
+  <div class="corgi-endpoint-body">
+    <p>Links a user's Mastodon account to Corgi for instance resolution.</p>
+
+    <h4>Request Body</h4>
+    <table class="corgi-param-table">
+      <thead>
+        <tr>
+          <th>Parameter</th>
+          <th>Type</th>
+          <th>Required</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>user_id</td>
+          <td>string</td>
+          <td><span class="corgi-param-required">Required</span></td>
+          <td>User ID to link the account for</td>
+        </tr>
+        <tr>
+          <td>instance</td>
+          <td>string</td>
+          <td><span class="corgi-param-required">Required</span></td>
+          <td>Mastodon instance URL (e.g., "mastodon.social")</td>
+        </tr>
+        <tr>
+          <td>access_token</td>
+          <td>string</td>
+          <td><span class="corgi-param-required">Required</span></td>
+          <td>OAuth access token for the Mastodon account</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="corgi-response-example">
+      <div class="corgi-response-example-header">Example Request</div>
+      <pre><code class="language-json">{
+  "user_id": "user_12345",
+  "instance": "mastodon.social",
+  "access_token": "abc123def456ghi789"
+}</code></pre>
+    </div>
+
+    <h4>Response</h4>
+    <p>Returns confirmation of the account linking.</p>
+
+    <div class="corgi-response-example">
+      <div class="corgi-response-example-header">Example Response</div>
+      <pre><code class="language-json">{
+  "status": "ok",
+  "user_id": "user_12345",
+  "instance": "https://mastodon.social",
+  "username": "@user",
+  "message": "Account successfully linked"
+}</code></pre>
+    </div>
+  </div>
+</div>
+
+<div class="corgi-endpoint">
+  <div class="corgi-endpoint-header">
+    <span class="corgi-endpoint-method get">GET</span>
+    <span class="corgi-endpoint-path">/api/v1/proxy/accounts</span>
+  </div>
+  <div class="corgi-endpoint-body">
+    <p>Lists all linked accounts for a user.</p>
+
+    <h4>Query Parameters</h4>
+    <table class="corgi-param-table">
+      <thead>
+        <tr>
+          <th>Parameter</th>
+          <th>Type</th>
+          <th>Default</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>user_id</td>
+          <td>string</td>
+          <td>null</td>
+          <td>The user ID to list accounts for <span class="corgi-param-required">Required</span></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h4>Response</h4>
+    <p>Returns the list of linked Mastodon accounts.</p>
+
+    <div class="corgi-response-example">
+      <div class="corgi-response-example-header">Example Response</div>
+      <pre><code class="language-json">{
+  "user_id": "user_12345",
+  "linked_accounts": [
+    {
+      "instance": "https://mastodon.social",
+      "username": "@user",
+      "linked_at": "2025-02-15T10:30:00.000Z",
+      "last_used": "2025-03-15T14:22:11.000Z"
+    },
+    {
+      "instance": "https://fosstodon.org",
+      "username": "@user",
+      "linked_at": "2025-03-01T08:15:00.000Z",
+      "last_used": "2025-03-10T09:45:00.000Z"
+    }
+  ]
+}</code></pre>
+    </div>
+  </div>
+</div>
+
+<div class="corgi-endpoint">
+  <div class="corgi-endpoint-header">
+    <span class="corgi-endpoint-method delete">DELETE</span>
+    <span class="corgi-endpoint-path">/api/v1/proxy/accounts/unlink</span>
+  </div>
+  <div class="corgi-endpoint-body">
+    <p>Unlinks a Mastodon account from Corgi.</p>
+
+    <h4>Request Body</h4>
+    <table class="corgi-param-table">
+      <thead>
+        <tr>
+          <th>Parameter</th>
+          <th>Type</th>
+          <th>Required</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>user_id</td>
+          <td>string</td>
+          <td><span class="corgi-param-required">Required</span></td>
+          <td>User ID to unlink the account for</td>
+        </tr>
+        <tr>
+          <td>instance</td>
+          <td>string</td>
+          <td><span class="corgi-param-required">Required</span></td>
+          <td>Mastodon instance URL to unlink</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="corgi-response-example">
+      <div class="corgi-response-example-header">Example Request</div>
+      <pre><code class="language-json">{
+  "user_id": "user_12345",
+  "instance": "mastodon.social"
+}</code></pre>
+    </div>
+
+    <h4>Response</h4>
+    <p>Returns confirmation of the account unlinking.</p>
+
+    <div class="corgi-response-example">
+      <div class="corgi-response-example-header">Example Response</div>
+      <pre><code class="language-json">{
+  "status": "ok",
+  "message": "Account successfully unlinked",
+  "user_id": "user_12345",
+  "instance": "https://mastodon.social"
+}</code></pre>
+    </div>
+  </div>
+</div>
+
+<h2 id="instance-resolution">Instance Resolution<a class="headerlink" href="#instance-resolution" title="Permanent link">&para;</a></h2>
+<p>The proxy determines which Mastodon instance to forward requests to using this sequence:</p>
+<ol>
+<li>
+<p><code>X-Mastodon-Instance</code> header in the request
+   <div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>X-Mastodon-Instance: mastodon.social
+</span></code></pre></div></p>
+</li>
+<li>
+<p><code>instance</code> query parameter 
+   <div class="language-text highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>?instance=mastodon.social
+</span></code></pre></div></p>
+</li>
+<li>
+<p>Database lookup based on the OAuth token (using account linking)</p>
+</li>
+<li>
+<p>Default instance from configuration
+   <div class="language-text highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>DEFAULT_MASTODON_INSTANCE = &quot;mastodon.social&quot;
+</span></code></pre></div></p>
+</li>
+</ol>
+<div class="corgi-callout">
+  <div class="corgi-callout-title">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10zm0-2a8 8 0 1 0 0-16 8 8 0 0 0 0 16zM11 7h2v2h-2V7zm0 4h2v6h-2v-6z"/></svg>
+    Best Practice
+  </div>
+  <p>For reliable instance resolution, users should be encouraged to link their Mastodon accounts using the <code>/api/v1/proxy/accounts/link</code> endpoint. This ensures the proxy always forwards to the correct instance, even when using multiple Mastodon clients.</p>
+</div>
+
+<h2 id="configuration">Configuration<a class="headerlink" href="#configuration" title="Permanent link">&para;</a></h2>
+<h3 id="environment-variables">Environment Variables<a class="headerlink" href="#environment-variables" title="Permanent link">&para;</a></h3>
+<p>The proxy's behavior can be configured through environment variables:</p>
+<table>
+<thead>
+<tr>
+<th>Variable</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>DEFAULT_MASTODON_INSTANCE</code></td>
+<td>Fallback Mastodon instance URL</td>
+<td>https://mastodon.social</td>
+</tr>
+<tr>
+<td><code>RECOMMENDATION_BLEND_RATIO</code></td>
+<td>Ratio of recommendations to include (0.0-1.0)</td>
+<td>0.3</td>
+</tr>
+<tr>
+<td><code>PROXY_TIMEOUT</code></td>
+<td>Timeout for proxy requests in seconds</td>
+<td>10</td>
+</tr>
+<tr>
+<td><code>DEBUG_PROXY</code></td>
+<td>Enable additional logging</td>
+<td>false</td>
+</tr>
+</tbody>
+</table>
+<h3 id="configuration-api">Configuration API<a class="headerlink" href="#configuration-api" title="Permanent link">&para;</a></h3>
+<p>You can also adjust some settings through the API:</p>
+<div class="corgi-endpoint">
+  <div class="corgi-endpoint-header">
+    <span class="corgi-endpoint-method post">POST</span>
+    <span class="corgi-endpoint-path">/api/v1/proxy/config</span>
+  </div>
+  <div class="corgi-endpoint-body">
+    <p>Update proxy configuration settings.</p>
+
+    <h4>Request Body</h4>
+    <table class="corgi-param-table">
+      <thead>
+        <tr>
+          <th>Parameter</th>
+          <th>Type</th>
+          <th>Required</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>recommendation_blend_ratio</td>
+          <td>float</td>
+          <td>Optional</td>
+          <td>Ratio of recommendations to include (0.0-1.0)</td>
+        </tr>
+        <tr>
+          <td>proxy_timeout</td>
+          <td>integer</td>
+          <td>Optional</td>
+          <td>Timeout for proxy requests in seconds</td>
+        </tr>
+        <tr>
+          <td>default_instance</td>
+          <td>string</td>
+          <td>Optional</td>
+          <td>Default Mastodon instance URL</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="corgi-response-example">
+      <div class="corgi-response-example-header">Example Request</div>
+      <pre><code class="language-json">{
+  "recommendation_blend_ratio": 0.4,
+  "proxy_timeout": 15
+}</code></pre>
+    </div>
+
+    <h4>Response</h4>
+    <p>Returns the updated configuration.</p>
+
+    <div class="corgi-response-example">
+      <div class="corgi-response-example-header">Example Response</div>
+      <pre><code class="language-json">{
+  "status": "ok",
+  "config": {
+    "recommendation_blend_ratio": 0.4,
+    "proxy_timeout": 15,
+    "default_instance": "https://mastodon.social"
+  }
+}</code></pre>
+    </div>
+  </div>
+</div>
+
+<h2 id="testing-the-proxy">Testing the Proxy<a class="headerlink" href="#testing-the-proxy" title="Permanent link">&para;</a></h2>
+<p>You can test the proxy using <code>curl</code>:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c1"># Test proxy status</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>curl<span class="w"> </span>-i<span class="w"> </span>http://localhost:5000/api/v1/proxy/status
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="c1"># Test instance detection</span>
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>curl<span class="w"> </span>-i<span class="w"> </span>-H<span class="w"> </span><span class="s2">&quot;X-Mastodon-Instance: mastodon.social&quot;</span><span class="w"> </span>http://localhost:5000/api/v1/proxy/instance
+</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>
+</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="c1"># Test timeline (will be anonymous without auth)</span>
+</span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>curl<span class="w"> </span>-i<span class="w"> </span>-H<span class="w"> </span><span class="s2">&quot;X-Mastodon-Instance: mastodon.social&quot;</span><span class="w"> </span>http://localhost:5000/api/v1/timelines/home
+</span><span id="__span-3-9"><a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a>
+</span><span id="__span-3-10"><a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a><span class="c1"># Test timeline with auth token</span>
+</span><span id="__span-3-11"><a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a>curl<span class="w"> </span>-i<span class="w"> </span>-H<span class="w"> </span><span class="s2">&quot;Authorization: Bearer YOUR_TOKEN&quot;</span><span class="w"> </span>-H<span class="w"> </span><span class="s2">&quot;X-Mastodon-Instance: mastodon.social&quot;</span><span class="w"> </span>http://localhost:5000/api/v1/timelines/home
+</span><span id="__span-3-12"><a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a>
+</span><span id="__span-3-13"><a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a><span class="c1"># Check proxy metrics</span>
+</span><span id="__span-3-14"><a id="__codelineno-3-14" name="__codelineno-3-14" href="#__codelineno-3-14"></a>curl<span class="w"> </span>-i<span class="w"> </span>http://localhost:5000/api/v1/proxy/metrics
+</span></code></pre></div>
+<h2 id="debugging-tips">Debugging Tips<a class="headerlink" href="#debugging-tips" title="Permanent link">&para;</a></h2>
+<h3 id="common-issues">Common Issues<a class="headerlink" href="#common-issues" title="Permanent link">&para;</a></h3>
+<ol>
+<li><strong>Instance Not Detected</strong>: If the instance isn't being properly detected, check that:</li>
+<li>The <code>X-Mastodon-Instance</code> header is correctly formatted (no <code>https://</code> prefix)</li>
+<li>The account is properly linked using the <code>/api/v1/proxy/accounts/link</code> endpoint</li>
+<li>
+<p>The OAuth token is valid and properly formatted</p>
+</li>
+<li>
+<p><strong>Authentication Failures</strong>: If authentication is failing:</p>
+</li>
+<li>Verify the token is valid for the intended instance</li>
+<li>Check that the token has the necessary scopes (usually <code>read:statuses</code>)</li>
+<li>
+<p>Ensure the instance URL is correct</p>
+</li>
+<li>
+<p><strong>Timeout Errors</strong>: If requests are timing out:</p>
+</li>
+<li>Check the instance's health</li>
+<li>Increase the <code>PROXY_TIMEOUT</code> setting</li>
+<li>Verify network connectivity</li>
+</ol>
+<h3 id="proxy-headers">Proxy Headers<a class="headerlink" href="#proxy-headers" title="Permanent link">&para;</a></h3>
+<p>The proxy adds these headers to responses:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>X-Corgi-Proxy: true
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>X-Corgi-Instance: mastodon.social
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>X-Corgi-Enhanced: true (for enhanced timelines)
+</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>X-Corgi-Recommendations: 5 (number of recommendations added)
+</span></code></pre></div>
+<p>These headers can help you debug issues by showing whether a request passed through the proxy and what enhancements were made.</p>
+<h2 id="client-configuration">Client Configuration<a class="headerlink" href="#client-configuration" title="Permanent link">&para;</a></h2>
+<h3 id="configuring-elk">Configuring Elk<a class="headerlink" href="#configuring-elk" title="Permanent link">&para;</a></h3>
+<div class="language-javascript highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="c1">// In Elk&#39;s settings.js</span>
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="k">export</span><span class="w"> </span><span class="k">default</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">  </span><span class="nx">apiUrl</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;https://api.corgi-recs.io&#39;</span><span class="p">,</span><span class="w">  </span><span class="c1">// Use Corgi proxy URL</span>
+</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">  </span><span class="nx">token</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;YOUR_MASTODON_TOKEN&#39;</span><span class="p">,</span><span class="w">         </span><span class="c1">// Your normal Mastodon token</span>
+</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="w">  </span><span class="nx">instance</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;mastodon.social&#39;</span><span class="w">           </span><span class="c1">// Your Mastodon instance</span>
+</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="p">}</span>
+</span></code></pre></div>
+<h3 id="configuring-ivory">Configuring Ivory<a class="headerlink" href="#configuring-ivory" title="Permanent link">&para;</a></h3>
+<p>In Ivory's Settings:
+1. Go to "Advanced" &gt; "Custom Server"
+2. Enter <code>https://api.corgi-recs.io</code> as the server URL
+3. Keep your existing Mastodon access token</p>
+<h2 id="related-resources">Related Resources<a class="headerlink" href="#related-resources" title="Permanent link">&para;</a></h2>
+<ul>
+<li><a href="../timelines/">Timelines API</a> - Get enhanced timelines with recommendations</li>
+<li><a href="../../concepts/proxy/">Concepts: Proxy Architecture</a> - Learn how the proxy works in detail</li>
+<li><a href="../../examples/elk/">Example: Elk Integration</a> - Step-by-step guide for Elk</li>
+</ul>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+  <script>var tabs=__md_get("__tabs");if(Array.isArray(tabs))e:for(var set of document.querySelectorAll(".tabbed-set")){var labels=set.querySelector(".tabbed-labels");for(var tab of tabs)for(var label of labels.getElementsByTagName("label"))if(label.innerText.trim()===tab){var input=document.getElementById(label.htmlFor);input.checked=!0;continue e}}</script>
+
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+    
+      
+      <nav class="md-footer__inner md-grid" aria-label="Footer" >
+        
+          
+          <a href="../privacy/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Privacy Settings">
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+            </div>
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Previous
+              </span>
+              <div class="md-ellipsis">
+                Privacy Settings
+              </div>
+            </div>
+          </a>
+        
+        
+          
+          <a href="../timeline_injection/" class="md-footer__link md-footer__link--next" aria-label="Next: Timeline Injection">
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Next
+              </span>
+              <div class="md-ellipsis">
+                Timeline Injection
+              </div>
+            </div>
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 11v2h12l-5.5 5.5 1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5 16 11z"/></svg>
+            </div>
+          </a>
+        
+      </nav>
+    
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      2025
+    </div>
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        <div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/AndrewNordstrom/corgi-recommender-service" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.7.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8M97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+    
+    
+      
+    
+    
+    
+      
+      
+    
+    <a href="https://mastodon.social/@corgi" target="_blank" rel="noopener me" title="mastodon.social" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.7.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M433 179.11c0-97.2-63.71-125.7-63.71-125.7-62.52-28.7-228.56-28.4-290.48 0 0 0-63.72 28.5-63.72 125.7 0 115.7-6.6 259.4 105.63 289.1 40.51 10.7 75.32 13 103.33 11.4 50.81-2.8 79.32-18.1 79.32-18.1l-1.7-36.9s-36.31 11.4-77.12 10.1c-40.41-1.4-83-4.4-89.63-54a102.5 102.5 0 0 1-.9-13.9c85.63 20.9 158.65 9.1 178.75 6.7 56.12-6.7 105-41.3 111.23-72.9 9.8-49.8 9-121.5 9-121.5m-75.12 125.2h-46.63v-114.2c0-49.7-64-51.6-64 6.9v62.5h-46.33V197c0-58.5-64-56.6-64-6.9v114.2H90.19c0-122.1-5.2-147.9 18.41-175 25.9-28.9 79.82-30.8 103.83 6.1l11.6 19.5 11.6-19.5c24.11-37.1 78.12-34.8 103.83-6.1 23.71 27.3 18.4 53 18.4 175z"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+      <div class="md-consent" data-md-component="consent" id="__consent" hidden>
+        <div class="md-consent__overlay"></div>
+        <aside class="md-consent__inner">
+          <form class="md-consent__form md-grid md-typeset" name="consent">
+            
+
+
+  
+
+
+<h4>Cookie consent</h4>
+<p>We use cookies to recognize your repeated visits and preferences, as well as to measure the effectiveness of our documentation and whether users find what they're searching for. With your consent, you're helping us to make our documentation better.</p>
+<input class="md-toggle" type="checkbox" id="__settings" >
+<div class="md-consent__settings">
+  <ul class="task-list">
+    
+    
+      
+        
+  
+  
+    
+    
+  
+  <li class="task-list-item">
+    <label class="task-list-control">
+      <input type="checkbox" name="analytics" checked>
+      <span class="task-list-indicator"></span>
+      Google Analytics
+    </label>
+  </li>
+
+      
+    
+    
+      
+        
+  
+  
+    
+    
+  
+  <li class="task-list-item">
+    <label class="task-list-control">
+      <input type="checkbox" name="github" checked>
+      <span class="task-list-indicator"></span>
+      GitHub
+    </label>
+  </li>
+
+      
+    
+    
+  </ul>
+</div>
+<div class="md-consent__controls">
+  
+    
+      <button class="md-button md-button--primary">Accept</button>
+    
+    
+    
+  
+    
+    
+    
+      <label class="md-button" for="__settings">Manage settings</label>
+    
+  
+</div>
+          </form>
+        </aside>
+      </div>
+      <script>var consent=__md_get("__consent");if(consent)for(var input of document.forms.consent.elements)input.name&&(input.checked=consent[input.name]||!1);else"file:"!==location.protocol&&setTimeout((function(){document.querySelector("[data-md-component=consent]").hidden=!1}),250);var form=document.forms.consent;for(var action of["submit","reset"])form.addEventListener(action,(function(e){if(e.preventDefault(),"reset"===e.type)for(var n of document.forms.consent.elements)n.name&&(n.checked=!1);__md_set("__consent",Object.fromEntries(Array.from(new FormData(form).keys()).map((function(e){return[e,!0]})))),location.hash="",location.reload()}))</script>
+    
+    
+      
+      <script id="__config" type="application/json">{"base": "../..", "features": ["navigation.instant", "navigation.tracking", "navigation.sections", "navigation.expand", "navigation.indexes", "navigation.top", "search.suggest", "search.highlight", "content.code.copy", "content.tabs.link", "header.autohide", "navigation.footer"], "search": "../../assets/javascripts/workers/search.f8cc74c7.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.c8b220af.min.js"></script>
+      
+        <script src="../../assets/js/diagram-zoom.js"></script>
+      
+    
+  </body>
+</html>

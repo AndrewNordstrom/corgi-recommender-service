@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="200px" height="180px" viewBox="0 0 200 180" xmlns="http://www.w3.org/2000/svg">
+  <!-- Simple silhouette of a corgi -->
+  <style>
+    .body { fill: #ffb300; }
+    .ear { fill: #ff8f00; }
+    .face { fill: #fffde7; }
+    .eye { fill: #424242; }
+    .nose { fill: #424242; }
+    .tail { fill: #ffb300; }
+    @keyframes wag {
+      0%, 100% { transform: rotate(-5deg); }
+      50% { transform: rotate(15deg); }
+    }
+    .tail {
+      transform-origin: 20% 50%;
+      animation: wag 2s infinite ease-in-out;
+    }
+  </style>
+  
+  <!-- Body -->
+  <ellipse class="body" cx="100" cy="110" rx="70" ry="40"/>
+  
+  <!-- Head -->
+  <circle class="face" cx="160" cy="90" r="30"/>
+  
+  <!-- Ears -->
+  <path class="ear" d="M145,65 L130,35 L160,55 Z"/>
+  <path class="ear" d="M175,65 L190,35 L160,55 Z"/>
+  
+  <!-- Eyes -->
+  <circle class="eye" cx="150" cy="85" r="4"/>
+  <circle class="eye" cx="170" cy="85" r="4"/>
+  
+  <!-- Nose -->
+  <ellipse class="nose" cx="160" cy="95" rx="6" ry="4"/>
+  
+  <!-- Legs -->
+  <rect x="70" y="130" width="10" height="30" rx="5" fill="#ffb300"/>
+  <rect x="120" y="130" width="10" height="30" rx="5" fill="#ffb300"/>
+  <rect x="50" y="130" width="10" height="25" rx="5" fill="#ffb300"/>
+  <rect x="140" y="130" width="10" height="25" rx="5" fill="#ffb300"/>
+  
+  <!-- Tail -->
+  <path class="tail" d="M30,100 L60,90 L55,110 Z"/>
+</svg>

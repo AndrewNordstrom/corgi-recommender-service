@@ -1,0 +1,243 @@
+{% extends "base.html" %}
+
+{% block extrahead %}
+  {{ super() }}
+  {% if page and page.meta and page.meta.template %}
+    <style>
+      .md-content__button {
+        display: none;
+      }
+    </style>
+  {% endif %}
+  <link rel="apple-touch-icon" sizes="180x180" href="{{ config.site_url }}assets/favicon/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="{{ config.site_url }}assets/favicon/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="{{ config.site_url }}assets/favicon/favicon-16x16.png">
+  <link rel="manifest" href="{{ config.site_url }}assets/favicon/site.webmanifest">
+  <link rel="shortcut icon" href="{{ config.site_url }}assets/favicon/favicon.ico">
+  <script src="{{ config.site_url }}assets/js/diagram-zoom.js"></script>
+  
+  <script>
+    // Global Mermaid configuration for all diagrams throughout the site
+    document.addEventListener('DOMContentLoaded', function() {
+      if (typeof window.mermaid !== 'undefined') {
+        // Detect dark mode
+        const isDarkMode = document.body.getAttribute('data-md-color-scheme') === 'slate';
+        
+        // Define colors for different themes
+        const darkTextOnAmber = '#000000';
+        const brightAmber = '#ffc107';
+        
+        window.mermaid.initialize({
+          // Base theme for diagrams
+          theme: isDarkMode ? 'dark' : 'default',
+          
+          // Standard diagram types
+          flowchart: {
+            htmlLabels: true,
+            useMaxWidth: true,
+            curve: 'basis',
+            // Make yellow boxes have black text
+            htmlLabels: true
+          },
+          sequence: {
+            useMaxWidth: true,
+            boxMargin: 10,
+            messageAlign: 'center', 
+            noteFontWeight: '500',
+            actorFontWeight: 'bold',
+            noteFontColor: darkTextOnAmber
+          },
+          gantt: {
+            useMaxWidth: true
+          },
+          class: {
+            useMaxWidth: true
+          },
+          state: {
+            useMaxWidth: true
+          },
+          er: {
+            useMaxWidth: true
+          },
+          journey: {
+            useMaxWidth: true
+          },
+          pie: {
+            useMaxWidth: true,
+            textPosition: 0.5
+          },
+          
+          // Global theme variables
+          themeVariables: {
+            // Ensure dark text on amber/yellow regardless of theme
+            primaryColor: '#ffb300',
+            primaryTextColor: darkTextOnAmber,
+            primaryBorderColor: '#ff8f00',
+            primaryFontWeight: 'bold',
+            
+            // Sequence diagram colors
+            actorBkg: isDarkMode ? brightAmber : '#FFECB3',
+            actorTextColor: darkTextOnAmber,
+            noteBkgColor: isDarkMode ? brightAmber : '#FFECB3',
+            noteTextColor: darkTextOnAmber,
+            
+            // Flowchart colors
+            nodeBorder: isDarkMode ? '#FFA000' : '#FF8F00',
+            clusterBkg: isDarkMode ? brightAmber : '#FFECB3',
+            clusterBorder: isDarkMode ? '#FFA000' : '#FF8F00',
+            
+            // Various text elements
+            edgeLabel: {
+              color: isDarkMode ? '#f8f8f8' : '#333333'
+            },
+            
+            // Class diagram
+            classText: isDarkMode ? '#f8f8f8' : '#333333',
+            
+            // Entity relationship diagram
+            entityBorder: isDarkMode ? '#FFA000' : '#FF8F00'
+          }
+        });
+      }
+      
+      // Fix text color on amber/yellow backgrounds in dark mode - Ultra aggressive approach
+      if (document.body.getAttribute('data-md-color-scheme') === 'slate') {
+        // Function to process diagrams once they're rendered 
+        function fixAllMermaidDiagrams() {
+          console.log("Fixing all Mermaid diagrams for dark mode...");
+          
+          const diagrams = document.querySelectorAll('.mermaid svg');
+          diagrams.forEach(svg => {
+            // 1. Handle any element with amber/yellow fill
+            const allElements = svg.querySelectorAll('*');
+            allElements.forEach(el => {
+              const fill = el.getAttribute('fill');
+              if (fill && (fill.toLowerCase().startsWith('#ff') || fill.toLowerCase().startsWith('rgb(255'))) {
+                // Find all text elements within this element
+                const textElements = el.querySelectorAll('text');
+                textElements.forEach(text => {
+                  text.setAttribute('fill', '#000000');
+                  text.style.fontWeight = 'bold';
+                });
+                
+                // If this element itself is text with a yellow fill
+                if (el.tagName.toLowerCase() === 'text') {
+                  el.setAttribute('fill', '#000000');
+                  el.style.fontWeight = 'bold';
+                }
+                
+                // Also style any HTML content in foreign objects
+                const divs = el.querySelectorAll('foreignObject div');
+                divs.forEach(div => {
+                  div.style.color = '#000000';
+                  div.style.fontWeight = 'bold';
+                });
+              }
+              
+              // 2. Check if element has style with fill:#ff color
+              const style = el.getAttribute('style');
+              if (style && (
+                  style.includes('fill:#ff') || 
+                  style.includes('fill:#FF') || 
+                  style.includes('fill:rgb(255')
+                )) {
+                const textElements = el.querySelectorAll('text');
+                textElements.forEach(text => {
+                  text.setAttribute('fill', '#000000');
+                  text.style.fontWeight = 'bold'; 
+                });
+                
+                // Target any elements with amber fill and color:#000
+                if (style.includes('color:#000')) {
+                  el.style.color = '#000000';
+                  el.style.fill = '#000000';
+                  el.style.fontWeight = 'bold';
+                  
+                  // Also update any child text nodes
+                  const textNodes = el.querySelectorAll('text');
+                  textNodes.forEach(text => {
+                    text.setAttribute('fill', '#000000');
+                    text.style.fontWeight = 'bold';
+                  });
+                }
+              }
+            });
+            
+            // 3. Handle flowchart special cases
+            const nodes = svg.querySelectorAll('.node');
+            nodes.forEach(node => {
+              const rect = node.querySelector('rect');
+              if (rect) {
+                const fill = rect.getAttribute('fill');
+                if (fill && (fill.toLowerCase().startsWith('#ff') || fill.toLowerCase().startsWith('rgb(255'))) {
+                  const text = node.querySelector('text');
+                  if (text) {
+                    text.setAttribute('fill', '#000000');
+                    text.style.fontWeight = 'bold';
+                  }
+                }
+              }
+            });
+            
+            // 4. Handle cluster labels specifically
+            const clusters = svg.querySelectorAll('.cluster');
+            clusters.forEach(cluster => {
+              const rect = cluster.querySelector('rect');
+              if (rect) {
+                const fill = rect.getAttribute('fill');
+                if (fill && (fill.toLowerCase().startsWith('#ff') || fill.toLowerCase().startsWith('rgb(255'))) {
+                  const label = cluster.querySelector('.cluster-label');
+                  if (label) {
+                    const text = label.querySelector('text');
+                    if (text) {
+                      text.setAttribute('fill', '#000000');
+                      text.style.fontWeight = 'bold';
+                    }
+                  }
+                }
+              }
+            });
+          });
+        }
+        
+        // Process diagrams with multiple attempts to catch late renderings
+        setTimeout(fixAllMermaidDiagrams, 200);
+        setTimeout(fixAllMermaidDiagrams, 500);
+        setTimeout(fixAllMermaidDiagrams, 1000);
+        setTimeout(fixAllMermaidDiagrams, 2000);
+        
+        // Also watch for any future updates to the DOM
+        const observer = new MutationObserver(function(mutations) {
+          let diagramsChanged = false;
+          
+          mutations.forEach(function(mutation) {
+            if (mutation.type === 'childList' && 
+                (mutation.target.closest('.mermaid') || 
+                 Array.from(mutation.addedNodes).some(node => 
+                   node.nodeType === 1 && (node.classList.contains('mermaid') || node.querySelector('.mermaid'))
+                 ))) {
+              diagramsChanged = true;
+            }
+          });
+          
+          if (diagramsChanged) {
+            setTimeout(fixAllMermaidDiagrams, 200);
+          }
+        });
+        
+        observer.observe(document.body, { 
+          childList: true, 
+          subtree: true,
+          attributes: true,
+          attributeFilter: ['fill', 'style', 'class']
+        });
+      }
+    });
+  </script>
+{% endblock %}
+
+{% block announce %}
+  <a href="/demo/">
+    ✨ Try our new <strong>interactive demo</strong> to see Corgi in action!
+  </a>
+{% endblock %}
