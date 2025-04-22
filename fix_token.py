@@ -49,8 +49,8 @@ def fix_token_assignment():
             print(f"{user['user_id']:<20} {user['token_snippet']:<20}")
         print("=" * 50)
         
-        # Verify which user now has the Elk token
-        token = "_Tb8IUyXBZ5Y8NmUcwY0-skXWQgP7xTVMZCFkqvZRIc"
+        # Verify which user now has the token
+        token = "YOUR_ELK_TOKEN"
         cursor.execute(
             """
             SELECT user_id, instance_url
@@ -62,7 +62,7 @@ def fix_token_assignment():
         
         result = cursor.fetchone()
         if result:
-            print(f"\nToken '_Tb8I...' is now assigned ONLY to: {result['user_id']}")
+            print(f"\nToken '{token[:5]}...' is now assigned ONLY to: {result['user_id']}")
             print(f"Instance URL: {result['instance_url']}\n")
             print("Elk integration should now work correctly with your actual user account.")
             print("Restart the proxy server if it's already running.")

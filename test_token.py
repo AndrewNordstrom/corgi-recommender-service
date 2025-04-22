@@ -51,7 +51,7 @@ def test_token(token):
 
 def main():
     # Mastodon token to test
-    token = "_Tb8IUyXBZ5Y8NmUcwY0-skXWQgP7xTVMZCFkqvZRIc"
+    token = "YOUR_TEST_TOKEN"
     
     # Run the test
     test_token(token)

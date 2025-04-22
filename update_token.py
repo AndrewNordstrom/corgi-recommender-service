@@ -76,8 +76,8 @@ def update_user_token(user_id, new_token):
 
 if __name__ == "__main__":
     # User information from the updated Elk JSON
-    user_id = "agent_artemis"
-    new_token = "lJrzv-c0l5_pzmHNnw2EgTzuE0U-A-CIwjbCSTR5cp8"
+    user_id = "YOUR_USER_ID"
+    new_token = "YOUR_TOKEN_VALUE"
     
     print(f"Updating token for user {user_id}...\n")
     update_user_token(user_id, new_token)

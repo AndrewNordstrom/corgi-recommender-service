@@ -70,3 +70,10 @@ Thumbs.db
 # Generated files
 *.pid
 /site/
+
+# Frontend build files
+frontend/.next/
+frontend/node_modules/
+
+# Any files that might contain secrets/tokens
+corgi_demo.db

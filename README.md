@@ -24,6 +24,25 @@ The project is organized to maintain clean separation between components:
 
 ## Getting Started with Corgi
 
+### Prerequisites
+
+1. Python 3.8+
+2. SQLite (for development) or PostgreSQL (for production)
+3. Node.js and npm (if using frontend features)
+
+### Setup
+
+1. Clone the repository
+2. Copy `.env.example` to `.env` and update values as needed
+3. Install dependencies:
+   ```bash
+   pip install -r requirements.txt
+   ```
+4. Initialize the database:
+   ```bash
+   ./setup_db.sh
+   ```
+
 ### Standalone Usage
 
 To run Corgi as a standalone service:
@@ -151,7 +170,7 @@ See the [Compatibility Matrix](docs/COMPATIBILITY.md).
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+This project is licensed under the MIT License - see the [LICENSE](licenses/LICENSE) file for details.
 
 ## Acknowledgments
 
