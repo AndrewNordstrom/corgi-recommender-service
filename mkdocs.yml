@@ -2,6 +2,7 @@ site_name: Corgi
 site_description: A privacy-aware recommendation engine for the Fediverse
 site_author: Corgi Team
 copyright: "2025"
+site_url: https://andrewnordstrom.github.io/corgi-recommender-service/
 
 theme:
   name: material
@@ -125,19 +126,19 @@ nav:
   - Compatibility: COMPATIBILITY.md
   - FAQ: faq.md
 
-repo_name: andrewnordstrom/corgi-recommender-service
-repo_url: https://github.com/andrewnordstrom/corgi-recommender-service
+repo_name: AndrewNordstrom/corgi-recommender-service
+repo_url: https://github.com/AndrewNordstrom/corgi-recommender-service
 edit_uri: edit/main/docs/
 
 extra:
   social:
     - icon: fontawesome/brands/github
-      link: https://github.com/andrewnordstrom/corgi-recommender-service
+      link: https://github.com/AndrewNordstrom/corgi-recommender-service
     - icon: fontawesome/brands/mastodon
       link: https://mastodon.social/@corgi
   analytics:
     provider: google
-    property: !ENV GOOGLE_ANALYTICS_KEY
+    property: !ENV [GOOGLE_ANALYTICS_KEY, ""]
   consent:
     title: Cookie consent
     description: >-
