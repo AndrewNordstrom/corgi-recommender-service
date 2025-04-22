@@ -1,24 +1,24 @@
 # Core dependencies
-Flask==2.2.3
-flask-cors==3.0.10
+Flask==2.2.5
+flask-cors==4.0.2
 flask-swagger-ui==4.11.1
 psycopg2-binary==2.9.6
 python-dotenv==1.0.0
-gunicorn==20.1.0
-requests==2.28.2
+gunicorn==22.0.0
+requests==2.32.3
 prometheus-client==0.16.0
 
 # Development and testing dependencies
 pytest==7.3.1
 pytest-cov==4.1.0
 pytest-env==0.8.1
-black==23.3.0
+black==24.3.0
 flake8==6.0.0
 isort==5.12.0
 termcolor==2.3.0
 pyyaml==6.0.1
 
 # Documentation
-mkdocs==1.5.3
-mkdocs-material==9.4.6
+mkdocs==1.6.1
+mkdocs-material==9.6.12
 mkdocs-minify-plugin==0.7.1
