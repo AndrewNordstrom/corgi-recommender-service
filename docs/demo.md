@@ -94,7 +94,7 @@ Experience Corgi in action with our interactive live demo. No setup required—j
       <p>You can interact with posts by clicking the favorite or reblog buttons to see how that affects recommendations over time.</p>
     </div>
     <div style="flex-shrink: 0; text-align: center;">
-      <img src="../assets/corgi-hero.png" alt="Corgi Hero" width="180" style="margin-bottom: 0.5rem;">
+      <img src="assets/corgi-hero.png" alt="Corgi Hero" width="180" style="margin-bottom: 0.5rem;">
     </div>
   </div>
 </div>
