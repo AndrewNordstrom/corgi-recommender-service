@@ -1,0 +1,117 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-corgi_recommender}
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - recommender_network
+
+  # Recommender Service
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: corgi-recommender-api
+    environment:
+      - POSTGRES_HOST=postgres
+      - DB_PORT=5432
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
+      - POSTGRES_DB=${POSTGRES_DB:-corgi_recommender}
+      - PORT=5000
+      - HOST=0.0.0.0
+      - DEBUG=${DEBUG:-False}
+      - FLASK_ENV=${FLASK_ENV:-development}
+      - USER_HASH_SALT=${USER_HASH_SALT:-corgi-recommender-salt-123}
+      - CORS_ALLOWED_ORIGINS=${CORS_ALLOWED_ORIGINS:-*}
+      - RANKING_WEIGHT_AUTHOR=${RANKING_WEIGHT_AUTHOR:-0.4}
+      - RANKING_WEIGHT_ENGAGEMENT=${RANKING_WEIGHT_ENGAGEMENT:-0.3}
+      - RANKING_WEIGHT_RECENCY=${RANKING_WEIGHT_RECENCY:-0.3}
+      - RANKING_INCLUDE_SYNTHETIC=${RANKING_INCLUDE_SYNTHETIC:-False}
+    ports:
+      - '5000:5000'
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - recommender_network
+    restart: unless-stopped
+    
+  # Agent Framework (not started by default)
+  agent:
+    build:
+      context: .
+      dockerfile: agents/Dockerfile
+    container_name: corgi-agent
+    environment:
+      - CLAUDE_DISABLE_INTERNET=${CLAUDE_DISABLE_INTERNET:-true}
+      - CLAUDE_ALLOWED_DOMAINS=${CLAUDE_ALLOWED_DOMAINS:-localhost,api}
+      - HEADLESS_MODE=${HEADLESS_MODE:-true}
+      - CORGI_SERVICE_URL=http://api:5000
+      - DEFAULT_MAX_TOKENS=${DEFAULT_MAX_TOKENS:-500000}
+    volumes:
+      - ./.env:/app/.env:ro
+      - ./logs:/app/logs
+    depends_on:
+      - api
+    networks:
+      - recommender_network
+    profiles:
+      - agent  # This container won't start by default, only when specified
+    command: >
+      --profile ${AGENT_PROFILE:-tech_fan}
+      ${AGENT_ARGS}
+      
+  # Multi-agent runner (not started by default)
+  multi-agent:
+    build:
+      context: .
+      dockerfile: agents/Dockerfile
+    container_name: corgi-multi-agent
+    environment:
+      - CLAUDE_DISABLE_INTERNET=${CLAUDE_DISABLE_INTERNET:-true}
+      - CLAUDE_ALLOWED_DOMAINS=${CLAUDE_ALLOWED_DOMAINS:-localhost,api}
+      - HEADLESS_MODE=${HEADLESS_MODE:-true}
+      - CORGI_SERVICE_URL=http://api:5000
+      - DEFAULT_MAX_TOKENS=${DEFAULT_MAX_TOKENS:-500000}
+    volumes:
+      - ./.env:/app/.env:ro
+      - ./logs:/app/logs
+    depends_on:
+      - api
+    networks:
+      - recommender_network
+    profiles:
+      - multi-agent  # This container won't start by default
+    entrypoint: ["/bin/bash", "-c"]
+    command: >
+      "
+      echo 'Running multiple agents for testing...' &&
+      for profile in tech_fan news_skeptic meme_lover privacy_tester; do
+        timestamp=$$(date +%Y%m%d_%H%M%S) &&
+        echo \"Starting agent: $${profile}\" &&
+        python /app/agents/test_runner.py --profile $${profile} --no-llm --headless --output /app/logs/multi_runs/$${profile}_$${timestamp}.json --host http://api:5000 &
+      done &&
+      wait
+      "
+
+networks:
+  recommender_network:
+    driver: bridge
+
+volumes:
+  postgres_data:

@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Configure Elk with Corgi</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .container {
+            border: 1px solid #ddd;
+            padding: 20px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        h1, h2 {
+            color: #333;
+        }
+        pre, code {
+            background-color: #f5f5f5;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+        img {
+            max-width: 100%;
+            height: auto;
+            border: 1px solid #ddd;
+            margin: 10px 0;
+        }
+        .step {
+            background-color: #f9f9f9;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-left: 4px solid #FF9A3C;
+        }
+        .warning {
+            background-color: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 10px;
+            margin: 10px 0;
+        }
+        .success {
+            background-color: #d4edda;
+            border-left: 4px solid #28a745;
+            padding: 10px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>Configure Elk with Corgi Proxy</h1>
+    
+    <div class="container">
+        <h2>Quick Start</h2>
+        
+        <div class="step">
+            <h3>Step 1: Enter Server Address</h3>
+            <p>When prompted for the server in Elk, enter:</p>
+            <pre>localhost:5003</pre>
+            <p>Do not include http:// or https://</p>
+        </div>
+        
+        <div class="step">
+            <h3>Step 2: Authenticate</h3>
+            <p>If prompted for login credentials, use anything as email/password:</p>
+            <ul>
+                <li>Email: anything@example.com</li>
+                <li>Password: anything</li>
+            </ul>
+            <p>The proxy will automatically authenticate you with the demo token.</p>
+        </div>
+        
+        <div class="step">
+            <h3>Step 3: Configure Manually if Steps 1-2 Don't Work</h3>
+            <p>If direct login doesn't work, you'll need to:</p>
+            <ol>
+                <li>Create a local access token manually: <code>_Tb8IUyXBZ5Y8NmUcwY0-skXWQgP7xTVMZCFkqvZRIc</code></li>
+                <li>Configure your instance URL manually: <code>https://localhost:5003</code></li>
+            </ol>
+        </div>
+    </div>
+    
+    <div class="container">
+        <h2>Testing the API Directly</h2>
+        
+        <p>To verify the proxy is working, test the API directly:</p>
+        
+        <pre>curl -k -H "Authorization: Bearer _Tb8IUyXBZ5Y8NmUcwY0-skXWQgP7xTVMZCFkqvZRIc" https://localhost:5003/api/v1/accounts/verify_credentials</pre>
+        
+        <p>You should see a JSON response with account information.</p>
+    </div>
+    
+    <div class="container">
+        <h2>Troubleshooting</h2>
+        
+        <div class="warning">
+            <h3>SSL Certificate Warnings</h3>
+            <p>Your browser will show warnings about the self-signed certificate. This is expected in a development environment.</p>
+            <p>Click "Advanced" → "Proceed to localhost (unsafe)" or similar.</p>
+        </div>
+        
+        <h3>Common Issues</h3>
+        <ul>
+            <li><strong>Instance not found:</strong> Make sure the proxy server is running on port 5003</li>
+            <li><strong>Authentication failed:</strong> Ensure you're using the correct token</li>
+            <li><strong>Elk not connecting:</strong> Try entering just <code>localhost</code> as the server address</li>
+        </ul>
+        
+        <h3>Testing Timeline</h3>
+        <p>To verify the timeline API with recommendations works:</p>
+        <pre>curl -k -H "Authorization: Bearer _Tb8IUyXBZ5Y8NmUcwY0-skXWQgP7xTVMZCFkqvZRIc" https://localhost:5003/api/v1/timelines/home</pre>
+    </div>
+    
+    <div class="container">
+        <h2>Complete Test Client</h2>
+        <p>A full test client is available for testing the API directly:</p>
+        <a href="https://localhost:5003/test-client">https://localhost:5003/test-client</a>
+    </div>
+    
+    <script>
+        // Auto-detect if this page is served over HTTPS and adjust URLs accordingly
+        document.addEventListener('DOMContentLoaded', function() {
+            const protocol = window.location.protocol;
+            if (protocol === 'http:') {
+                // Replace all https:// links with http://
+                document.body.innerHTML = document.body.innerHTML.replace(/https:\/\/localhost:5003/g, 'http://localhost:5003');
+            }
+        });
+    </script>
+</body>
+</html>

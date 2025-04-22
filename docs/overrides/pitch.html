@@ -1,0 +1,156 @@
+{% extends "main.html" %}
+
+{% block content %}
+<style>
+  .md-content__inner {
+    margin: 0;
+    padding-top: 0;
+  }
+  
+  .md-content__inner:before {
+    display: none;
+  }
+  
+  .pitch-slide {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+    text-align: center;
+    background: linear-gradient(135deg, var(--md-primary-fg-color) 0%, var(--md-primary-fg-color--dark) 100%);
+    color: white;
+  }
+  
+  .pitch-logo {
+    margin-bottom: 2rem;
+    animation: bounce 2s infinite ease-in-out;
+  }
+  
+  @keyframes bounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-20px); }
+  }
+  
+  .pitch-logo img {
+    width: 220px;
+    height: auto;
+  }
+  
+  .pitch-title {
+    font-size: 4rem;
+    font-weight: 800;
+    margin-bottom: 1rem;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+  
+  .pitch-tagline {
+    font-size: 1.5rem;
+    font-weight: 400;
+    margin-bottom: 2rem;
+    max-width: 800px;
+  }
+  
+  .pitch-description {
+    font-size: 1.25rem;
+    max-width: 800px;
+    margin-bottom: 3rem;
+    line-height: 1.6;
+  }
+  
+  .pitch-buttons {
+    display: flex;
+    gap: 1.5rem;
+    margin-bottom: 3rem;
+  }
+  
+  .pitch-button {
+    display: inline-block;
+    padding: 1rem 2rem;
+    border-radius: 50px;
+    font-weight: 600;
+    font-size: 1.1rem;
+    text-decoration: none;
+    transition: all 0.3s ease;
+  }
+  
+  .pitch-button-primary {
+    background-color: white;
+    color: var(--md-primary-fg-color);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  }
+  
+  .pitch-button-primary:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+  }
+  
+  .pitch-button-secondary {
+    background-color: rgba(255, 255, 255, 0.1);
+    color: white;
+    border: 2px solid white;
+  }
+  
+  .pitch-button-secondary:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+    transform: translateY(-5px);
+  }
+  
+  .pitch-badges {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1rem;
+  }
+  
+  .pitch-badge {
+    padding: 0.5rem 1rem;
+    border-radius: 50px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    background-color: rgba(255, 255, 255, 0.15);
+  }
+  
+  @media (max-width: 768px) {
+    .pitch-title {
+      font-size: 3rem;
+    }
+    
+    .pitch-tagline {
+      font-size: 1.25rem;
+    }
+    
+    .pitch-description {
+      font-size: 1rem;
+    }
+    
+    .pitch-buttons {
+      flex-direction: column;
+    }
+  }
+</style>
+
+<section class="pitch-slide">
+  <div class="pitch-logo">
+    <img src="/assets/corgi-hero.png" alt="Corgi Hero Image" width="200">
+  </div>
+  
+  <div class="pitch-badges">
+    <div class="pitch-badge">Fediverse</div>
+    <div class="pitch-badge">Privacy-First</div>
+    <div class="pitch-badge">Open Source</div>
+  </div>
+  
+  <h1 class="pitch-title">CORGI</h1>
+  <p class="pitch-tagline">Small body. Big brain. Portable recs that follow you anywhere.</p>
+  
+  <p class="pitch-description">
+    A privacy-aware recommendation engine for the Fediverse that works as middleware between any Mastodon client and server. No code changes needed.
+  </p>
+  
+  <div class="pitch-buttons">
+    <a href="/demo/" class="pitch-button pitch-button-primary">Try Demo</a>
+    <a href="/quickstart/" class="pitch-button pitch-button-secondary">Get Started</a>
+  </div>
+</section>
+{% endblock %}

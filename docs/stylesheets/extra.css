@@ -1,0 +1,1314 @@
+/* Custom styles for Corgi docs */
+
+/* Diagram zoom functionality */
+.diagram-zoomable {
+  position: relative;
+  transition: transform 0.2s ease;
+  border: 2px solid transparent;
+  border-radius: 4px;
+  padding: 4px;
+  margin: 1rem 0;
+}
+
+.diagram-zoomable:hover {
+  transform: scale(1.01);
+  border-color: var(--md-corgi-amber-500);
+  box-shadow: 0 2px 12px rgba(255, 179, 0, 0.2);
+}
+
+.diagram-zoomable::after {
+  content: '🔍 Click to zoom';
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  background-color: var(--md-corgi-amber-500);
+  color: rgba(0, 0, 0, 0.8);
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  z-index: 2;
+}
+
+.diagram-zoomable:hover::after {
+  opacity: 1;
+}
+
+.diagram-modal {
+  display: none;
+  position: fixed;
+  z-index: 1000;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  overflow: auto;
+  background-color: rgba(0, 0, 0, 0.8);
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+}
+
+.diagram-modal-content {
+  position: relative;
+  background-color: var(--md-default-bg-color);
+  margin: auto;
+  padding: 20px;
+  border-radius: 8px;
+  max-width: 95%;
+  max-height: 95%;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+  overflow: auto;
+}
+
+[data-md-color-scheme="slate"] .diagram-modal-content {
+  background-color: #2d2d2d;
+  border: 1px solid var(--md-corgi-neutral-700);
+}
+
+/* Ensure text in yellow elements has good contrast in dark mode */
+[data-md-color-scheme="slate"] .mermaid [fill="#ffb300"] text,
+[data-md-color-scheme="slate"] .mermaid [fill="#ffcc80"] text,
+[data-md-color-scheme="slate"] .mermaid [fill="#ffecb3"] text,
+[data-md-color-scheme="slate"] .mermaid [fill="#ffd54f"] text,
+[data-md-color-scheme="slate"] .mermaid [fill="#ffe082"] text,
+[data-md-color-scheme="slate"] .mermaid [fill="#ffca28"] text,
+[data-md-color-scheme="slate"] .mermaid [style*="fill:#ffb300"] text,
+[data-md-color-scheme="slate"] .mermaid [style*="fill:#ffcc80"] text,
+[data-md-color-scheme="slate"] .mermaid [style*="fill:#ffecb3"] text,
+[data-md-color-scheme="slate"] .mermaid [style*="fill:#ffd54f"] text,
+[data-md-color-scheme="slate"] .mermaid [style*="fill:#ffe082"] text,
+[data-md-color-scheme="slate"] .mermaid [style*="fill:#ffca28"] text {
+  fill: #000000 !important;
+  font-weight: 700 !important;
+}
+
+/* Additional selectors for Mermaid diagram formatting */
+[data-md-color-scheme="slate"] .mermaid .labelText,
+[data-md-color-scheme="slate"] .mermaid .loopText,
+[data-md-color-scheme="slate"] .mermaid .loopText > tspan {
+  font-weight: 500 !important;
+}
+
+/* Improve contrast for specific Mermaid components in dark mode */
+[data-md-color-scheme="slate"] .mermaid .section0,
+[data-md-color-scheme="slate"] .mermaid .section1,
+[data-md-color-scheme="slate"] .mermaid .section2,
+[data-md-color-scheme="slate"] .mermaid .section3 {
+  opacity: 0.9 !important;
+}
+
+/* Make yellow fills brighter in diagrams in dark mode */
+[data-md-color-scheme="slate"] .mermaid [fill="#ffb300"],
+[data-md-color-scheme="slate"] .mermaid [fill="#ffcc80"],
+[data-md-color-scheme="slate"] .mermaid [fill="#ffecb3"],
+[data-md-color-scheme="slate"] .mermaid [fill="#ffd54f"],
+[data-md-color-scheme="slate"] .mermaid [fill="#ffe082"],
+[data-md-color-scheme="slate"] .mermaid [fill="#ffca28"] {
+  fill: #ffc107 !important; /* Brighter amber in dark mode */
+}
+
+/* Global solution for dark text on yellow/amber backgrounds in all Mermaid diagrams */
+
+/* Base styles for dark theme Mermaid diagrams */
+[data-md-color-scheme="slate"] .mermaid {
+  --dark-text-on-amber: #000000;
+  --amber-bg-color: #ffc107;
+}
+
+/* Target nodes that use short-form color (#000 instead of #000000) */
+[data-md-color-scheme="slate"] .mermaid .node[style*="color:#000"],
+[data-md-color-scheme="slate"] .mermaid g[style*="color:#000"] text,
+[data-md-color-scheme="slate"] .mermaid [style*="fill:#FFB300"][style*="color:#000"] text,
+[data-md-color-scheme="slate"] .mermaid .label[style*="color:#000"] {
+  fill: var(--dark-text-on-amber) !important;
+  color: var(--dark-text-on-amber) !important;
+  font-weight: bold !important;
+}
+
+/* 1. Target all yellow/amber fill color variants */
+[data-md-color-scheme="slate"] .mermaid [fill="#ffb300"] text, [data-md-color-scheme="slate"] .mermaid [fill="#FFB300"] text,
+[data-md-color-scheme="slate"] .mermaid [fill="#ffcc80"] text, [data-md-color-scheme="slate"] .mermaid [fill="#FFCC80"] text,
+[data-md-color-scheme="slate"] .mermaid [fill="#ffecb3"] text, [data-md-color-scheme="slate"] .mermaid [fill="#FFECB3"] text,
+[data-md-color-scheme="slate"] .mermaid [fill="#ffd54f"] text, [data-md-color-scheme="slate"] .mermaid [fill="#FFD54F"] text,
+[data-md-color-scheme="slate"] .mermaid [fill="#ffe082"] text, [data-md-color-scheme="slate"] .mermaid [fill="#FFE082"] text,
+[data-md-color-scheme="slate"] .mermaid [fill="#ffca28"] text, [data-md-color-scheme="slate"] .mermaid [fill="#FFCA28"] text,
+[data-md-color-scheme="slate"] .mermaid [fill="#ffc107"] text, [data-md-color-scheme="slate"] .mermaid [fill="#FFC107"] text {
+  fill: var(--dark-text-on-amber) !important;
+  font-weight: bold !important;
+}
+
+/* 2. Target inline styles with yellow/amber fills (both lowercase and uppercase) */
+[data-md-color-scheme="slate"] .mermaid [style*="fill:#ffb300"] text, [data-md-color-scheme="slate"] .mermaid [style*="fill:#FFB300"] text,
+[data-md-color-scheme="slate"] .mermaid [style*="fill:#ffcc80"] text, [data-md-color-scheme="slate"] .mermaid [style*="fill:#FFCC80"] text,
+[data-md-color-scheme="slate"] .mermaid [style*="fill:#ffecb3"] text, [data-md-color-scheme="slate"] .mermaid [style*="fill:#FFECB3"] text,
+[data-md-color-scheme="slate"] .mermaid [style*="fill:#ffd54f"] text, [data-md-color-scheme="slate"] .mermaid [style*="fill:#FFD54F"] text,
+[data-md-color-scheme="slate"] .mermaid [style*="fill:#ffe082"] text, [data-md-color-scheme="slate"] .mermaid [style*="fill:#FFE082"] text,
+[data-md-color-scheme="slate"] .mermaid [style*="fill:#ffca28"] text, [data-md-color-scheme="slate"] .mermaid [style*="fill:#FFCA28"] text,
+[data-md-color-scheme="slate"] .mermaid [style*="fill:#ffc107"] text, [data-md-color-scheme="slate"] .mermaid [style*="fill:#FFC107"] text,
+/* Handle short-form color codes used in some diagrams */
+[data-md-color-scheme="slate"] .mermaid [style*="color:#000"] text, 
+[data-md-color-scheme="slate"] .mermaid text[style*="fill:#FFB300"][style*="color:#000"],
+[data-md-color-scheme="slate"] .mermaid g[style*="fill:#FFB300"][style*="color:#000"] text {
+  fill: var(--dark-text-on-amber) !important;
+  font-weight: bold !important;
+}
+
+/* 3. Target text elements that are directly yellow/amber */
+[data-md-color-scheme="slate"] .mermaid text[fill="#ffb300"],
+[data-md-color-scheme="slate"] .mermaid text[fill="#ffcc80"],
+[data-md-color-scheme="slate"] .mermaid text[fill="#ffecb3"],
+[data-md-color-scheme="slate"] .mermaid text[fill="#ffd54f"],
+[data-md-color-scheme="slate"] .mermaid text[fill="#ffe082"],
+[data-md-color-scheme="slate"] .mermaid text[fill="#ffca28"],
+[data-md-color-scheme="slate"] .mermaid text[fill="#ffc107"] {
+  fill: var(--dark-text-on-amber) !important;
+  font-weight: bold !important;
+}
+
+/* 4. Target labels inside elements with yellow/amber fills */
+[data-md-color-scheme="slate"] .mermaid [fill="#ffb300"] .label,
+[data-md-color-scheme="slate"] .mermaid [fill="#ffcc80"] .label,
+[data-md-color-scheme="slate"] .mermaid [fill="#ffecb3"] .label,
+[data-md-color-scheme="slate"] .mermaid [fill="#ffd54f"] .label,
+[data-md-color-scheme="slate"] .mermaid [fill="#ffe082"] .label,
+[data-md-color-scheme="slate"] .mermaid [fill="#ffca28"] .label,
+[data-md-color-scheme="slate"] .mermaid [fill="#ffc107"] .label {
+  color: var(--dark-text-on-amber) !important;
+  fill: var(--dark-text-on-amber) !important;
+  font-weight: bold !important;
+}
+
+/* 5. Target foreignObject divs in yellow/amber elements (for HTML labels) */
+[data-md-color-scheme="slate"] .mermaid [fill="#ffb300"] foreignObject div,
+[data-md-color-scheme="slate"] .mermaid [fill="#ffcc80"] foreignObject div,
+[data-md-color-scheme="slate"] .mermaid [fill="#ffecb3"] foreignObject div,
+[data-md-color-scheme="slate"] .mermaid [fill="#ffd54f"] foreignObject div,
+[data-md-color-scheme="slate"] .mermaid [fill="#ffe082"] foreignObject div,
+[data-md-color-scheme="slate"] .mermaid [fill="#ffca28"] foreignObject div,
+[data-md-color-scheme="slate"] .mermaid [fill="#ffc107"] foreignObject div {
+  color: var(--dark-text-on-amber) !important;
+  font-weight: bold !important;
+}
+
+/* 6. Target specifically flowchart subgraph titles and labels */
+[data-md-color-scheme="slate"] .mermaid .cluster-label foreignObject div,
+[data-md-color-scheme="slate"] .mermaid .cluster[fill="#ffb300"] .cluster-label text,
+[data-md-color-scheme="slate"] .mermaid .cluster[fill="#ffcc80"] .cluster-label text,
+[data-md-color-scheme="slate"] .mermaid .cluster[fill="#ffecb3"] .cluster-label text,
+[data-md-color-scheme="slate"] .mermaid .cluster[fill="#ffd54f"] .cluster-label text,
+[data-md-color-scheme="slate"] .mermaid .cluster[fill="#ffe082"] .cluster-label text,
+[data-md-color-scheme="slate"] .mermaid .cluster[fill="#ffca28"] .cluster-label text,
+[data-md-color-scheme="slate"] .mermaid .cluster[fill="#ffc107"] .cluster-label text {
+  color: var(--dark-text-on-amber) !important;
+  fill: var(--dark-text-on-amber) !important;
+  font-weight: bold !important;
+}
+
+/* 7. Target specifically for sequence diagrams */
+[data-md-color-scheme="slate"] .mermaid .actor,
+[data-md-color-scheme="slate"] .mermaid .messageText[fill^="#ff"],
+[data-md-color-scheme="slate"] .mermaid .labelText[fill^="#ff"],
+[data-md-color-scheme="slate"] .mermaid .loopText[fill^="#ff"],
+[data-md-color-scheme="slate"] .mermaid .noteText[fill^="#ff"] {
+  fill: var(--dark-text-on-amber) !important;
+  font-weight: bold !important;
+}
+
+/* 8. Make yellow fills brighter in diagrams in dark mode */
+[data-md-color-scheme="slate"] .mermaid [fill="#ffb300"], [data-md-color-scheme="slate"] .mermaid [fill="#FFB300"],
+[data-md-color-scheme="slate"] .mermaid [fill="#ffcc80"], [data-md-color-scheme="slate"] .mermaid [fill="#FFCC80"],
+[data-md-color-scheme="slate"] .mermaid [fill="#ffecb3"], [data-md-color-scheme="slate"] .mermaid [fill="#FFECB3"],
+[data-md-color-scheme="slate"] .mermaid [fill="#ffd54f"], [data-md-color-scheme="slate"] .mermaid [fill="#FFD54F"],
+[data-md-color-scheme="slate"] .mermaid [fill="#ffe082"], [data-md-color-scheme="slate"] .mermaid [fill="#FFE082"],
+[data-md-color-scheme="slate"] .mermaid [fill="#ffca28"], [data-md-color-scheme="slate"] .mermaid [fill="#FFCA28"] {
+  fill: var(--amber-bg-color) !important;
+}
+
+/* 9. Direct Mermaid class overrides - most aggressive approach */
+[data-md-color-scheme="slate"] .mermaid .node text,
+[data-md-color-scheme="slate"] .mermaid .cluster-label text {
+  font-weight: bold !important;
+}
+
+[data-md-color-scheme="slate"] .mermaid .node:has(rect[fill="#FFB300"]) text,
+[data-md-color-scheme="slate"] .mermaid .node:has(rect[fill="#ffb300"]) text,
+[data-md-color-scheme="slate"] .mermaid .cluster:has(rect[fill="#FFB300"]) .cluster-label text,
+[data-md-color-scheme="slate"] .mermaid .cluster:has(rect[fill="#ffb300"]) .cluster-label text {
+  fill: #000000 !important;
+  color: #000000 !important;
+  font-weight: bold !important;
+}
+
+/* Final catch-all rule for any dark text in amber elements */
+[data-md-color-scheme="slate"] .mermaid *[style*="color:#000"] {
+  color: #000000 !important;
+  fill: #000000 !important;
+  font-weight: bold !important;
+}
+
+.diagram-close {
+  position: absolute;
+  top: 15px;
+  right: 20px;
+  color: var(--md-corgi-neutral-500);
+  font-size: 28px;
+  font-weight: bold;
+  cursor: pointer;
+  z-index: 2;
+}
+
+.diagram-close:hover,
+.diagram-close:focus {
+  color: var(--md-corgi-neutral-900);
+}
+
+.diagram-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  overflow: auto;
+}
+
+.diagram-container svg {
+  cursor: default !important;
+}
+
+/* Enhanced styling for modals */
+.diagram-modal {
+  z-index: 9999 !important; /* Ensure it's on top of everything */
+}
+
+.diagram-modal-content svg {
+  max-width: 95% !important;
+  height: auto !important;
+}
+
+/* Ensure styles are applied to SVGs in the modal too */
+[data-md-color-scheme="slate"] .diagram-modal .mermaid [fill^="#ff"] text,
+[data-md-color-scheme="slate"] .diagram-modal .mermaid [style*="fill:#ff"] text,
+[data-md-color-scheme="slate"] .diagram-modal .mermaid text[fill^="#ff"] {
+  fill: #000000 !important;
+  font-weight: bold !important;
+}
+
+:root {
+  --md-primary-fg-color: #ffb300;
+  --md-primary-fg-color--light: #ffd54f;
+  --md-primary-fg-color--dark: #ff8f00;
+  --md-accent-fg-color: #ff5722;
+  --md-accent-fg-color--transparent: rgba(255, 87, 34, 0.1);
+  
+  /* Warm neutrals palette */
+  --md-default-bg-color: #fffbf5;
+  --md-corgi-neutral-50: #faf6f1;
+  --md-corgi-neutral-100: #f0ebe4;
+  --md-corgi-neutral-200: #e0d8cc;
+  --md-corgi-neutral-300: #c5b8a6;
+  --md-corgi-neutral-400: #a18c75;
+  --md-corgi-neutral-500: #907963;
+  --md-corgi-neutral-600: #7a6553;
+  --md-corgi-neutral-700: #5f4d3e;
+  --md-corgi-neutral-800: #463a2f;
+  --md-corgi-neutral-900: #342c23;
+  
+  /* Accent colors */
+  --md-corgi-amber-500: #ffb300;
+  --md-corgi-navy-500: #1a237e;
+}
+
+[data-md-color-scheme="slate"] {
+  --md-default-bg-color: #1a1a1a;
+  --md-default-bg-color--light: #222222;
+  --md-typeset-a-color: #ffd54f; /* Even lighter/brighter amber for better contrast in dark mode */
+}
+
+/* Typography refinements */
+.md-typeset h1, .md-typeset h2, .md-typeset h3, .md-typeset h4 {
+  font-weight: 700;
+  color: var(--md-corgi-neutral-900);
+}
+
+[data-md-color-scheme="slate"] .md-typeset h1,
+[data-md-color-scheme="slate"] .md-typeset h2,
+[data-md-color-scheme="slate"] .md-typeset h3,
+[data-md-color-scheme="slate"] .md-typeset h4 {
+  color: var(--md-corgi-neutral-100);
+}
+
+.md-typeset h1 {
+  margin-bottom: 1.5em;
+}
+
+.md-typeset h2 {
+  margin-top: 1.5em;
+}
+
+/* Card styles */
+.corgi-card {
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin: 1rem 0;
+  border-left: 4px solid var(--md-corgi-amber-500);
+  background-color: var(--md-corgi-neutral-50);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+}
+
+[data-md-color-scheme="slate"] .corgi-card {
+  background-color: var(--md-default-bg-color--light);
+}
+
+/* Callout styles */
+.corgi-callout {
+  border-left: 4px solid var(--md-corgi-amber-500);
+  background-color: var(--md-corgi-neutral-50);
+  padding: 1rem;
+  margin: 1rem 0;
+  border-radius: 4px;
+}
+
+[data-md-color-scheme="slate"] .corgi-callout {
+  background-color: rgba(255, 179, 0, 0.15); /* Slightly more visible amber background */
+  border-left: 4px solid #ffb300; /* Brighter border */
+}
+
+.corgi-callout-title {
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+  display: flex;
+  align-items: center;
+}
+
+.corgi-callout-title svg {
+  margin-right: 0.5rem;
+}
+
+/* API endpoint blocks */
+.corgi-endpoint {
+  margin: 2rem 0;
+  border: 1px solid var(--md-corgi-neutral-200);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+[data-md-color-scheme="slate"] .corgi-endpoint {
+  border-color: var(--md-corgi-neutral-700);
+}
+
+.corgi-endpoint-header {
+  display: flex;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  background-color: var(--md-corgi-neutral-100);
+  border-bottom: 1px solid var(--md-corgi-neutral-200);
+}
+
+[data-md-color-scheme="slate"] .corgi-endpoint-header {
+  background-color: var(--md-corgi-neutral-800);
+  border-color: var(--md-corgi-neutral-700);
+}
+
+.corgi-endpoint-method {
+  font-family: var(--md-code-font-family);
+  font-weight: 700;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  margin-right: 0.75rem;
+}
+
+.corgi-endpoint-method.get {
+  background-color: #e3f2fd;
+  color: #0277bd;
+}
+
+.corgi-endpoint-method.post {
+  background-color: #e8f5e9;
+  color: #2e7d32;
+}
+
+.corgi-endpoint-method.put {
+  background-color: #fff8e1;
+  color: #ff8f00;
+}
+
+.corgi-endpoint-method.delete {
+  background-color: #ffebee;
+  color: #c62828;
+}
+
+[data-md-color-scheme="slate"] .corgi-endpoint-method {
+  opacity: 0.9;
+}
+
+.corgi-endpoint-path {
+  font-family: var(--md-code-font-family);
+  font-weight: 500;
+}
+
+.corgi-endpoint-body {
+  padding: 1rem;
+}
+
+/* Code blocks */
+.md-typeset pre > code {
+  border-radius: 8px;
+  padding: 1rem;
+}
+
+/* Custom components */
+.corgi-diagram {
+  margin: 2rem 0;
+  text-align: center;
+}
+
+.corgi-diagram img {
+  max-width: 100%;
+  border-radius: 8px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+/* Grid layout for path selection */
+.corgi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1.5rem;
+  margin: 2rem 0;
+}
+
+.corgi-grid-item {
+  background-color: var(--md-corgi-neutral-50);
+  border-radius: 8px;
+  padding: 1.5rem;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  border: 1px solid var(--md-corgi-neutral-100);
+}
+
+.corgi-grid-item:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.1);
+}
+
+[data-md-color-scheme="slate"] .corgi-grid-item {
+  background-color: var(--md-default-bg-color--light);
+  border-color: var(--md-corgi-neutral-700);
+}
+
+.corgi-grid-item h3 {
+  margin-top: 0;
+  font-weight: 600;
+  font-size: 1.2rem;
+}
+
+.corgi-button {
+  display: inline-block;
+  padding: 0.75rem 1.25rem;
+  background-color: var(--md-corgi-amber-500);
+  color: rgba(0, 0, 0, 0.87) !important;
+  border-radius: 8px;
+  text-decoration: none !important;
+  font-weight: 600;
+  margin-top: 1rem;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  border: none;
+  cursor: pointer;
+  font-size: 0.95rem;
+  letter-spacing: 0.01em;
+}
+
+.corgi-button:hover {
+  background-color: var(--md-primary-fg-color--dark);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+  transform: translateY(-1px);
+}
+
+.corgi-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* Footer styles */
+.md-footer {
+  background-color: var(--md-corgi-neutral-900);
+}
+
+.md-footer-meta {
+  background-color: rgba(0, 0, 0, 0.2);
+}
+
+/* Sidebar mascot */
+.md-nav__icon.corgi-icon {
+  display: none;
+}
+
+@media screen and (min-width: 76.25em) {
+  /* Right sidebar corgi mascot (under table of contents) */
+  .md-sidebar--secondary .md-sidebar__scrollwrap::after {
+    content: "";
+    display: block;
+    height: 180px;
+    background-image: url('../assets/corgi-mascot.png');
+    background-size: contain;
+    background-position: center bottom;
+    background-repeat: no-repeat;
+    margin-top: 2rem;
+    opacity: 0.8;
+    transition: transform 0.5s ease;
+  }
+  
+  .md-sidebar--secondary .md-sidebar__scrollwrap:hover::after {
+    transform: translateY(-10px);
+  }
+}
+
+/* Tables */
+.md-typeset table:not([class]) {
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  overflow: hidden;
+}
+
+.md-typeset table:not([class]) th {
+  background-color: var(--md-corgi-neutral-100);
+  color: var(--md-corgi-neutral-900);
+  font-weight: 600;
+}
+
+[data-md-color-scheme="slate"] .md-typeset table:not([class]) th {
+  background-color: var(--md-corgi-neutral-800);
+  color: var(--md-corgi-neutral-100);
+}
+
+/* JSON Response example styling */
+.corgi-response-example {
+  position: relative;
+  background-color: #f5f5f5;
+  border-radius: 8px;
+  margin: 1.5rem 0;
+  overflow: hidden;
+}
+
+[data-md-color-scheme="slate"] .corgi-response-example {
+  background-color: #2d2d2d;
+}
+
+.corgi-response-example-header {
+  background-color: var(--md-corgi-neutral-200);
+  padding: 0.5rem 1rem;
+  font-weight: 500;
+  font-size: 0.8rem;
+  color: var(--md-corgi-neutral-700);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+[data-md-color-scheme="slate"] .corgi-response-example-header {
+  background-color: var(--md-corgi-neutral-700);
+  color: var(--md-corgi-neutral-200);
+}
+
+.corgi-response-example pre {
+  margin: 0;
+  padding: 1rem;
+}
+
+/* Visual refinements */
+.md-header {
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  position: relative;
+  overflow: hidden;
+}
+
+.md-header:after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(90deg, 
+    rgba(255, 255, 255, 0) 0%, 
+    rgba(255, 255, 255, 0.1) 50%, 
+    rgba(255, 255, 255, 0) 100%);
+  z-index: 0;
+  transform: translateX(-100%);
+  animation: header-shine 8s infinite;
+}
+
+@keyframes header-shine {
+  0% { transform: translateX(-100%); }
+  20%, 100% { transform: translateX(100%); }
+}
+
+[data-md-color-scheme="slate"] .md-header:after {
+  background: linear-gradient(90deg, 
+    rgba(255, 255, 255, 0) 0%, 
+    rgba(255, 255, 255, 0.05) 50%, 
+    rgba(255, 255, 255, 0) 100%);
+}
+
+/* API parameter tables */
+.corgi-param-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1.5rem 0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  overflow: hidden;
+  border-radius: 8px;
+}
+
+.corgi-param-table th,
+.corgi-param-table td {
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--md-corgi-neutral-100);
+  vertical-align: top;
+}
+
+[data-md-color-scheme="slate"] .corgi-param-table th,
+[data-md-color-scheme="slate"] .corgi-param-table td {
+  border-color: var(--md-corgi-neutral-700);
+}
+
+.corgi-param-table th {
+  background-color: var(--md-corgi-neutral-100);
+  color: var(--md-corgi-neutral-900);
+  font-weight: 600;
+  text-align: left;
+}
+
+[data-md-color-scheme="slate"] .corgi-param-table th {
+  background-color: var(--md-corgi-neutral-800);
+  color: var(--md-corgi-neutral-100);
+}
+
+.corgi-param-table th:first-child {
+  width: 20%;
+}
+
+.corgi-param-table th:nth-child(2) {
+  width: 15%;
+}
+
+.corgi-param-table th:nth-child(3) {
+  width: 15%;
+}
+
+.corgi-param-table td:nth-child(4) code {
+  word-break: break-all;
+}
+
+.corgi-param-table tr:nth-child(even) {
+  background-color: var(--md-corgi-neutral-50);
+}
+
+[data-md-color-scheme="slate"] .corgi-param-table tr:nth-child(even) {
+  background-color: var(--md-default-bg-color--light);
+}
+
+/* Required parameter badge */
+.corgi-param-required {
+  display: inline-block;
+  padding: 0.1rem 0.4rem;
+  border-radius: 4px;
+  background-color: var(--md-corgi-amber-500);
+  color: #000;
+  font-size: 0.7rem;
+  font-weight: 600;
+  margin-left: 0.5rem;
+  vertical-align: middle;
+}
+
+[data-md-color-scheme="slate"] .corgi-param-required {
+  background-color: #ffb300; /* Brighter amber for dark mode */
+  color: #000000; /* Black text for maximum contrast */
+  font-weight: 700; /* Slightly bolder text */
+}
+
+/* Animation for loading indicator (in code snippets that show progress) */
+@keyframes tail-wag {
+  0%, 100% { transform: rotate(-5deg); }
+  50% { transform: rotate(5deg); }
+}
+
+.tail-wagging {
+  display: inline-block;
+  transform-origin: center left;
+  animation: tail-wag 1s infinite ease-in-out;
+}
+
+/* Fix asset paths in the demo page */
+.corgi-live-demo .post-avatar,
+.corgi-card img,
+.demo-section img {
+  max-width: 100%;
+}
+
+/* Make sure demo works on mobile */
+@media (max-width: 768px) {
+  .demo-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .demo-controls {
+    width: 100%;
+    margin-top: 1rem;
+  }
+  
+  .post-recommendation-badge {
+    position: static;
+    margin-top: 0.5rem;
+  }
+  
+  .post-ranking-score {
+    margin-left: 0;
+    margin-top: 0.5rem;
+    display: block;
+    width: fit-content;
+  }
+  
+  .post-actions {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+}
+
+/* Fix demo button styles */
+.corgi-live-demo .corgi-button {
+  margin-top: 0;
+}
+
+/* Ensure scrollable content on smaller screens */
+.demo-content {
+  max-height: 700px;
+  overflow-y: auto;
+}
+
+/* Fix avatar image in posts */
+.post-avatar {
+  width: 64px !important;
+  height: 64px !important;
+  border-radius: 50% !important;
+  object-fit: cover !important;
+}
+
+/* Live demo styles */
+.corgi-live-demo {
+  margin: 2rem 0;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+  background-color: var(--md-default-bg-color);
+  border: 1px solid var(--md-corgi-neutral-100);
+  max-width: 100%;
+  width: 100%;
+  /* Make sure the content has some breathing room */
+  min-height: 800px;
+}
+
+[data-md-color-scheme="slate"] .corgi-live-demo {
+  border-color: var(--md-corgi-neutral-700);
+}
+
+.demo-header {
+  padding: 1.5rem 2rem;
+  background-color: var(--md-corgi-amber-500);
+  color: rgba(0, 0, 0, 0.87);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.demo-header h2 {
+  margin: 0;
+  color: rgba(0, 0, 0, 0.87) !important;
+  font-size: 1.5rem;
+}
+
+.demo-controls {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.demo-user-bar {
+  background-color: var(--md-default-bg-color);
+  border-bottom: 1px solid var(--md-corgi-neutral-100);
+  padding: 0.75rem 1.5rem;
+}
+
+[data-md-color-scheme="slate"] .demo-user-bar {
+  border-bottom-color: var(--md-corgi-neutral-700);
+}
+
+.demo-user {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.demo-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background-color: var(--md-corgi-amber-500);
+  background-image: url('../assets/corgi-mascot.png');
+  background-size: contain;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+.demo-username {
+  font-weight: 600;
+}
+
+.demo-instance {
+  font-size: 0.8rem;
+  color: var(--md-corgi-neutral-500);
+}
+
+.demo-tabs {
+  display: flex;
+  background-color: var(--md-default-bg-color);
+  border-bottom: 1px solid var(--md-corgi-neutral-100);
+  padding: 0 1rem;
+}
+
+[data-md-color-scheme="slate"] .demo-tabs {
+  border-bottom-color: var(--md-corgi-neutral-700);
+}
+
+.demo-tab {
+  padding: 1rem 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border-bottom: 3px solid transparent;
+  font-weight: 500;
+}
+
+.demo-tab:hover {
+  background-color: var(--md-corgi-neutral-50);
+}
+
+[data-md-color-scheme="slate"] .demo-tab:hover {
+  background-color: var(--md-corgi-neutral-800);
+}
+
+.demo-tab.active {
+  border-bottom-color: var(--md-corgi-amber-500);
+  font-weight: 600;
+}
+
+.demo-tab svg {
+  width: 20px;
+  height: 20px;
+  opacity: 0.8;
+}
+
+.demo-container {
+  height: 700px;
+}
+
+@media (max-width: 768px) {
+  .demo-tabs {
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+  
+  .demo-tab {
+    padding: 1rem;
+  }
+}
+
+.demo-content {
+  overflow-y: auto;
+  padding: 2rem;
+  background-color: var(--md-default-bg-color);
+  min-width: 300px;
+  height: 100%;
+}
+
+.demo-view {
+  height: 100%;
+  overflow-y: auto;
+}
+
+.demo-view.hidden {
+  display: none;
+}
+
+.demo-section-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.demo-section-header h3 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.demo-badge {
+  background-color: var(--md-corgi-amber-500);
+  color: rgba(0, 0, 0, 0.87);
+  padding: 0.25rem 0.5rem;
+  border-radius: 16px;
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+
+[data-md-color-scheme="slate"] .demo-badge {
+  background-color: #ffb300; /* Brighter amber for dark mode */
+  color: #000000; /* Black text for maximum contrast */
+  font-weight: 700; /* Slightly bolder text */
+}
+
+.demo-timeline, .demo-recommendations {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.demo-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 200px;
+  gap: 1rem;
+}
+
+.demo-loading-icon {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.spin {
+  animation: spin 1s linear infinite;
+}
+
+.demo-post {
+  border: 1px solid var(--md-corgi-neutral-100);
+  border-radius: 8px;
+  padding: 1.5rem;
+  background-color: var(--md-default-bg-color);
+  margin-bottom: 1.5rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.demo-post:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+[data-md-color-scheme="slate"] .demo-post {
+  border-color: var(--md-corgi-neutral-700);
+}
+
+.demo-post.is-recommendation {
+  border-left: 4px solid var(--md-corgi-amber-500);
+  padding-left: 2rem;
+}
+
+.post-header {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  margin-bottom: 1.5rem;
+  position: relative;
+  flex-wrap: wrap;
+}
+
+.post-avatar {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  object-fit: cover;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+.post-display-name {
+  font-weight: 600;
+  font-size: 1.1rem;
+}
+
+.post-username {
+  font-size: 0.9rem;
+  color: var(--md-corgi-neutral-500);
+  margin-top: 0.1rem;
+}
+
+.post-recommendation-badge {
+  display: inline-block;
+  background-color: var(--md-corgi-amber-500);
+  color: rgba(0, 0, 0, 0.87);
+  padding: 0.25rem 0.6rem;
+  border-radius: 16px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  margin-top: 0.25rem;
+  margin-bottom: 0.5rem;
+}
+
+[data-md-color-scheme="slate"] .post-recommendation-badge {
+  background-color: #ffb300; /* Brighter amber for dark mode */
+  color: #000000; /* Black text for maximum contrast */
+}
+
+/* This media query is no longer needed since we changed the position */
+
+.post-content {
+  margin-top: 0.5rem;
+  margin-bottom: 1.5rem;
+  font-size: 1.1rem;
+  line-height: 1.6;
+}
+
+.post-content a {
+  color: var(--md-typeset-a-color);
+  text-decoration: none;
+}
+
+.post-timestamp {
+  font-size: 0.9rem;
+  color: var(--md-corgi-neutral-500);
+  margin-bottom: 1rem;
+  display: inline-block;
+}
+
+.post-actions {
+  display: flex;
+  gap: 1.5rem;
+  align-items: center;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--md-corgi-neutral-100);
+}
+
+[data-md-color-scheme="slate"] .post-actions {
+  border-top-color: var(--md-corgi-neutral-700);
+}
+
+.post-action-reply, .post-action-reblog, .post-action-favorite {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: none;
+  border: none;
+  padding: 0.8rem 1rem;
+  border-radius: 8px;
+  cursor: pointer;
+  color: var(--md-corgi-neutral-500);
+  transition: color 0.2s ease, background-color 0.2s ease;
+  font-size: 1rem;
+}
+
+.post-action-reply:hover, .post-action-reblog:hover, .post-action-favorite:hover {
+  background-color: var(--md-corgi-neutral-100);
+  color: var(--md-corgi-neutral-900);
+}
+
+[data-md-color-scheme="slate"] .post-action-reply:hover,
+[data-md-color-scheme="slate"] .post-action-reblog:hover,
+[data-md-color-scheme="slate"] .post-action-favorite:hover {
+  background-color: var(--md-corgi-neutral-700);
+  color: var(--md-corgi-neutral-100);
+}
+
+.post-action-reblog.active {
+  color: #2196f3;
+}
+
+.post-action-favorite.active {
+  color: #f44336;
+}
+
+.post-action-reply svg,
+.post-action-reblog svg,
+.post-action-favorite svg {
+  width: 22px;
+  height: 22px;
+}
+
+.post-ranking-score {
+  display: inline-block;
+  font-size: 0.9rem;
+  color: var(--md-corgi-neutral-500);
+  background-color: var(--md-corgi-neutral-100);
+  padding: 0.35rem 0.7rem;
+  border-radius: 16px;
+  font-weight: 500;
+  margin-bottom: 0.75rem;
+}
+
+[data-md-color-scheme="slate"] .post-ranking-score {
+  background-color: var(--md-corgi-neutral-700);
+}
+
+@media (max-width: 768px) {
+  .post-ranking-score {
+    margin-left: 0;
+    margin-top: 0.5rem;
+  }
+}
+
+.demo-api-log {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.demo-api-empty {
+  text-align: center;
+  padding: 3rem;
+  color: var(--md-corgi-neutral-500);
+  font-size: 1.1rem;
+  background-color: var(--md-corgi-neutral-50);
+  border-radius: 8px;
+  border: 1px dashed var(--md-corgi-neutral-200);
+}
+
+[data-md-color-scheme="slate"] .demo-api-empty {
+  background-color: var(--md-corgi-neutral-800);
+  border-color: var(--md-corgi-neutral-700);
+}
+
+.demo-api-call {
+  border: 1px solid var(--md-corgi-neutral-100);
+  border-radius: 8px;
+  overflow: hidden;
+  margin-bottom: 1rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+[data-md-color-scheme="slate"] .demo-api-call {
+  border-color: var(--md-corgi-neutral-700);
+}
+
+.api-call-header {
+  padding: 1rem 1.25rem;
+  background-color: var(--md-corgi-neutral-100);
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+[data-md-color-scheme="slate"] .api-call-header {
+  background-color: var(--md-corgi-neutral-800);
+}
+
+.api-call-method {
+  font-weight: 700;
+  padding: 0.35rem 0.7rem;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-family: var(--md-code-font-family);
+  letter-spacing: 0.03em;
+}
+
+.api-call-method.get {
+  background-color: #e3f2fd;
+  color: #0277bd;
+}
+
+.api-call-method.post {
+  background-color: #e8f5e9;
+  color: #2e7d32;
+}
+
+.api-call-method.delete {
+  background-color: #ffebee;
+  color: #c62828;
+}
+
+[data-md-color-scheme="slate"] .api-call-method {
+  opacity: 0.9;
+}
+
+.api-call-endpoint {
+  font-family: var(--md-code-font-family);
+  font-weight: 500;
+  font-size: 1.05rem;
+}
+
+.api-call-status {
+  margin-left: auto;
+  padding: 0.35rem 0.7rem;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.api-call-status.status-2xx {
+  background-color: #e8f5e9;
+  color: #2e7d32;
+}
+
+.api-call-status.status-4xx, .api-call-status.status-5xx {
+  background-color: #ffebee;
+  color: #c62828;
+}
+
+.api-call-timestamp {
+  font-size: 0.9rem;
+  color: var(--md-corgi-neutral-500);
+}
+
+@media (max-width: 768px) {
+  .api-call-status {
+    margin-left: 0;
+    margin-top: 0.5rem;
+  }
+}
+
+.api-call-details {
+  padding: 1.5rem;
+}
+
+.api-call-section {
+  margin-bottom: 1.5rem;
+}
+
+.api-call-section-title {
+  font-weight: 600;
+  margin-bottom: 0.75rem;
+  font-size: 1rem;
+  color: var(--md-corgi-neutral-900);
+}
+
+[data-md-color-scheme="slate"] .api-call-section-title {
+  color: var(--md-corgi-neutral-100);
+}
+
+.api-call-code {
+  background-color: var(--md-corgi-neutral-50);
+  padding: 1rem;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  overflow-x: auto;
+  line-height: 1.5;
+  border: 1px solid var(--md-corgi-neutral-100);
+}
+
+[data-md-color-scheme="slate"] .api-call-code {
+  background-color: var(--md-corgi-neutral-800);
+  border-color: var(--md-corgi-neutral-700);
+}

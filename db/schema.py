@@ -3,11 +3,16 @@ Database schema definition module for the Corgi Recommender Service.
 
 This module defines the database tables and schema migrations for the Corgi
 recommender system, a PostgreSQL-backed recommendation engine for the fediverse.
+It also includes SQLite schema for testing with an in-memory database.
 """
 
 import logging
+import os
 
 logger = logging.getLogger(__name__)
+
+# Flag for in-memory SQLite mode
+USE_IN_MEMORY_DB = os.getenv("USE_IN_MEMORY_DB", "false").lower() == "true"
 
 # SQL to drop all tables (for dev resets)
 DROP_TABLES_SQL = """
@@ -185,6 +190,84 @@ def check_schema_version(conn):
         logger.error(f"Error checking schema version: {e}")
         return False
 
+# SQLite schema for in-memory testing mode
+CREATE_SQLITE_TABLES_SQL = """
+-- Table: users
+-- Stores basic user information for test data
+CREATE TABLE IF NOT EXISTS users (
+    user_id TEXT PRIMARY KEY,
+    username TEXT NOT NULL,
+    preferences TEXT DEFAULT '{}'
+);
+
+-- Table: posts
+-- Stores post content and basic metadata
+CREATE TABLE IF NOT EXISTS posts (
+    post_id TEXT PRIMARY KEY,
+    content TEXT NOT NULL,
+    author_id TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    metadata TEXT DEFAULT '{}'
+);
+
+-- Table: interactions
+-- Tracks user interactions with posts
+CREATE TABLE IF NOT EXISTS interactions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id TEXT NOT NULL,
+    post_id TEXT NOT NULL,
+    interaction_type TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(user_id, post_id, interaction_type)
+);
+
+-- Table: recommendations
+-- Stores recommendation data
+CREATE TABLE IF NOT EXISTS recommendations (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id TEXT NOT NULL,
+    post_id TEXT NOT NULL,
+    score REAL NOT NULL,
+    reason TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(user_id, post_id)
+);
+
+-- Table: privacy_settings
+-- Stores user privacy preferences
+CREATE TABLE IF NOT EXISTS privacy_settings (
+    user_id TEXT PRIMARY KEY,
+    tracking_level TEXT CHECK (tracking_level IN ('full', 'limited', 'none')) DEFAULT 'full',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+"""
+
+def create_sqlite_tables(conn):
+    """
+    Create SQLite tables for in-memory testing.
+    
+    Args:
+        conn: SQLite database connection
+    """
+    cursor = conn.cursor()
+    
+    # Create the tables
+    logger.info("Creating SQLite in-memory tables...")
+    cursor.executescript(CREATE_SQLITE_TABLES_SQL)
+    
+    # Create indexes
+    logger.info("Creating SQLite indexes...")
+    cursor.executescript("""
+        CREATE INDEX IF NOT EXISTS idx_interactions_user_id ON interactions(user_id);
+        CREATE INDEX IF NOT EXISTS idx_interactions_post_id ON interactions(post_id);
+        CREATE INDEX IF NOT EXISTS idx_posts_author_id ON posts(author_id);
+        CREATE INDEX IF NOT EXISTS idx_recommendations_user_id ON recommendations(user_id);
+    """)
+    
+    # Commit changes
+    conn.commit()
+    logger.info("SQLite in-memory database schema created successfully")
+
 def init_db(conn=None):
     """
     Initialize the database schema.
@@ -196,28 +279,45 @@ def init_db(conn=None):
     """
     if conn is None:
         from db.connection import get_db_connection
-        conn = get_db_connection()
-        auto_close = True
+        with get_db_connection() as conn:
+            if USE_IN_MEMORY_DB:
+                create_sqlite_tables(conn)
+            else:
+                try:
+                    # Check if tables exist first
+                    with conn.cursor() as cur:
+                        cur.execute("SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'post_metadata')")
+                        tables_exist = cur.fetchone()[0]
+                        
+                    if not tables_exist:
+                        # No tables, create them all
+                        create_tables(conn)
+                    else:
+                        # Tables exist, check if they need updates
+                        if not check_schema_version(conn):
+                            logger.info("Schema needs upgrade - performing migrations...")
+                            # Future: Add migration logic here
+                except Exception as e:
+                    logger.error(f"Database initialization error: {e}")
+                    raise
     else:
-        auto_close = False
-    
-    try:
-        # Check if tables exist first
-        with conn.cursor() as cur:
-            cur.execute("SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'post_metadata')")
-            tables_exist = cur.fetchone()[0]
-            
-        if not tables_exist:
-            # No tables, create them all
-            create_tables(conn)
+        if USE_IN_MEMORY_DB:
+            create_sqlite_tables(conn)
         else:
-            # Tables exist, check if they need updates
-            if not check_schema_version(conn):
-                logger.info("Schema needs upgrade - performing migrations...")
-                # Future: Add migration logic here
-    except Exception as e:
-        logger.error(f"Database initialization error: {e}")
-        raise
-    finally:
-        if auto_close:
-            conn.close()
+            try:
+                # Check if tables exist first
+                with conn.cursor() as cur:
+                    cur.execute("SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'post_metadata')")
+                    tables_exist = cur.fetchone()[0]
+                    
+                if not tables_exist:
+                    # No tables, create them all
+                    create_tables(conn)
+                else:
+                    # Tables exist, check if they need updates
+                    if not check_schema_version(conn):
+                        logger.info("Schema needs upgrade - performing migrations...")
+                        # Future: Add migration logic here
+            except Exception as e:
+                logger.error(f"Database initialization error: {e}")
+                raise

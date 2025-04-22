@@ -1,0 +1,112 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --color-primary: 255 179 0;
+    --color-primary-light: 255 213 79;
+    --color-primary-dark: 255 143 0;
+    
+    --color-accent: 255 87 34;
+    --color-accent-light: 255 138 101;
+    --color-accent-dark: 230 74 25;
+    
+    --color-background-light: 255 251 245;
+    --color-background-dark: 26 26 26;
+  }
+
+  .dark {
+    --color-primary: 255 143 0;
+    --color-primary-light: 255 179 0;
+    --color-primary-dark: 230 119 0;
+  }
+}
+
+@layer base {
+  body {
+    @apply bg-background-light dark:bg-background-dark text-neutral-800 dark:text-neutral-200;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-bold text-neutral-900 dark:text-neutral-50;
+  }
+
+  h1 {
+    @apply text-4xl mb-6;
+  }
+
+  h2 {
+    @apply text-3xl mt-12 mb-4;
+  }
+
+  h3 {
+    @apply text-2xl mt-8 mb-3;
+  }
+
+  p {
+    @apply mb-4 leading-relaxed;
+  }
+
+  a:not(.btn) {
+    @apply text-accent hover:text-accent-dark dark:text-accent-light dark:hover:text-accent transition-colors;
+  }
+
+  code:not(pre code) {
+    @apply font-mono text-sm px-1.5 py-0.5 rounded bg-neutral-100 dark:bg-neutral-800 text-accent-dark dark:text-accent-light;
+  }
+
+  pre {
+    @apply font-mono text-sm p-4 rounded-lg bg-neutral-100 dark:bg-neutral-800 overflow-x-auto mb-4;
+  }
+}
+
+@layer components {
+  .card {
+    @apply bg-white dark:bg-neutral-800 rounded-card shadow-card hover:shadow-card-hover transition-shadow p-6;
+  }
+
+  .btn {
+    @apply inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none;
+  }
+
+  .btn-primary {
+    @apply btn bg-primary text-neutral-900 hover:bg-primary-dark;
+  }
+
+  .btn-secondary {
+    @apply btn bg-neutral-200 dark:bg-neutral-700 text-neutral-900 dark:text-neutral-100 hover:bg-neutral-300 dark:hover:bg-neutral-600;
+  }
+  
+  .sidebar {
+    @apply w-64 h-screen fixed top-0 left-0 bg-white dark:bg-neutral-800 shadow-md z-40 transition-transform;
+  }
+
+  .main-content {
+    @apply ml-64 p-6;
+  }
+
+  .nav-link {
+    @apply block px-4 py-2 hover:bg-neutral-100 dark:hover:bg-neutral-700 transition-colors;
+  }
+
+  .nav-link.active {
+    @apply bg-primary-light/20 dark:bg-primary-dark/20 text-primary-dark dark:text-primary-light font-medium;
+  }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.5s ease-out forwards;
+}

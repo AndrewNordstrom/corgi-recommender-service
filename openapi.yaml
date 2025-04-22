@@ -5,6 +5,13 @@ info:
     API for the Corgi Recommender Service, a personalized recommendations system
     for Mastodon posts. The API handles user interactions, preferences, and generates
     personalized timelines.
+    
+    ## Key Features
+    - **User Interaction Tracking**: Records favorites, bookmarks, and explicit feedback
+    - **Personalized Recommendations**: Generates tailored post suggestions based on user activity
+    - **Privacy Controls**: Provides user-configurable privacy settings
+    - **Mastodon Compatibility**: Returns data in Mastodon-compatible format for easy integration
+    - **Transparent Proxy**: Proxies requests to Mastodon instances with added recommendations
   version: 1.0.0
   contact:
     name: Corgi Service Team
@@ -15,6 +22,24 @@ servers:
     description: Local development server
   - url: https://api.corgi-recommender.example.com
     description: Production server
+
+tags:
+  - name: interactions
+    description: Endpoints for logging and retrieving user interactions with posts
+  - name: privacy
+    description: User privacy settings management
+  - name: recommendations
+    description: Personalized post recommendations
+  - name: posts
+    description: Post management endpoints
+  - name: timelines
+    description: Mastodon-compatible timeline endpoints
+  - name: proxy
+    description: Transparent Mastodon proxy functionality
+  - name: health
+    description: Service health check endpoints
+  - name: rankings
+    description: Post ranking and scoring endpoints
 
 paths:
   /api/v1/interactions:
@@ -32,6 +57,12 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/InteractionRequest'
+            example:
+              user_alias: "user_12345"
+              post_id: "post_67890"
+              action_type: "favorite"
+              context:
+                source: "timeline_home"
       responses:
         '200':
           description: Interaction logged successfully
@@ -43,6 +74,10 @@ paths:
                   status:
                     type: string
                     example: ok
+                  interaction_id:
+                    type: string
+                    description: The ID of the logged interaction
+                    example: "interaction_12345"
         '400':
           $ref: '#/components/responses/BadRequest'
         '500':
@@ -88,6 +123,126 @@ paths:
         '500':
           $ref: '#/components/responses/ServerError'
 
+  /api/v1/interactions/counts/batch:
+    post:
+      summary: Get interaction counts for multiple posts in a single request
+      description: Efficiently retrieves interaction counts for a batch of posts
+      operationId: batchGetInteractionCounts
+      tags:
+        - interactions
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - post_ids
+              properties:
+                post_ids:
+                  type: array
+                  items:
+                    type: string
+                  description: Array of post IDs to get counts for
+            example:
+              post_ids: ["post_12345", "post_67890", "post_24680"]
+      responses:
+        '200':
+          description: Interaction counts for the requested posts
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  counts:
+                    type: object
+                    additionalProperties:
+                      $ref: '#/components/schemas/InteractionCounts'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /api/v1/interactions/user/{user_id}:
+    get:
+      summary: Get all interactions for a specific user
+      description: Retrieves interactions performed by a single user
+      operationId: getUserInteractions
+      tags:
+        - interactions
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The ID of the user to retrieve interactions for
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 50
+          description: Maximum number of interactions to return
+      responses:
+        '200':
+          description: User interactions
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user_id:
+                    type: string
+                  interactions:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Interaction'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /api/v1/interactions/favourites:
+    get:
+      summary: Get all posts favorited by a specific user
+      description: Retrieves posts that a user has marked as favorites
+      operationId: getUserFavorites
+      tags:
+        - interactions
+      parameters:
+        - name: user_id
+          in: query
+          required: true
+          schema:
+            type: string
+          description: The ID of the user to retrieve favorites for
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 20
+          description: Maximum number of favorites to return
+      responses:
+        '200':
+          description: Favorited posts
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user_id:
+                    type: string
+                  favorites:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/MastodonPost'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
   /api/v1/timelines/recommended:
     get:
       summary: Get personalized recommended timeline
@@ -97,6 +252,7 @@ paths:
         integrated into client applications.
       operationId: getRecommendedTimeline
       tags:
+        - timelines
         - recommendations
       parameters:
         - name: user_id
@@ -123,6 +279,252 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/MastodonPost'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /api/v1/timelines/home:
+    get:
+      summary: Get user's home timeline
+      description: |
+        Returns the user's home timeline, similar to a Mastodon home timeline.
+        For real users, the request is proxied to their Mastodon instance.
+        For test/synthetic users, returns mock data.
+      operationId: getHomeTimeline
+      tags:
+        - timelines
+        - proxy
+      parameters:
+        - name: user_id
+          in: query
+          required: false
+          schema:
+            type: string
+          description: The user ID to get timeline for (for testing/validation)
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 20
+          description: Maximum number of posts to return
+        - name: strategy
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [uniform, after_n, first_only, tag_match]
+          description: Injection strategy to use for recommended posts
+        - name: inject
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: true
+          description: Whether to inject recommended posts into the timeline
+      responses:
+        '200':
+          description: Home timeline posts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/MastodonPost'
+                description: Array of Mastodon-compatible posts, possibly with injected recommendations
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /api/v1/timelines/home/augmented:
+    get:
+      summary: Get augmented home timeline with recommendations
+      description: |
+        Returns the user's home timeline with personalized recommendations injected.
+        Can blend real Mastodon posts with recommended posts based on user preferences.
+      operationId: getAugmentedTimeline
+      tags:
+        - timelines
+        - recommendations
+        - proxy
+      parameters:
+        - name: user_id
+          in: query
+          required: false
+          schema:
+            type: string
+          description: The user ID to get timeline for (for testing/validation)
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 20
+          description: Maximum number of posts to return
+        - name: inject_recommendations
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: false
+          description: Whether to inject personalized recommendations into the timeline
+      responses:
+        '200':
+          description: Augmented timeline posts
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  timeline:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/MastodonPost'
+                  injected_count:
+                    type: integer
+                    description: Number of recommendations injected
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /api/v1/recommendations:
+    get:
+      summary: Get personalized recommendations
+      description: |
+        Returns personalized post recommendations for a user in a detailed format.
+        This endpoint provides more metadata and debugging information than the
+        /timelines/recommended endpoint.
+      operationId: getRecommendations
+      tags:
+        - recommendations
+      parameters:
+        - name: user_id
+          in: query
+          required: true
+          schema:
+            type: string
+          description: The user ID to get recommendations for
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 10
+          description: Maximum number of recommendations to return
+      responses:
+        '200':
+          description: Personalized recommendations
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user_id:
+                    type: string
+                  recommendations:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/MastodonPost'
+                  debug_info:
+                    type: object
+                    additionalProperties: true
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /api/v1/recommendations/real-posts:
+    get:
+      summary: Get only real Mastodon posts
+      description: |
+        Returns only posts retrieved from actual Mastodon instances,
+        without any synthetic or recommended content.
+      operationId: getRealPosts
+      tags:
+        - recommendations
+        - posts
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 20
+          description: Maximum number of posts to return
+      responses:
+        '200':
+          description: Real Mastodon posts
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  posts:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/MastodonPost'
+                  count:
+                    type: integer
+                  message:
+                    type: string
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /api/v1/rankings/generate:
+    post:
+      summary: Generate personalized rankings for a user
+      description: |
+        Creates or updates rankings for a user's timeline based on their
+        interaction history and preferences.
+      operationId: generateRankings
+      tags:
+        - rankings
+        - recommendations
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - user_id
+              properties:
+                user_id:
+                  type: string
+                  description: ID of the user to generate rankings for
+                force_refresh:
+                  type: boolean
+                  description: Force recalculation even if recent rankings exist
+                  default: false
+            example:
+              user_id: "user_12345"
+              force_refresh: true
+      responses:
+        '201':
+          description: New rankings were generated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  count:
+                    type: integer
+        '200':
+          description: Using existing recent rankings
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  count:
+                    type: integer
         '400':
           $ref: '#/components/responses/BadRequest'
         '500':
@@ -181,6 +583,9 @@ paths:
                   description: The user ID to update privacy settings for
                 tracking_level:
                   $ref: '#/components/schemas/TrackingLevel'
+            example:
+              user_id: "user_12345"
+              tracking_level: "limited"
       responses:
         '200':
           description: Privacy settings updated successfully
@@ -201,18 +606,420 @@ paths:
         '500':
           $ref: '#/components/responses/ServerError'
 
+  /api/v1/privacy/settings:
+    get:
+      summary: Get user privacy settings (Legacy)
+      description: Legacy endpoint for retrieving user privacy settings
+      operationId: getPrivacySettingsLegacy
+      deprecated: true
+      tags:
+        - privacy
+      parameters:
+        - name: user_id
+          in: query
+          required: true
+          schema:
+            type: string
+          description: The user ID to get privacy settings for
+      responses:
+        '200':
+          $ref: '#/components/responses/PrivacySettings'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    post:
+      summary: Update user privacy settings (Legacy)
+      description: Legacy endpoint for updating user privacy settings
+      operationId: updatePrivacySettingsLegacy
+      deprecated: true
+      tags:
+        - privacy
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - user_id
+                - tracking_level
+              properties:
+                user_id:
+                  type: string
+                  description: The user ID to update privacy settings for
+                tracking_level:
+                  $ref: '#/components/schemas/TrackingLevel'
+      responses:
+        '200':
+          $ref: '#/components/responses/PrivacySettings'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /api/v1/posts:
+    get:
+      summary: Get a list of posts
+      description: Retrieves a list of posts with optional filtering
+      operationId: getPosts
+      tags:
+        - posts
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 100
+          description: Maximum number of posts to return
+      responses:
+        '200':
+          description: List of posts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/MastodonPost'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    post:
+      summary: Create or update a post
+      description: Creates a new post or updates an existing one
+      operationId: createPost
+      tags:
+        - posts
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PostCreationRequest'
+      responses:
+        '201':
+          description: Post created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  post_id:
+                    type: string
+                  status:
+                    type: string
+                    example: created
+        '200':
+          description: Post updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  post_id:
+                    type: string
+                  status:
+                    type: string
+                    example: updated
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /api/v1/posts/{post_id}:
+    get:
+      summary: Get a specific post by ID
+      description: Retrieves a single post by its unique identifier
+      operationId: getPostById
+      tags:
+        - posts
+      parameters:
+        - name: post_id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The ID of the post to retrieve
+      responses:
+        '200':
+          description: Post details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MastodonPost'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /api/v1/posts/author/{author_id}:
+    get:
+      summary: Get all posts by a specific author
+      description: Retrieves all posts created by a single author
+      operationId: getPostsByAuthor
+      tags:
+        - posts
+      parameters:
+        - name: author_id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The ID of the author to retrieve posts for
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 20
+          description: Maximum number of posts to return
+      responses:
+        '200':
+          description: Posts by the author
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/MastodonPost'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /api/v1/posts/trending:
+    get:
+      summary: Get trending posts
+      description: Retrieves posts with the highest interaction counts
+      operationId: getTrendingPosts
+      tags:
+        - posts
+        - recommendations
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 10
+          description: Maximum number of posts to return
+      responses:
+        '200':
+          description: Trending posts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/MastodonPost'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /api/v1/proxy/status:
+    get:
+      summary: Check proxy status
+      description: Returns the status of the Mastodon proxy service
+      operationId: getProxyStatus
+      tags:
+        - proxy
+      responses:
+        '200':
+          description: Proxy status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+                  proxy:
+                    type: string
+                    example: active
+                  default_instance:
+                    type: string
+                    example: https://mastodon.social
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /api/v1/proxy/instance:
+    get:
+      summary: Detect Mastodon instance
+      description: Debug endpoint to see what instance would be detected for the current request
+      operationId: detectInstance
+      tags:
+        - proxy
+      responses:
+        '200':
+          description: Instance detection information
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detected_instance:
+                    type: string
+                    example: https://mastodon.social
+                  user_id:
+                    type: string
+                  headers:
+                    type: object
+                    additionalProperties: true
+                  args:
+                    type: object
+                    additionalProperties: true
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /api/v1/proxy/metrics:
+    get:
+      summary: Get proxy metrics
+      description: Returns metrics about proxy usage
+      operationId: getProxyMetrics
+      tags:
+        - proxy
+      parameters:
+        - name: reset
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: ["true", "false"]
+          description: If 'true', resets metrics after retrieval
+      responses:
+        '200':
+          description: Proxy metrics
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  total_requests:
+                    type: integer
+                  successful_requests:
+                    type: integer
+                  failed_requests:
+                    type: integer
+                  timeline_requests:
+                    type: integer
+                  enriched_timelines:
+                    type: integer
+                  total_recommendations:
+                    type: integer
+                  avg_latency_seconds:
+                    type: number
+                    format: float
+                  enrichment_rate:
+                    type: number
+                    format: float
+                  sample_size:
+                    type: integer
+                  uptime_seconds:
+                    type: number
+                  recent_errors:
+                    type: array
+                    items:
+                      type: object
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /health:
+    get:
+      summary: Service health check
+      description: |
+        Checks if the service is healthy and all dependencies are accessible.
+        Returns detailed information about database connectivity and service status.
+      operationId: healthCheck
+      tags:
+        - health
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: healthy
+                  database:
+                    type: string
+                    example: connected (SQLite in-memory)
+                  database_config:
+                    type: object
+                    properties:
+                      mode:
+                        type: string
+                      type:
+                        type: string
+                  timestamp:
+                    type: string
+                    format: date-time
+                  hostname:
+                    type: string
+                  platform:
+                    type: string
+                  version:
+                    type: string
+        '500':
+          description: Service is unhealthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: unhealthy
+                  error:
+                    type: string
+                  details:
+                    type: object
+                    additionalProperties: true
+
+  /api/v1/health:
+    get:
+      summary: API health check
+      description: API-specific health check endpoint
+      operationId: apiHealthCheck
+      tags:
+        - health
+      responses:
+        '200':
+          description: API is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: healthy
+                  database:
+                    type: string
+                  api_version:
+                    type: string
+                  timestamp:
+                    type: string
+                    format: date-time
+        '500':
+          $ref: '#/components/responses/ServerError'
+
 components:
   schemas:
     InteractionRequest:
       type: object
       required:
-        - user_alias
         - post_id
         - action_type
       properties:
         user_alias:
           type: string
-          description: Unique identifier for the user
+          description: Pseudonymized identifier for the user
+        user_id:
+          type: string
+          description: Alternative direct user identifier
         post_id:
           type: string
           description: Unique identifier for the post
@@ -232,6 +1039,30 @@ components:
             source:
               type: string
               description: Source of the interaction (e.g., timeline_home)
+
+    Interaction:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Unique identifier for the interaction
+        user_alias:
+          type: string
+          description: Pseudonymized identifier for the user
+        post_id:
+          type: string
+          description: Identifier for the post interacted with
+        action_type:
+          type: string
+          description: Type of interaction (favorite, bookmark, etc.)
+        created_at:
+          type: string
+          format: date-time
+          description: When the interaction occurred
+        context:
+          type: object
+          description: Additional context about the interaction
+          additionalProperties: true
 
     InteractionCounts:
       type: object
@@ -312,6 +1143,16 @@ components:
           type: string
           format: uri
           description: URL to the post
+        sensitive:
+          type: boolean
+          description: Whether the post contains sensitive content
+        spoiler_text:
+          type: string
+          description: Content warning text
+        visibility:
+          type: string
+          enum: [public, unlisted, private, direct]
+          description: Visibility level of the post
         ranking_score:
           type: number
           format: float
@@ -321,12 +1162,73 @@ components:
         recommendation_reason:
           type: string
           description: Human-readable reason for recommendation
+        is_recommendation:
+          type: boolean
+          description: Whether this post was added as a recommendation
         is_real_mastodon_post:
           type: boolean
           description: Whether this is a real Mastodon post (vs. synthetic)
         is_synthetic:
           type: boolean
           description: Whether this is a synthetic post
+        injected:
+          type: boolean
+          description: Whether this post was injected by the recommendation system
+        injection_metadata:
+          type: object
+          description: Metadata about the injected recommendation post
+          properties:
+            source:
+              type: string
+              description: Source of the recommendation (e.g., recommendation_engine, timeline_injector)
+              example: recommendation_engine
+            strategy:
+              type: string
+              description: Strategy used for the recommendation (e.g., personalized, tag_match)
+              example: personalized
+            explanation:
+              type: string
+              description: Human-readable explanation for why this post was recommended
+              example: Suggested based on your recent interests in #python and #opensource
+            score:
+              type: number
+              format: float
+              description: Recommendation confidence score (0-1)
+              example: 0.87
+
+    PostCreationRequest:
+      type: object
+      required:
+        - content
+        - author_id
+      properties:
+        post_id:
+          type: string
+          description: Optional ID for the post (generated if not provided)
+        content:
+          type: string
+          description: HTML content of the post
+        author_id:
+          type: string
+          description: ID of the author
+        author_name:
+          type: string
+          description: Username of the author
+        language:
+          type: string
+          description: ISO language code (default "en")
+        tags:
+          type: array
+          items:
+            type: string
+          description: Hashtags associated with the post
+        sensitive:
+          type: boolean
+          description: Whether the post contains sensitive content
+        metadata:
+          type: object
+          description: Additional metadata for the post
+          additionalProperties: true
 
     TrackingLevel:
       type: string
@@ -375,3 +1277,20 @@ components:
                 type: string
               type:
                 type: string
+              request_id:
+                type: string
+
+    PrivacySettings:
+      description: User privacy settings
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              user_id:
+                type: string
+              tracking_level:
+                $ref: '#/components/schemas/TrackingLevel'
+              status:
+                type: string
+                example: ok

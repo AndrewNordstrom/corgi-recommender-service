@@ -8,7 +8,7 @@ import logging
 import json
 from flask import Blueprint, request, jsonify
 
-from db.connection import get_db_connection
+from db.connection import get_db_connection, get_cursor, USE_IN_MEMORY_DB
 from utils.logging_decorator import log_route
 
 # Set up logging
@@ -112,8 +112,12 @@ def create_post():
     
     # Check if this is an update to an existing post
     with get_db_connection() as conn:
-        with conn.cursor() as cur:
-            cur.execute("SELECT 1 FROM post_metadata WHERE post_id = %s", (post_id,))
+        with get_cursor(conn) as cur:
+            # Adjust for SQLite vs PostgreSQL
+            placeholder = "?" if USE_IN_MEMORY_DB else "%s"
+            
+            query = f"SELECT 1 FROM posts WHERE post_id = {placeholder}"
+            cur.execute(query, (post_id,))
             is_update = cur.fetchone() is not None
             
             # Full post info is required for new posts
@@ -129,48 +133,88 @@ def create_post():
             interaction_counts = data.get('interaction_counts', {})
             mastodon_post = data.get('mastodon_post')
             
-            # Handle different update scenarios
-            if is_update and interaction_counts and not (author_id or author_name or content):
-                # Only updating interaction counts
-                cur.execute('''
-                    UPDATE post_metadata
-                    SET interaction_counts = %s
-                    WHERE post_id = %s
-                    RETURNING post_id
-                ''', (json.dumps(interaction_counts), post_id))
+            # Adapt for SQLite vs PostgreSQL
+            if USE_IN_MEMORY_DB:
+                # SQLite simpler version
+                if is_update:
+                    cur.execute('''
+                        UPDATE posts
+                        SET content = ?, metadata = ?
+                        WHERE post_id = ?
+                    ''', (
+                        content,
+                        json.dumps({
+                            "interaction_counts": interaction_counts,
+                            "content_type": content_type
+                        }),
+                        post_id
+                    ))
+                else:
+                    cur.execute('''
+                        INSERT INTO posts 
+                        (post_id, author_id, content, created_at, metadata)
+                        VALUES (?, ?, ?, ?, ?)
+                    ''', (
+                        post_id, 
+                        author_id, 
+                        content, 
+                        created_at, 
+                        json.dumps({
+                            "author_name": author_name,
+                            "content_type": content_type,
+                            "interaction_counts": interaction_counts,
+                            "mastodon_post": mastodon_post
+                        })
+                    ))
+                
+                conn.commit()
+                return jsonify({
+                    "message": "Post saved successfully",
+                    "post_id": post_id
+                }), 201
             else:
-                # Full insert or update
-                cur.execute('''
-                    INSERT INTO post_metadata 
-                    (post_id, author_id, author_name, content, content_type, created_at, 
-                     interaction_counts, mastodon_post)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-                    ON CONFLICT (post_id) 
-                    DO UPDATE SET 
-                        content = COALESCE(EXCLUDED.content, post_metadata.content),
-                        author_name = COALESCE(EXCLUDED.author_name, post_metadata.author_name),
-                        content_type = COALESCE(EXCLUDED.content_type, post_metadata.content_type),
-                        interaction_counts = EXCLUDED.interaction_counts,
-                        mastodon_post = COALESCE(EXCLUDED.mastodon_post, post_metadata.mastodon_post)
-                    RETURNING post_id
-                ''', (
-                    post_id, 
-                    author_id, 
-                    author_name, 
-                    content, 
-                    content_type, 
-                    created_at, 
-                    json.dumps(interaction_counts),
-                    json.dumps(mastodon_post) if mastodon_post else None
-                ))
-            
-            result = cur.fetchone()
-            conn.commit()
-            
-            return jsonify({
-                "message": "Post saved successfully",
-                "post_id": result[0]
-            }), 201
+                # PostgreSQL original version with upsert
+                if is_update and interaction_counts and not (author_id or author_name or content):
+                    # Only updating interaction counts
+                    cur.execute('''
+                        UPDATE post_metadata
+                        SET interaction_counts = %s
+                        WHERE post_id = %s
+                        RETURNING post_id
+                    ''', (json.dumps(interaction_counts), post_id))
+                else:
+                    # Full insert or update
+                    cur.execute('''
+                        INSERT INTO post_metadata 
+                        (post_id, author_id, author_name, content, content_type, created_at, 
+                         interaction_counts, mastodon_post)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                        ON CONFLICT (post_id) 
+                        DO UPDATE SET 
+                            content = COALESCE(EXCLUDED.content, post_metadata.content),
+                            author_name = COALESCE(EXCLUDED.author_name, post_metadata.author_name),
+                            content_type = COALESCE(EXCLUDED.content_type, post_metadata.content_type),
+                            interaction_counts = EXCLUDED.interaction_counts,
+                            mastodon_post = COALESCE(EXCLUDED.mastodon_post, post_metadata.mastodon_post)
+                        RETURNING post_id
+                    ''', (
+                        post_id, 
+                        author_id, 
+                        author_name, 
+                        content, 
+                        content_type, 
+                        created_at, 
+                        json.dumps(interaction_counts),
+                        json.dumps(mastodon_post) if mastodon_post else None
+                    ))
+                
+                result = cur.fetchone()
+                conn.commit()
+                
+                return jsonify({
+                    "message": "Post saved successfully",
+                    "post_id": result[0]
+                }), 201
 
 @posts_bp.route('/<post_id>', methods=['GET'])
 @log_route
@@ -187,44 +231,82 @@ def get_post(post_id):
         500 Server Error on failure
     """
     with get_db_connection() as conn:
-        with conn.cursor() as cur:
-            cur.execute('''
-                SELECT post_id, author_id, author_name, content, content_type, created_at, 
-                       interaction_counts, mastodon_post
-                FROM post_metadata
-                WHERE post_id = %s
-            ''', (post_id,))
-            
-            post_data = cur.fetchone()
-    
-    if not post_data:
-        return jsonify({"message": "Post not found"}), 404
-    
-    # Check if we have a Mastodon-compatible post version
-    mastodon_post = post_data[7]
-    
-    if mastodon_post:
-        # If we have a mastodon_post field, return that directly
-        try:
-            if isinstance(mastodon_post, str):
-                mastodon_post = json.loads(mastodon_post)
-            return jsonify(mastodon_post)
-        except Exception as e:
-            logger.error(f"Error parsing mastodon_post JSON: {e}")
-            # Fall back to legacy format if JSON parsing fails
-    
-    # Fall back to legacy post format
-    return jsonify({
-        "id": post_data[0],  # Use "id" instead of "post_id" for Mastodon compatibility
-        "author_id": post_data[1],
-        "author_name": post_data[2],
-        "content": post_data[3],
-        "content_type": post_data[4],
-        "created_at": post_data[5].isoformat() if post_data[5] else None,
-        "favourites_count": post_data[6].get("favorites", 0) if post_data[6] else 0,
-        "reblogs_count": post_data[6].get("reblogs", 0) if post_data[6] else 0,
-        "replies_count": post_data[6].get("replies", 0) if post_data[6] else 0
-    })
+        with get_cursor(conn) as cur:
+            if USE_IN_MEMORY_DB:
+                # SQLite version
+                cur.execute('''
+                    SELECT post_id, author_id, content, created_at, metadata
+                    FROM posts
+                    WHERE post_id = ?
+                ''', (post_id,))
+                
+                post_data = cur.fetchone()
+                
+                if not post_data:
+                    return jsonify({"message": "Post not found"}), 404
+                
+                # Parse metadata from SQLite
+                metadata = json.loads(post_data[4]) if post_data[4] else {}
+                author_name = metadata.get("author_name", "")
+                content_type = metadata.get("content_type", "text")
+                interaction_counts = metadata.get("interaction_counts", {})
+                mastodon_post = metadata.get("mastodon_post")
+                
+                if mastodon_post:
+                    # If we have a mastodon_post field, return that directly
+                    return jsonify(mastodon_post)
+                
+                # Fall back to legacy post format
+                return jsonify({
+                    "id": post_data[0],  # Use "id" instead of "post_id" for Mastodon compatibility
+                    "author_id": post_data[1],
+                    "author_name": author_name,
+                    "content": post_data[2],
+                    "content_type": content_type,
+                    "created_at": post_data[3],
+                    "favourites_count": interaction_counts.get("favorites", 0),
+                    "reblogs_count": interaction_counts.get("reblogs", 0),
+                    "replies_count": interaction_counts.get("replies", 0)
+                })
+            else:
+                # PostgreSQL version
+                cur.execute('''
+                    SELECT post_id, author_id, author_name, content, content_type, created_at, 
+                           interaction_counts, mastodon_post
+                    FROM post_metadata
+                    WHERE post_id = %s
+                ''', (post_id,))
+                
+                post_data = cur.fetchone()
+                
+                if not post_data:
+                    return jsonify({"message": "Post not found"}), 404
+                
+                # Check if we have a Mastodon-compatible post version
+                mastodon_post = post_data[7]
+                
+                if mastodon_post:
+                    # If we have a mastodon_post field, return that directly
+                    try:
+                        if isinstance(mastodon_post, str):
+                            mastodon_post = json.loads(mastodon_post)
+                        return jsonify(mastodon_post)
+                    except Exception as e:
+                        logger.error(f"Error parsing mastodon_post JSON: {e}")
+                        # Fall back to legacy format if JSON parsing fails
+                
+                # Fall back to legacy post format
+                return jsonify({
+                    "id": post_data[0],  # Use "id" instead of "post_id" for Mastodon compatibility
+                    "author_id": post_data[1],
+                    "author_name": post_data[2],
+                    "content": post_data[3],
+                    "content_type": post_data[4],
+                    "created_at": post_data[5].isoformat() if post_data[5] else None,
+                    "favourites_count": post_data[6].get("favorites", 0) if post_data[6] else 0,
+                    "reblogs_count": post_data[6].get("reblogs", 0) if post_data[6] else 0,
+                    "replies_count": post_data[6].get("replies", 0) if post_data[6] else 0
+                })
 
 @posts_bp.route('/author/<author_id>', methods=['GET'])
 @log_route

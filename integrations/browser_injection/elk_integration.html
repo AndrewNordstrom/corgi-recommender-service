@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Elk Post Enhancer</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        pre {
+            background-color: #f5f5f5;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+            white-space: pre-wrap;
+        }
+        .code-container {
+            max-height: 350px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-top: 10px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .steps {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-left: 4px solid #4CAF50;
+            margin-bottom: 20px;
+        }
+        h3 {
+            margin-top: 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>Elk Post Enhancer</h1>
+    <p>This tool will help you add profile link and recommendation badge features to Elk without modifying the Vue components directly.</p>
+    
+    <div class="steps">
+        <h3>Step 1: Start Elk with the Corgi backend</h3>
+        <p>First, make sure your Corgi backend is running on port 5004:</p>
+        <pre>cd /Users/andrewnordstrom/corgi-recommender-service
+python3 special_proxy_fixed.py --port 5004</pre>
+        <p>Then, in a separate terminal, run the Elk frontend:</p>
+        <pre>cd /Users/andrewnordstrom/elk-clean-repo/elk
+export PORT=3013
+export NUXT_PUBLIC_DEFAULT_SERVER="localhost:5004"
+export NUXT_PUBLIC_DISABLE_SERVER_SIDE_AUTH=true
+npm run dev</pre>
+    </div>
+    
+    <div class="steps">
+        <h3>Step 2: Open Elk in your browser</h3>
+        <p>Open this URL in your browser: <a href="http://localhost:3013" target="_blank">http://localhost:3013</a></p>
+    </div>
+    
+    <div class="steps">
+        <h3>Step 3: Inject the enhancer script</h3>
+        <p>Open your browser's developer console (F12 or Cmd+Option+I), go to the Console tab, and paste the script below:</p>
+        
+        <div class="code-container">
+            <pre id="enhancerScript"></pre>
+        </div>
+        
+        <button id="copyButton">Copy Script to Clipboard</button>
+    </div>
+    
+    <div class="steps">
+        <h3>Step 4: Verify the enhancements</h3>
+        <p>After injecting the script, you should see:</p>
+        <ul>
+            <li>Recommendation badges on posts marked with <code>is_recommendation: true</code></li>
+            <li>Clickable profile pictures and usernames that link to the user's profile URL</li>
+        </ul>
+        <p>If you reload the page, you'll need to inject the script again.</p>
+    </div>
+    
+    <div class="steps">
+        <h3>For permanent integration</h3>
+        <p>For a more permanent solution, consider:</p>
+        <ol>
+            <li>Using a browser extension like "User JavaScript and CSS" to automatically inject this script</li>
+            <li>Updating the Vue components directly once you resolve the syntax issues</li>
+            <li>Creating a custom build of Elk with these features integrated</li>
+        </ol>
+    </div>
+
+    <script>
+        // Load the enhancer script
+        fetch('./simple_elk_integration.js')
+            .then(response => response.text())
+            .then(scriptText => {
+                document.getElementById('enhancerScript').textContent = scriptText;
+            });
+        
+        // Copy script to clipboard
+        document.getElementById('copyButton').addEventListener('click', function() {
+            const scriptText = document.getElementById('enhancerScript').textContent;
+            navigator.clipboard.writeText(scriptText)
+                .then(() => {
+                    alert('Script copied to clipboard! Now paste it into your browser console on the Elk page.');
+                })
+                .catch(err => {
+                    console.error('Failed to copy: ', err);
+                    alert('Failed to copy. Please select the text manually and copy it.');
+                });
+        });
+    </script>
+</body>
+</html>

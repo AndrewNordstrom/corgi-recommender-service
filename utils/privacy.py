@@ -9,6 +9,7 @@ This module provides functions for handling user privacy, including:
 import hashlib
 import logging
 from config import USER_HASH_SALT
+from db.connection import USE_IN_MEMORY_DB, get_cursor
 
 logger = logging.getLogger(__name__)
 
@@ -38,11 +39,17 @@ def get_user_privacy_level(conn, user_id):
     Returns:
         str: Privacy level ('full', 'limited', or 'none')
     """
-    with conn.cursor() as cur:
-        cur.execute(
-            "SELECT tracking_level FROM privacy_settings WHERE user_id = %s", 
-            (user_id,)
-        )
+    with get_cursor(conn) as cur:
+        placeholder = "?" if USE_IN_MEMORY_DB else "%s"
+        
+        # Select based on database type
+        if USE_IN_MEMORY_DB:
+            table_name = "privacy_settings"
+        else:
+            table_name = "privacy_settings"
+            
+        query = f"SELECT tracking_level FROM {table_name} WHERE user_id = {placeholder}"
+        cur.execute(query, (user_id,))
         result = cur.fetchone()
         
         if result:
@@ -68,13 +75,32 @@ def update_user_privacy_level(conn, user_id, tracking_level):
         return False
     
     try:
-        with conn.cursor() as cur:
-            cur.execute('''
-                INSERT INTO privacy_settings (user_id, tracking_level)
-                VALUES (%s, %s)
-                ON CONFLICT (user_id) 
-                DO UPDATE SET tracking_level = EXCLUDED.tracking_level
-            ''', (user_id, tracking_level))
+        with get_cursor(conn) as cur:
+            if USE_IN_MEMORY_DB:
+                # SQLite version
+                # Check if record exists
+                cur.execute("SELECT 1 FROM privacy_settings WHERE user_id = ?", (user_id,))
+                if cur.fetchone():
+                    # Update existing
+                    cur.execute('''
+                        UPDATE privacy_settings 
+                        SET tracking_level = ?
+                        WHERE user_id = ?
+                    ''', (tracking_level, user_id))
+                else:
+                    # Insert new
+                    cur.execute('''
+                        INSERT INTO privacy_settings (user_id, tracking_level)
+                        VALUES (?, ?)
+                    ''', (user_id, tracking_level))
+            else:
+                # PostgreSQL version with UPSERT
+                cur.execute('''
+                    INSERT INTO privacy_settings (user_id, tracking_level)
+                    VALUES (%s, %s)
+                    ON CONFLICT (user_id) 
+                    DO UPDATE SET tracking_level = EXCLUDED.tracking_level
+                ''', (user_id, tracking_level))
         conn.commit()
         return True
     except Exception as e:

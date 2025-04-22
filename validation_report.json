@@ -1,0 +1,25 @@
+{
+  "timestamp": "2025-04-17T17:43:45.216097",
+  "total_users": 10,
+  "total_posts": 0,
+  "total_interactions": 0,
+  "checks": {
+    "recommendations": {
+      "status": "fail",
+      "error": "Ranking generation failed with status 403"
+    },
+    "feedback": {
+      "status": "fail",
+      "error": "No posts available"
+    },
+    "privacy": {
+      "status": "fail",
+      "error": "No posts available"
+    }
+  },
+  "summary": {
+    "recommendations": "fail",
+    "feedback": "fail",
+    "privacy": "fail"
+  }
+}

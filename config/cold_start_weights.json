@@ -1,0 +1,7 @@
+{
+  "random_ratio": 0.7,
+  "weighted_ratio": 0.3,
+  "evolution_rate": 0.1,
+  "min_weighted_ratio": 0.3,
+  "max_weighted_ratio": 1.0
+}

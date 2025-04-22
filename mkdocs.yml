@@ -1,0 +1,150 @@
+site_name: Corgi
+site_description: A privacy-aware recommendation engine for the Fediverse
+site_author: Corgi Team
+copyright: "2025"
+
+theme:
+  name: material
+  palette:
+    # Light mode
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: amber
+      accent: deep orange
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+    # Dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: amber
+      accent: deep orange
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+  features:
+    - navigation.instant
+    - navigation.tracking
+    - navigation.sections
+    - navigation.expand
+    - navigation.indexes
+    - navigation.top
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - content.tabs.link
+    - header.autohide
+    - navigation.footer
+  logo: assets/logo-icon.png
+  icon:
+    repo: fontawesome/brands/github
+  font:
+    text: Inter
+    code: JetBrains Mono
+  custom_dir: docs/overrides
+
+extra_css:
+  - stylesheets/extra.css
+
+extra_javascript:
+  - assets/js/diagram-zoom.js
+
+plugins:
+  - search
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - md_in_html
+  - pymdownx.details
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.keys
+  - pymdownx.smartsymbols
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - toc:
+      permalink: true
+      toc_depth: 3
+
+nav:
+  - Introduction: index.md
+  - Getting Started: getting-started.md
+  - Quickstart: quickstart.md
+  - Live Demo: demo.md
+  - Pitch Deck: pitch.md
+  - Concepts:
+    - How Corgi Works: concepts.md
+    - Architecture: architecture.md
+    - Privacy Design: concepts/privacy.md
+    - Proxy Architecture: concepts/proxy.md
+    - Recommendation Engine: concepts/recommendations.md
+    - Self-Hosting: concepts/self-hosting.md
+  - Recommender System:
+    - Cold Start Strategy: cold_start_strategy.md
+    - Adaptive Cold Start: cold_start_adaptive.md
+  - API Reference:
+    - Overview: api/overview.md
+    - Documentation Guide: api-documentation.md
+    - Endpoints:
+      - Timelines: endpoints/timelines.md
+      - Recommendations: endpoints/recommendations.md
+      - Interactions: endpoints/interactions.md
+      - Feedback: endpoints/feedback.md
+      - Posts: endpoints/posts.md
+      - Privacy Settings: endpoints/privacy.md
+      - Proxy: endpoints/proxy.md
+      - Timeline Injection: endpoints/timeline_injection.md
+  - Integrations:
+    - Elk Integration: elk_integration.md
+    - Mastodon Proxy: proxy.md
+  - Guides:
+    - Deployment: deployment.md
+    - Agent Framework: agent_guide.md
+    - Validator: validator-guide.md
+    - Client Integration: client/README.md
+  - Examples:
+    - Elk Integration: examples/elk.md
+    - Python Client: examples/python.md
+    - CLI Tool: examples/cli.md
+  - Compatibility: COMPATIBILITY.md
+  - FAQ: faq.md
+
+repo_name: andrewnordstrom/corgi-recommender-service
+repo_url: https://github.com/andrewnordstrom/corgi-recommender-service
+edit_uri: edit/main/docs/
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/andrewnordstrom/corgi-recommender-service
+    - icon: fontawesome/brands/mastodon
+      link: https://mastodon.social/@corgi
+  analytics:
+    provider: google
+    property: !ENV GOOGLE_ANALYTICS_KEY
+  consent:
+    title: Cookie consent
+    description: >-
+      We use cookies to recognize your repeated visits and preferences, as well
+      as to measure the effectiveness of our documentation and whether users
+      find what they're searching for. With your consent, you're helping us to
+      make our documentation better.
+  version:
+    provider: mike
+  favicon: assets/favicon/favicon.ico

@@ -1,0 +1,327 @@
+<!-- Post.vue - A Vue component for displaying Mastodon posts in Elk -->
+<template>
+  <div class="post" :class="{ 'post--recommendation': post.is_recommendation }">
+    <!-- Post header with user info -->
+    <div class="post__header">
+      <!-- Avatar (clickable) -->
+      <a 
+        :href="post.account.url" 
+        target="_blank" 
+        class="post__avatar-link"
+      >
+        <img 
+          :src="post.account.avatar" 
+          :alt="post.account.display_name" 
+          class="post__avatar" 
+        />
+      </a>
+      
+      <div class="post__user-info">
+        <!-- Display name (clickable) -->
+        <a 
+          :href="post.account.url" 
+          target="_blank" 
+          class="post__display-name"
+        >
+          {{ post.account.display_name }}
+        </a>
+        
+        <!-- Username (clickable) -->
+        <a 
+          :href="post.account.url" 
+          target="_blank" 
+          class="post__username"
+        >
+          @{{ post.account.username }}
+        </a>
+        
+        <!-- Timestamp -->
+        <span class="post__timestamp">
+          {{ formatDate(post.created_at) }}
+        </span>
+      </div>
+    </div>
+    
+    <!-- Post content -->
+    <div 
+      class="post__content" 
+      v-html="post.content"
+    ></div>
+    
+    <!-- Post media attachments (if any) -->
+    <div 
+      v-if="post.media_attachments && post.media_attachments.length > 0"
+      class="post__media"
+    >
+      <div 
+        v-for="(media, index) in post.media_attachments" 
+        :key="index"
+        class="post__media-item"
+      >
+        <img 
+          v-if="media.type === 'image'"
+          :src="media.url"
+          :alt="media.description || ''"
+          class="post__media-image"
+        />
+        <video 
+          v-else-if="media.type === 'video'"
+          :src="media.url"
+          controls
+          class="post__media-video"
+        ></video>
+      </div>
+    </div>
+    
+    <!-- Post tags -->
+    <div 
+      v-if="post.tags && post.tags.length > 0"
+      class="post__tags"
+    >
+      <span 
+        v-for="tag in post.tags" 
+        :key="tag"
+        class="post__tag"
+      >
+        #{{ tag }}
+      </span>
+    </div>
+    
+    <!-- Post actions -->
+    <div class="post__actions">
+      <button class="post__action post__action--like">
+        <span class="post__action-icon">❤️</span>
+        <span class="post__action-count">{{ post.favourites_count }}</span>
+      </button>
+      
+      <button class="post__action post__action--boost">
+        <span class="post__action-icon">🔄</span>
+        <span class="post__action-count">{{ post.reblogs_count }}</span>
+      </button>
+      
+      <button class="post__action post__action--reply">
+        <span class="post__action-icon">💬</span>
+        <span class="post__action-count">{{ post.replies_count }}</span>
+      </button>
+    </div>
+  </div>
+</template>
+
+<script>
+export default {
+  name: 'Post',
+  
+  props: {
+    post: {
+      type: Object,
+      required: true
+    }
+  },
+  
+  methods: {
+    formatDate(dateString) {
+      const date = new Date(dateString);
+      return new Intl.DateTimeFormat('en-US', {
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      }).format(date);
+    }
+  }
+};
+</script>
+
+<style>
+.post {
+  padding: 16px;
+  border-bottom: 1px solid var(--border-color, #e6e6e6);
+  transition: background-color 0.2s;
+}
+
+.post--recommendation {
+  background-color: var(--recommendation-bg, rgba(29, 155, 240, 0.1));
+  position: relative;
+}
+
+.post--recommendation::before {
+  content: 'Recommended';
+  position: absolute;
+  top: 0;
+  right: 0;
+  background-color: var(--primary-color, #1d9bf0);
+  color: white;
+  font-size: 12px;
+  font-weight: bold;
+  padding: 2px 8px;
+  border-bottom-left-radius: 8px;
+}
+
+.post__header {
+  display: flex;
+  margin-bottom: 12px;
+}
+
+.post__avatar-link {
+  margin-right: 12px;
+  flex-shrink: 0;
+}
+
+.post__avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  object-fit: cover;
+  transition: opacity 0.2s;
+}
+
+.post__avatar:hover {
+  opacity: 0.9;
+}
+
+.post__user-info {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  flex: 1;
+}
+
+.post__display-name {
+  font-weight: bold;
+  color: var(--text-color, #000);
+  text-decoration: none;
+  margin-right: 8px;
+}
+
+.post__display-name:hover {
+  text-decoration: underline;
+}
+
+.post__username {
+  color: var(--secondary-text-color, #6e767d);
+  text-decoration: none;
+  font-size: 14px;
+}
+
+.post__username:hover {
+  text-decoration: underline;
+}
+
+.post__timestamp {
+  color: var(--secondary-text-color, #6e767d);
+  font-size: 14px;
+  margin-left: auto;
+}
+
+.post__content {
+  margin-bottom: 12px;
+  word-break: break-word;
+  overflow-wrap: break-word;
+}
+
+.post__content a {
+  color: var(--link-color, #1d9bf0);
+  text-decoration: none;
+}
+
+.post__content a:hover {
+  text-decoration: underline;
+}
+
+.post__media {
+  margin-bottom: 12px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  grid-gap: 8px;
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.post__media-item {
+  position: relative;
+  overflow: hidden;
+  border-radius: 4px;
+}
+
+.post__media-image,
+.post__media-video {
+  width: 100%;
+  max-height: 300px;
+  object-fit: cover;
+}
+
+.post__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.post__tag {
+  background-color: var(--tag-bg, #f2f2f2);
+  color: var(--secondary-text-color, #6e767d);
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.post__actions {
+  display: flex;
+  gap: 24px;
+}
+
+.post__action {
+  display: flex;
+  align-items: center;
+  background: none;
+  border: none;
+  padding: 8px 0;
+  color: var(--secondary-text-color, #6e767d);
+  cursor: pointer;
+}
+
+.post__action:hover {
+  color: var(--primary-color, #1d9bf0);
+}
+
+.post__action--like:hover {
+  color: var(--like-color, #e0245e);
+}
+
+.post__action-icon {
+  margin-right: 4px;
+}
+
+.post__action-count {
+  font-size: 14px;
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .post {
+    border-bottom-color: var(--dark-border-color, #2f3336);
+  }
+  
+  .post__display-name {
+    color: var(--dark-text-color, #e7e9ea);
+  }
+  
+  .post__username,
+  .post__timestamp {
+    color: var(--dark-secondary-text-color, #71767b);
+  }
+  
+  .post__content {
+    color: var(--dark-text-color, #e7e9ea);
+  }
+  
+  .post__tag {
+    background-color: var(--dark-tag-bg, #2f3336);
+    color: var(--dark-secondary-text-color, #71767b);
+  }
+  
+  .post__action {
+    color: var(--dark-secondary-text-color, #71767b);
+  }
+}
+</style>

@@ -9,9 +9,10 @@ import logging
 import json
 from flask import Blueprint, request, jsonify
 
-from db.connection import get_db_connection
+from db.connection import get_db_connection, get_cursor, USE_IN_MEMORY_DB
 from utils.privacy import generate_user_alias, get_user_privacy_level
 from utils.logging_decorator import log_route
+from utils.metrics import track_recommendation_interaction
 
 # Set up logging
 logger = logging.getLogger(__name__)
@@ -35,6 +36,16 @@ def log_interaction():
         }
     }
     
+    Also supports using user_id instead of user_alias:
+    {
+        "user_id": "user123",
+        "post_id": "xyz789",
+        "action_type": "favorite",
+        "context": {
+            "source": "timeline_home"
+        }
+    }
+    
     Returns:
         200 OK on success
         400 Bad Request if required fields are missing
@@ -42,12 +53,19 @@ def log_interaction():
     """
     data = request.json
     
-    # Validate required fields
+    # Support both user_alias and user_id
     user_alias = data.get('user_alias')
+    user_id = data.get('user_id')
+    
+    # If user_id is provided but not user_alias, generate an alias
+    if not user_alias and user_id:
+        user_alias = generate_user_alias(user_id)
+        
     post_id = data.get('post_id')
     action_type = data.get('action_type')
     context = data.get('context', {})
     
+    # Validate required fields
     if not all([user_alias, post_id, action_type]):
         return jsonify({
             "error": "Missing required fields",
@@ -68,69 +86,166 @@ def log_interaction():
     action_type = ACTION_TYPE_MAPPING.get(action_type, action_type)
     
     with get_db_connection() as conn:
-        with conn.cursor() as cur:
-            # Remove conflicting binary actions if necessary
-            # (e.g., remove "less_like_this" if action is "more_like_this")
-            conflicting_action = "more_like_this" if action_type == "less_like_this" else "less_like_this"
-            cur.execute('''
-                DELETE FROM interactions 
-                WHERE user_alias = %s AND post_id = %s AND action_type = %s
-            ''', (user_alias, post_id, conflicting_action))
+        with get_cursor(conn) as cur:
+            # Use correct placeholder based on database type
+            placeholder = "?" if USE_IN_MEMORY_DB else "%s"
             
-            # Check if this is a new interaction or an update
-            cur.execute('''
-                SELECT id FROM interactions
-                WHERE user_alias = %s AND post_id = %s AND action_type = %s
-            ''', (user_alias, post_id, action_type))
-            
-            existing_interaction = cur.fetchone()
-            is_new = existing_interaction is None
-            
-            # Insert or update the interaction
-            cur.execute('''
-                INSERT INTO interactions 
-                (user_alias, post_id, action_type, context)
-                VALUES (%s, %s, %s, %s)
-                ON CONFLICT (user_alias, post_id, action_type) 
-                DO UPDATE SET 
-                    context = EXCLUDED.context,
-                    created_at = CURRENT_TIMESTAMP
-                RETURNING id
-            ''', (user_alias, post_id, action_type, json.dumps(context)))
-            
-            result = cur.fetchone()
-            
-            # Update post interaction counts if necessary
-            if is_new and action_type in ['favorite', 'reblog', 'reply', 'bookmark', 'favourited']:
-                try:
-                    # Increment the appropriate counter in post_metadata
-                    field_name = {
-                        'favorite': 'favorites',
-                        'favourite': 'favorites',
-                        'favourited': 'favorites',
-                        'reblog': 'reblogs',
-                        'reply': 'replies',
-                        'bookmark': 'bookmarks'
-                    }.get(action_type)
+            if USE_IN_MEMORY_DB:
+                # SQLite version - simplified for in-memory database
+                
+                # Check if this is a new interaction or an update
+                cur.execute(f'''
+                    SELECT id FROM interactions
+                    WHERE user_id = ? AND post_id = ? AND interaction_type = ?
+                ''', (user_alias, post_id, action_type))
+                
+                existing_interaction = cur.fetchone()
+                is_new = existing_interaction is None
+                
+                # Remove conflicting binary actions
+                conflicting_action = "more_like_this" if action_type == "less_like_this" else "less_like_this"
+                cur.execute(f'''
+                    DELETE FROM interactions 
+                    WHERE user_id = ? AND post_id = ? AND interaction_type = ?
+                ''', (user_alias, post_id, conflicting_action))
+                
+                if is_new:
+                    # Insert new interaction
+                    cur.execute(f'''
+                        INSERT INTO interactions 
+                        (user_id, post_id, interaction_type)
+                        VALUES (?, ?, ?)
+                    ''', (user_alias, post_id, action_type))
+                else:
+                    # Update existing interaction timestamp
+                    cur.execute(f'''
+                        UPDATE interactions
+                        SET created_at = datetime('now')
+                        WHERE user_id = ? AND post_id = ? AND interaction_type = ?
+                    ''', (user_alias, post_id, action_type))
+                
+                conn.commit()
+                
+                # Track metrics for interactions with recommendations
+                is_injected = context.get('injected', False)
+                track_recommendation_interaction(action_type, is_injected)
+                
+                return jsonify({
+                    "status": "ok",
+                    "message": "Interaction logged successfully"
+                }), 200
+            else:
+                # PostgreSQL version with full features
+                # First, check if the post exists in post_metadata, and if not, add it
+                cur.execute(f'''
+                    SELECT post_id FROM post_metadata
+                    WHERE post_id = {placeholder}
+                ''', (post_id,))
+                
+                post_exists = cur.fetchone() is not None
+                
+                if not post_exists:
+                    # Post doesn't exist in metadata, so we need to add a stub entry
+                    # to satisfy the foreign key constraint
+                    logger.info(f"Post {post_id} not found in post_metadata, adding stub entry")
+                    try:
+                        # Parse any available metadata from context
+                        author_id = context.get('author_id', 'unknown')
+                        author_name = context.get('author_name', 'Unknown Author')
+                        created_at = context.get('created_at', None)
+                        
+                        # Insert a minimal entry to satisfy the foreign key constraint
+                        cur.execute(f'''
+                            INSERT INTO post_metadata 
+                            (post_id, author_id, author_name, created_at, mastodon_post)
+                            VALUES ({placeholder}, {placeholder}, {placeholder}, 
+                                    COALESCE({placeholder}, CURRENT_TIMESTAMP), {placeholder})
+                            ON CONFLICT (post_id) DO NOTHING
+                        ''', (post_id, author_id, author_name, created_at, json.dumps({
+                            "id": post_id,
+                            "content": context.get('content', 'Stub post content'),
+                            "is_stub": True
+                        })))
+                        
+                        post_exists = True
+                        logger.info(f"Successfully added stub entry for post {post_id}")
+                    except Exception as e:
+                        logger.error(f"Error adding stub entry for post {post_id}: {e}")
+                        return jsonify({
+                            "error": f"Failed to create stub entry for post: {e}"
+                        }), 500
+                
+                if post_exists:
+                    # Remove conflicting binary actions if necessary
+                    conflicting_action = "more_like_this" if action_type == "less_like_this" else "less_like_this"
+                    cur.execute(f'''
+                        DELETE FROM interactions 
+                        WHERE user_alias = {placeholder} AND post_id = {placeholder} AND action_type = {placeholder}
+                    ''', (user_alias, post_id, conflicting_action))
                     
-                    if field_name:
-                        cur.execute('''
-                            UPDATE post_metadata
-                            SET interaction_counts = jsonb_set(
-                                COALESCE(interaction_counts, '{}'::jsonb),
-                                %s,
-                                (COALESCE((interaction_counts->%s)::int, 0) + 1)::text::jsonb
-                            )
-                            WHERE post_id = %s
-                        ''', ([field_name], field_name, post_id))
-                except Exception as e:
-                    logger.error(f"Error updating post interaction counts: {e}")
-            
-            conn.commit()
-            
-            return jsonify({
-                "status": "ok"
-            }), 200
+                    # Check if this is a new interaction or an update
+                    cur.execute(f'''
+                        SELECT id FROM interactions
+                        WHERE user_alias = {placeholder} AND post_id = {placeholder} AND action_type = {placeholder}
+                    ''', (user_alias, post_id, action_type))
+                    
+                    existing_interaction = cur.fetchone()
+                    is_new = existing_interaction is None
+                    
+                    # Insert or update the interaction
+                    cur.execute(f'''
+                        INSERT INTO interactions 
+                        (user_alias, post_id, action_type, context)
+                        VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder})
+                        ON CONFLICT (user_alias, post_id, action_type) 
+                        DO UPDATE SET 
+                            context = EXCLUDED.context,
+                            created_at = CURRENT_TIMESTAMP
+                        RETURNING id
+                    ''', (user_alias, post_id, action_type, json.dumps(context)))
+                    
+                    result = cur.fetchone()
+                else:
+                    # If we couldn't create the post entry for some reason, return an error
+                    return jsonify({
+                        "error": f"Cannot log interaction: post {post_id} does not exist and could not be created"
+                    }), 400
+                
+                # Update post interaction counts if necessary
+                if is_new and action_type in ['favorite', 'reblog', 'reply', 'bookmark', 'favourited']:
+                    try:
+                        # Increment the appropriate counter in post_metadata
+                        field_name = {
+                            'favorite': 'favorites',
+                            'favourite': 'favorites',
+                            'favourited': 'favorites',
+                            'reblog': 'reblogs',
+                            'reply': 'replies',
+                            'bookmark': 'bookmarks'
+                        }.get(action_type)
+                        
+                        if field_name:
+                            cur.execute(f'''
+                                UPDATE post_metadata
+                                SET interaction_counts = jsonb_set(
+                                    COALESCE(interaction_counts, '{{}}'::jsonb),
+                                    {placeholder},
+                                    (COALESCE((interaction_counts->{placeholder})::int, 0) + 1)::text::jsonb
+                                )
+                                WHERE post_id = {placeholder}
+                            ''', ([field_name], field_name, post_id))
+                    except Exception as e:
+                        logger.error(f"Error updating post interaction counts: {e}")
+                
+                conn.commit()
+                
+                # Track metrics for interactions with recommendations
+                is_injected = context.get('injected', False)
+                track_recommendation_interaction(action_type, is_injected)
+                
+                return jsonify({
+                    "status": "ok"
+                }), 200
 
 @interactions_bp.route('/<post_id>', methods=['GET'])
 @log_route
@@ -147,13 +262,18 @@ def get_interactions_by_post(post_id):
         500 Server Error on failure
     """
     with get_db_connection() as conn:
-        with conn.cursor() as cur:
-            cur.execute('''
-                SELECT action_type, COUNT(*) as count
+        with get_cursor(conn) as cur:
+            # Use appropriate placeholder and column names based on database type
+            placeholder = "?" if USE_IN_MEMORY_DB else "%s"
+            action_column = "interaction_type" if USE_IN_MEMORY_DB else "action_type"
+            
+            query = f'''
+                SELECT {action_column}, COUNT(*) as count
                 FROM interactions
-                WHERE post_id = %s
-                GROUP BY action_type
-            ''', (post_id,))
+                WHERE post_id = {placeholder}
+                GROUP BY {action_column}
+            '''
+            cur.execute(query, (post_id,))
             
             interactions = cur.fetchall()
     
@@ -222,26 +342,46 @@ def get_interactions_counts_batch():
         return jsonify({"error": "Too many post_ids. Maximum 100 allowed."}), 400
     
     with get_db_connection() as conn:
-        with conn.cursor() as cur:
-            if len(post_ids) == 1:
-                # Special case for a single post
-                cur.execute('''
-                    SELECT post_id, action_type, COUNT(*) as count
-                    FROM interactions
-                    WHERE post_id = %s
-                    GROUP BY post_id, action_type
-                ''', (post_ids[0],))
-            else:
-                # Multiple posts case
-                post_ids_tuple = tuple(post_ids)
-                cur.execute('''
-                    SELECT post_id, action_type, COUNT(*) as count
-                    FROM interactions
-                    WHERE post_id IN %s
-                    GROUP BY post_id, action_type
-                ''', (post_ids_tuple,))
+        with get_cursor(conn) as cur:
+            # Use appropriate placeholder and column names based on database type
+            placeholder = "?" if USE_IN_MEMORY_DB else "%s"
+            action_column = "interaction_type" if USE_IN_MEMORY_DB else "action_type"
             
-            interactions = cur.fetchall()
+            if USE_IN_MEMORY_DB:
+                # SQLite doesn't have a direct equivalent for tuple IN operator,
+                # so we'll query each post individually and combine results
+                interactions = []
+                
+                for post_id in post_ids:
+                    query = f'''
+                        SELECT post_id, {action_column}, COUNT(*) as count
+                        FROM interactions
+                        WHERE post_id = {placeholder}
+                        GROUP BY post_id, {action_column}
+                    '''
+                    cur.execute(query, (post_id,))
+                    interactions.extend(cur.fetchall())
+            else:
+                # PostgreSQL version
+                if len(post_ids) == 1:
+                    # Special case for a single post
+                    cur.execute(f'''
+                        SELECT post_id, action_type, COUNT(*) as count
+                        FROM interactions
+                        WHERE post_id = {placeholder}
+                        GROUP BY post_id, action_type
+                    ''', (post_ids[0],))
+                else:
+                    # Multiple posts case
+                    post_ids_tuple = tuple(post_ids)
+                    cur.execute(f'''
+                        SELECT post_id, action_type, COUNT(*) as count
+                        FROM interactions
+                        WHERE post_id IN {placeholder}
+                        GROUP BY post_id, action_type
+                    ''', (post_ids_tuple,))
+                
+                interactions = cur.fetchall()
     
     # Standardizing action types
     ACTION_TYPE_MAPPING = {
@@ -300,9 +440,6 @@ def get_user_interactions_data(user_id):
     # Validate user_id
     if not user_id:
         return jsonify({"error": "Missing user_id parameter"}), 400
-        
-    # Check privacy settings for this user
-    from db.connection import get_db_connection
     
     # Pseudonymize user ID for privacy
     user_alias = generate_user_alias(user_id)
@@ -324,15 +461,21 @@ def get_user_interactions_data(user_id):
         # For limited privacy, we'll only return interaction types, not content
         limited_privacy = (privacy_level == 'limited')
         
-        with conn.cursor() as cur:
+        with get_cursor(conn) as cur:
+            # Use appropriate placeholder and column names based on database type
+            placeholder = "?" if USE_IN_MEMORY_DB else "%s"
+            action_column = "interaction_type" if USE_IN_MEMORY_DB else "action_type"
+            user_column = "user_id" if USE_IN_MEMORY_DB else "user_alias"
+            
             if limited_privacy:
                 # Limited privacy - only return action types and counts
-                cur.execute('''
-                    SELECT action_type, COUNT(*) as count
+                query = f'''
+                    SELECT {action_column}, COUNT(*) as count
                     FROM interactions
-                    WHERE user_alias = %s
-                    GROUP BY action_type
-                ''', (user_alias,))
+                    WHERE {user_column} = {placeholder}
+                    GROUP BY {action_column}
+                '''
+                cur.execute(query, (user_alias,))
                 
                 interaction_counts = cur.fetchall()
                 
@@ -348,14 +491,36 @@ def get_user_interactions_data(user_id):
                 })
             else:
                 # Full privacy - return all interaction data
-                cur.execute('''
-                    SELECT post_id, action_type, context, created_at
-                    FROM interactions
-                    WHERE user_alias = %s
-                    ORDER BY created_at DESC
-                ''', (user_alias,))
-                
-                interactions = cur.fetchall()
+                if USE_IN_MEMORY_DB:
+                    # SQLite version
+                    query = f'''
+                        SELECT post_id, {action_column}, created_at
+                        FROM interactions
+                        WHERE {user_column} = {placeholder}
+                        ORDER BY created_at DESC
+                    '''
+                    cur.execute(query, (user_alias,))
+                    
+                    # SQLite doesn't store context in separate field
+                    # Also, the created_at is already a string in SQLite, not a datetime object
+                    rows = cur.fetchall()
+                    interactions = []
+                    for row in rows:
+                        post_id = row[0]
+                        action_type = row[1]
+                        created_at = row[2]  # Already a string, so don't call isoformat()
+                        context = {}  # Empty context for SQLite
+                        interactions.append((post_id, action_type, context, created_at))
+                else:
+                    # PostgreSQL version
+                    query = f'''
+                        SELECT post_id, action_type, context, created_at
+                        FROM interactions
+                        WHERE user_alias = {placeholder}
+                        ORDER BY created_at DESC
+                    '''
+                    cur.execute(query, (user_alias,))
+                    interactions = cur.fetchall()
     
     if not interactions:
         return jsonify({"message": "No interactions found for this user"}), 404
@@ -367,7 +532,7 @@ def get_user_interactions_data(user_id):
                 "post_id": row[0],
                 "action_type": row[1],
                 "context": row[2],
-                "created_at": row[3].isoformat() if row[3] else None
+                "created_at": row[3].isoformat() if hasattr(row[3], 'isoformat') else row[3]
             }
             for row in interactions
         ]
@@ -397,13 +562,19 @@ def get_user_favourites():
     user_alias = generate_user_alias(user_id)
     
     with get_db_connection() as conn:
-        with conn.cursor() as cur:
-            cur.execute('''
+        with get_cursor(conn) as cur:
+            # Use appropriate placeholder and column names based on database type
+            placeholder = "?" if USE_IN_MEMORY_DB else "%s"
+            action_column = "interaction_type" if USE_IN_MEMORY_DB else "action_type"
+            user_column = "user_id" if USE_IN_MEMORY_DB else "user_alias"
+            
+            query = f'''
                 SELECT post_id, created_at
                 FROM interactions
-                WHERE user_alias = %s AND action_type = 'favorite'
+                WHERE {user_column} = {placeholder} AND {action_column} = {placeholder}
                 ORDER BY created_at DESC
-            ''', (user_alias,))
+            '''
+            cur.execute(query, (user_alias, 'favorite'))
             
             favourites = cur.fetchall()
     
@@ -415,7 +586,7 @@ def get_user_favourites():
         "favourites": [
             {
                 "post_id": row[0],
-                "created_at": row[1].isoformat() if row[1] else None
+                "created_at": row[1].isoformat() if hasattr(row[1], 'isoformat') else row[1]
             }
             for row in favourites
         ]

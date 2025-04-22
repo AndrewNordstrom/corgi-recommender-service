@@ -1,0 +1,733 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Corgi Recommender Setup</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        :root {
+            --corgi-orange: #FF9A3C;
+            --corgi-cream: #FFF8E8;
+            --corgi-brown: #754C24;
+            --corgi-dark: #3E2723;
+            --mastodon-purple: #6364FF;
+        }
+        
+        body {
+            padding-top: 20px;
+            padding-bottom: 20px;
+            background-color: var(--corgi-cream);
+            color: var(--corgi-dark);
+        }
+        .card {
+            margin-bottom: 20px;
+            box-shadow: 0 0.125rem 0.5rem rgba(0, 0, 0, 0.1);
+            border: none;
+            border-radius: 10px;
+        }
+        .card-header {
+            background-color: var(--corgi-orange);
+            color: white;
+            font-weight: bold;
+            border-top-left-radius: 10px !important;
+            border-top-right-radius: 10px !important;
+        }
+        .btn-primary {
+            background-color: var(--corgi-orange);
+            border-color: var(--corgi-orange);
+        }
+        .btn-primary:hover {
+            background-color: #e87f00;
+            border-color: #e87f00;
+        }
+        .btn-success {
+            background-color: var(--mastodon-purple);
+            border-color: var(--mastodon-purple);
+        }
+        .btn-success:hover {
+            background-color: #4d4dff;
+            border-color: #4d4dff;
+        }
+        .logo {
+            max-height: 120px;
+            margin-bottom: 20px;
+        }
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 5px;
+        }
+        .status-healthy {
+            background-color: #28a745;
+        }
+        .status-unhealthy {
+            background-color: #dc3545;
+        }
+        .status-unknown {
+            background-color: #ffc107;
+        }
+        #output-area {
+            background-color: var(--corgi-dark);
+            color: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .brand-header {
+            color: var(--corgi-brown);
+            margin-bottom: 15px;
+            font-weight: bold;
+        }
+        .brand-tagline {
+            color: var(--corgi-brown);
+            margin-bottom: 30px;
+            font-style: italic;
+        }
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid var(--corgi-orange);
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 2s linear infinite;
+            display: inline-block;
+            margin-right: 10px;
+            vertical-align: middle;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .corgi-emoji {
+            font-size: 2.5rem;
+            margin-bottom: 15px;
+        }
+        
+        .demo-button {
+            background: linear-gradient(135deg, var(--corgi-orange) 0%, var(--mastodon-purple) 100%);
+            color: white;
+            border: none;
+            font-weight: bold;
+            padding: 10px 20px;
+            margin: 20px 0;
+            border-radius: 30px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+        }
+        
+        .demo-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 8px rgba(0,0,0,0.15);
+            color: white;
+        }
+        
+        .mastodon-note {
+            font-size: 0.9rem;
+            color: var(--mastodon-purple);
+            margin-top: 5px;
+        }
+        
+        .feature-icon {
+            background-color: var(--corgi-orange);
+            color: white;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="text-center">
+            <div class="corgi-emoji">🐕</div>
+            <h1 class="brand-header">Corgi Recommender Service</h1>
+            <p class="brand-tagline">Personalized content recommendations for the Fediverse</p>
+            <div class="alert alert-warning d-inline-block">
+                <i class="fas fa-info-circle"></i> Demo Mode - For testing and presentations only
+            </div>
+        </div>
+        
+        <div class="row">
+            <!-- System Status Card -->
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <span>System Status</span>
+                        <button id="refresh-status" class="btn btn-sm btn-outline-primary">Refresh</button>
+                    </div>
+                    <div class="card-body">
+                        <div class="d-flex align-items-center mb-3">
+                            <span class="status-indicator status-unknown" id="health-indicator"></span>
+                            <span id="health-status">Checking health status...</span>
+                        </div>
+                        <div class="mb-3">
+                            <strong>Database:</strong> <span id="db-status">Unknown</span>
+                        </div>
+                        <div class="mb-3">
+                            <strong>Environment:</strong> <span id="env-status">Unknown</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Validation Results Card -->
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <span>Validator Results</span>
+                        <button id="refresh-validation" class="btn btn-sm btn-outline-primary">Refresh</button>
+                    </div>
+                    <div class="card-body">
+                        <div id="validation-results">
+                            <p>No validation results available. Run the validator first.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Configuration Card -->
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">Instance Configuration</div>
+                    <div class="card-body">
+                        <form id="config-form">
+                            <div class="mb-3">
+                                <label for="mastodon-instance" class="form-label">Mastodon Instance</label>
+                                <select class="form-select" id="mastodon-instance">
+                                    <option value="">Loading instances...</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label for="custom-instance" class="form-label">Or enter custom instance:</label>
+                                <input type="text" class="form-control" id="custom-instance" placeholder="E.g., mastodon.example.com">
+                            </div>
+                            <div class="mb-3">
+                                <label for="access-token" class="form-label">Access Token (simulated)</label>
+                                <input type="text" class="form-control" id="access-token" placeholder="Enter access token">
+                            </div>
+                            <div class="mb-3">
+                                <label for="privacy-level" class="form-label">Privacy Level</label>
+                                <select class="form-select" id="privacy-level">
+                                    <option value="full">Full (track all interactions)</option>
+                                    <option value="limited">Limited (aggregate data only)</option>
+                                    <option value="none">None (no tracking)</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label for="user-id" class="form-label">User ID (for testing)</label>
+                                <input type="text" class="form-control" id="user-id" value="demo_user_1234">
+                            </div>
+                            <button type="submit" class="btn btn-primary">Apply Configuration</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Quick Demo Button -->
+        <div class="text-center mb-4">
+            <button id="one-click-demo" class="btn demo-button btn-lg">
+                <i class="fas fa-rocket"></i> One-Click Demo
+            </button>
+            <p class="text-muted small">Runs validation and launches a tech_fan agent</p>
+        </div>
+        
+        <!-- Actions Card -->
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-cogs"></i> System Actions
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h5><span class="feature-icon"><i class="fas fa-check"></i></span> Validation</h5>
+                        <div class="d-grid gap-2">
+                            <button id="run-final-test" class="btn btn-outline-primary">
+                                <i class="fas fa-vial"></i> Run final-test
+                            </button>
+                            <button id="run-dry-validate" class="btn btn-outline-info">
+                                <i class="fas fa-clipboard-check"></i> Run dry-validate
+                            </button>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <h5><span class="feature-icon"><i class="fas fa-robot"></i></span> Agent Management</h5>
+                        <div class="mb-3">
+                            <label for="agent-profile" class="form-label">Select Agent Profile</label>
+                            <select class="form-select" id="agent-profile">
+                                <option value="">Loading profiles...</option>
+                            </select>
+                        </div>
+                        <button id="launch-agent" class="btn btn-success">
+                            <i class="fas fa-play"></i> Launch Agent
+                        </button>
+                        <p class="mastodon-note">
+                            <i class="fab fa-mastodon"></i> Simulates user behavior on Mastodon
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Output Card -->
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="fas fa-terminal"></i> Command Output</span>
+                <button id="clear-output" class="btn btn-sm btn-outline-light">
+                    <i class="fas fa-eraser"></i> Clear
+                </button>
+            </div>
+            <div class="card-body">
+                <div id="output-area">Welcome to Corgi Recommender Setup GUI! 🐕</div>
+            </div>
+        </div>
+        
+        <!-- Footer -->
+        <footer class="mt-4 text-center text-muted small">
+            <p>Corgi Recommender Service &copy; 2025 | Demo GUI for internal use only</p>
+            <p>
+                <a href="https://github.com/your-repo/corgi-recommender-service" class="text-decoration-none text-muted">
+                    <i class="fab fa-github"></i> GitHub
+                </a> |
+                <a href="https://mastodon.social/@corgi_recommender" class="text-decoration-none text-muted">
+                    <i class="fab fa-mastodon"></i> Mastodon
+                </a>
+            </p>
+        </footer>
+    </div>
+
+    <script>
+        // Helper function to show output
+        function showOutput(message, isError = false) {
+            const outputArea = document.getElementById('output-area');
+            const timestamp = new Date().toLocaleTimeString();
+            outputArea.innerHTML += `\n[${timestamp}] ${isError ? '❌ ERROR: ' : ''}${message}`;
+            outputArea.scrollTop = outputArea.scrollHeight;
+        }
+        
+        // Helper function to show loading spinner
+        function showLoading(elementId, isLoading) {
+            const element = document.getElementById(elementId);
+            if (isLoading) {
+                element.disabled = true;
+                element.innerHTML = `<span class="loader"></span> ${element.textContent}`;
+            } else {
+                element.disabled = false;
+                element.innerHTML = element.textContent;
+            }
+        }
+        
+        // Fetch health status
+        async function checkHealth() {
+            try {
+                const response = await fetch('/setup/api/health');
+                const data = await response.json();
+                
+                if (data.status === 'ok') {
+                    const healthData = data.health;
+                    const healthStatus = healthData.status;
+                    
+                    // Update health indicator
+                    const indicator = document.getElementById('health-indicator');
+                    indicator.className = 'status-indicator status-' + 
+                        (healthStatus === 'healthy' ? 'healthy' : 'unhealthy');
+                    
+                    // Update health status text
+                    document.getElementById('health-status').textContent = 
+                        healthStatus === 'healthy' ? 'System is healthy' : 'System has issues';
+                    
+                    // Update database status
+                    document.getElementById('db-status').textContent = 
+                        healthData.database === 'connected' ? 'Connected' : 'Disconnected';
+                    
+                    // Update environment status
+                    document.getElementById('env-status').textContent = 
+                        healthData.platform || 'Unknown';
+                    
+                    showOutput('Health check completed');
+                } else {
+                    throw new Error(data.message || 'Unknown health check error');
+                }
+            } catch (error) {
+                showOutput(`Health check failed: ${error.message}`, true);
+                document.getElementById('health-indicator').className = 'status-indicator status-unhealthy';
+                document.getElementById('health-status').textContent = 'Health check failed';
+            }
+        }
+        
+        // Fetch Mastodon instances
+        async function loadMastodonInstances() {
+            try {
+                const response = await fetch('/setup/api/mastodon-instances');
+                const data = await response.json();
+                
+                if (data.status === 'ok') {
+                    const instanceSelect = document.getElementById('mastodon-instance');
+                    instanceSelect.innerHTML = '<option value="">Select an instance</option>';
+                    
+                    data.instances.forEach(instance => {
+                        const option = document.createElement('option');
+                        option.value = instance.url;
+                        option.textContent = instance.name;
+                        instanceSelect.appendChild(option);
+                    });
+                    
+                    // Add custom option
+                    const customOption = document.createElement('option');
+                    customOption.value = "custom";
+                    customOption.textContent = "Enter custom instance...";
+                    instanceSelect.appendChild(customOption);
+                    
+                    showOutput('Loaded Mastodon instances');
+                } else {
+                    throw new Error(data.message || 'Failed to load Mastodon instances');
+                }
+            } catch (error) {
+                showOutput(`Failed to load Mastodon instances: ${error.message}`, true);
+            }
+        }
+        
+        // Fetch agent profiles
+        async function loadAgentProfiles() {
+            try {
+                const response = await fetch('/setup/api/agent-profiles');
+                const data = await response.json();
+                
+                if (data.status === 'ok') {
+                    const profileSelect = document.getElementById('agent-profile');
+                    profileSelect.innerHTML = '';
+                    
+                    data.profiles.forEach(profile => {
+                        const option = document.createElement('option');
+                        option.value = profile.name;
+                        option.textContent = `${profile.name} - ${profile.description}`;
+                        profileSelect.appendChild(option);
+                    });
+                    
+                    showOutput('Loaded agent profiles');
+                } else {
+                    throw new Error(data.message || 'Failed to load agent profiles');
+                }
+            } catch (error) {
+                showOutput(`Failed to load agent profiles: ${error.message}`, true);
+            }
+        }
+        
+        // Fetch validation results
+        async function loadValidationResults() {
+            try {
+                const response = await fetch('/setup/api/validation-results');
+                const data = await response.json();
+                
+                const resultsDiv = document.getElementById('validation-results');
+                
+                if (data.status === 'ok') {
+                    const validation = data.validation;
+                    let html = `
+                        <div class="mb-2">
+                            <strong>Timestamp:</strong> ${validation.timestamp || 'Unknown'}
+                        </div>
+                        <div class="mb-2">
+                            <strong>Users:</strong> ${validation.total_users || 0}
+                            <strong>Posts:</strong> ${validation.total_posts || 0}
+                            <strong>Interactions:</strong> ${validation.total_interactions || 0}
+                        </div>
+                        <div class="mb-2">
+                            <strong>Check Results:</strong>
+                        </div>
+                        <ul class="list-group">
+                    `;
+                    
+                    for (const [check, status] of Object.entries(validation.summary || {})) {
+                        const statusClass = status === 'pass' ? 'success' : 
+                                          status === 'fail' ? 'danger' : 'warning';
+                        const statusIcon = status === 'pass' ? '✅' : 
+                                          status === 'fail' ? '❌' : '⚠️';
+                        
+                        html += `
+                            <li class="list-group-item list-group-item-${statusClass}">
+                                ${statusIcon} ${check}: ${status}
+                            </li>
+                        `;
+                    }
+                    
+                    html += '</ul>';
+                    resultsDiv.innerHTML = html;
+                    
+                    showOutput('Loaded validation results');
+                } else if (data.status === 'warning') {
+                    resultsDiv.innerHTML = `<p class="text-warning">${data.message}</p>`;
+                    showOutput(`Validation results: ${data.message}`);
+                } else {
+                    throw new Error(data.message || 'Failed to load validation results');
+                }
+            } catch (error) {
+                showOutput(`Failed to load validation results: ${error.message}`, true);
+            }
+        }
+        
+        // Run a system command
+        async function runCommand(command) {
+            showOutput(`Running command: ${command}`);
+            
+            try {
+                const response = await fetch('/setup/api/run-command', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ command })
+                });
+                
+                const data = await response.json();
+                
+                if (data.status === 'ok') {
+                    showOutput(`Command completed: ${data.message}`);
+                    showOutput(data.output || 'No output');
+                    return true;
+                } else {
+                    throw new Error(data.message || 'Unknown command error');
+                }
+            } catch (error) {
+                showOutput(`Command failed: ${error.message}`, true);
+                return false;
+            }
+        }
+        
+        // Update privacy settings
+        async function updatePrivacy(userId, privacyLevel) {
+            showOutput(`Updating privacy level to ${privacyLevel} for user ${userId}`);
+            
+            try {
+                const response = await fetch('/setup/api/update-privacy', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ 
+                        user_id: userId,
+                        privacy_level: privacyLevel
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.status === 'ok') {
+                    showOutput(`Privacy updated: ${data.message}`);
+                    return true;
+                } else {
+                    throw new Error(data.message || 'Unknown privacy update error');
+                }
+            } catch (error) {
+                showOutput(`Privacy update failed: ${error.message}`, true);
+                return false;
+            }
+        }
+        
+        // Add event listeners when DOM is ready
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initial loads
+            checkHealth();
+            loadMastodonInstances();
+            loadAgentProfiles();
+            loadValidationResults();
+            
+            // Refresh status button
+            document.getElementById('refresh-status').addEventListener('click', function() {
+                showOutput('Refreshing system status...');
+                checkHealth();
+            });
+            
+            // Refresh validation button
+            document.getElementById('refresh-validation').addEventListener('click', function() {
+                showOutput('Refreshing validation results...');
+                loadValidationResults();
+            });
+            
+            // Run final-test button
+            document.getElementById('run-final-test').addEventListener('click', async function() {
+                const button = this;
+                showLoading(button.id, true);
+                await runCommand('final-test');
+                showLoading(button.id, false);
+                loadValidationResults();
+            });
+            
+            // Run dry-validate button
+            document.getElementById('run-dry-validate').addEventListener('click', async function() {
+                const button = this;
+                showLoading(button.id, true);
+                await runCommand('dry-validate');
+                showLoading(button.id, false);
+                loadValidationResults();
+            });
+            
+            // Launch agent button
+            document.getElementById('launch-agent').addEventListener('click', async function() {
+                const profile = document.getElementById('agent-profile').value;
+                if (!profile) {
+                    showOutput('Please select an agent profile', true);
+                    return;
+                }
+                
+                const button = this;
+                showLoading(button.id, true);
+                await runCommand(`run-agent profile=${profile}`);
+                showLoading(button.id, false);
+            });
+            
+            // Clear output button
+            document.getElementById('clear-output').addEventListener('click', function() {
+                document.getElementById('output-area').innerHTML = 'Output cleared';
+            });
+            
+            // One-click demo button
+            document.getElementById('one-click-demo').addEventListener('click', async function() {
+                const button = this;
+                button.disabled = true;
+                button.innerHTML = '<span class="loader"></span> Running demo...';
+                
+                // Show friendly message
+                showOutput('Starting one-click demo sequence...');
+                showOutput('Step 1: Running final-test to validate the system');
+                
+                // Run final-test
+                const testResult = await runCommand('final-test');
+                
+                if (testResult) {
+                    showOutput('Step 2: Refreshing validation results');
+                    await loadValidationResults();
+                    
+                    // Select tech_fan profile and launch agent
+                    showOutput('Step 3: Launching tech_fan agent');
+                    const agentSelect = document.getElementById('agent-profile');
+                    
+                    // Wait for profiles to load if needed
+                    if (agentSelect.options.length <= 1) {
+                        showOutput('Waiting for agent profiles to load...');
+                        await loadAgentProfiles();
+                        await new Promise(resolve => setTimeout(resolve, 1000));
+                    }
+                    
+                    // Find and select tech_fan profile
+                    let techFanFound = false;
+                    for (let i = 0; i < agentSelect.options.length; i++) {
+                        if (agentSelect.options[i].value === 'tech_fan') {
+                            agentSelect.value = 'tech_fan';
+                            techFanFound = true;
+                            break;
+                        }
+                    }
+                    
+                    if (techFanFound) {
+                        await runCommand('run-agent profile=tech_fan');
+                        showOutput('Demo complete! 🎉 Agent is running in the background');
+                    } else {
+                        showOutput('Could not find tech_fan profile. Please select a profile manually.', true);
+                    }
+                } else {
+                    showOutput('Final test failed. Please check the logs and try again.', true);
+                }
+                
+                button.disabled = false;
+                button.innerHTML = '<i class="fas fa-rocket"></i> One-Click Demo';
+            });
+            
+            // Configuration form
+            document.getElementById('config-form').addEventListener('submit', async function(e) {
+                e.preventDefault();
+                
+                const instanceSelect = document.getElementById('mastodon-instance');
+                const customInstance = document.getElementById('custom-instance');
+                const userId = document.getElementById('user-id').value;
+                const privacyLevel = document.getElementById('privacy-level').value;
+                
+                let instanceUrl;
+                if (instanceSelect.value === 'custom') {
+                    instanceUrl = customInstance.value;
+                    if (!instanceUrl) {
+                        showOutput('Please enter a custom instance URL', true);
+                        return;
+                    }
+                } else {
+                    instanceUrl = instanceSelect.value;
+                    if (!instanceUrl) {
+                        showOutput('Please select a Mastodon instance', true);
+                        return;
+                    }
+                }
+                
+                if (!userId) {
+                    showOutput('Please enter a user ID', true);
+                    return;
+                }
+                
+                // Update privacy settings
+                await updatePrivacy(userId, privacyLevel);
+                
+                // Store configuration in localStorage
+                localStorage.setItem('corgi-instance', instanceUrl);
+                localStorage.setItem('corgi-user-id', userId);
+                localStorage.setItem('corgi-privacy-level', privacyLevel);
+                
+                showOutput(`Configuration applied for instance: ${instanceUrl}, user: ${userId}, privacy: ${privacyLevel}`);
+            });
+            
+            // Handle custom instance selection
+            document.getElementById('mastodon-instance').addEventListener('change', function() {
+                const customInstanceField = document.getElementById('custom-instance');
+                if (this.value === 'custom') {
+                    customInstanceField.style.display = 'block';
+                } else {
+                    customInstanceField.style.display = 'none';
+                }
+            });
+            
+            // Load saved config from localStorage if available
+            const savedInstance = localStorage.getItem('corgi-instance');
+            const savedUserId = localStorage.getItem('corgi-user-id');
+            const savedPrivacyLevel = localStorage.getItem('corgi-privacy-level');
+            
+            if (savedInstance) {
+                const instanceSelect = document.getElementById('mastodon-instance');
+                
+                // Check if it's one of the predefined instances
+                let found = false;
+                for (let i = 0; i < instanceSelect.options.length; i++) {
+                    if (instanceSelect.options[i].value === savedInstance) {
+                        instanceSelect.value = savedInstance;
+                        found = true;
+                        break;
+                    }
+                }
+                
+                // If not found, set as custom
+                if (!found && savedInstance) {
+                    instanceSelect.value = 'custom';
+                    document.getElementById('custom-instance').value = savedInstance;
+                    document.getElementById('custom-instance').style.display = 'block';
+                }
+            }
+            
+            if (savedUserId) {
+                document.getElementById('user-id').value = savedUserId;
+            }
+            
+            if (savedPrivacyLevel) {
+                document.getElementById('privacy-level').value = savedPrivacyLevel;
+            }
+        });
+    </script>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

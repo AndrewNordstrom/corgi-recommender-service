@@ -9,7 +9,7 @@ This service provides:
 - Post metadata storage
 - Personalized post recommendations
 
-The API is versioned with a /v1 prefix for all routes.
+The API is versioned with a configurable prefix (default: /api/v1) for all routes.
 """
 
 import logging
@@ -31,6 +31,9 @@ from routes.recommendations import recommendations_bp
 from routes.privacy import privacy_bp
 from routes.analytics import analytics_bp
 from routes.proxy import proxy_bp
+from routes.oauth import oauth_bp
+from routes.setup_gui import setup_gui_bp  # Import setup GUI blueprint
+from routes.timeline import timeline_bp   # Import new timeline blueprint with injection
 
 # Configure logging based on environment
 log_format = '%(asctime)s [%(levelname)s] [%(name)s] [request_id=%(request_id)s] %(message)s'
@@ -43,14 +46,18 @@ class RequestIdFilter(logging.Filter):
 
 # Set up logging
 root_logger = logging.getLogger()
-handler = logging.StreamHandler(sys.stdout)
-handler.setFormatter(logging.Formatter(log_format))
-root_logger.addHandler(handler)
-root_logger.setLevel(logging.DEBUG if DEBUG else logging.INFO)
 
-# Add request ID filter to root logger
-request_id_filter = RequestIdFilter()
-root_logger.addFilter(request_id_filter)
+# Clear existing handlers to avoid duplicates
+if len(root_logger.handlers) == 0:
+    handler = logging.StreamHandler(sys.stdout)
+    handler.setFormatter(logging.Formatter(log_format))
+    root_logger.addHandler(handler)
+    root_logger.setLevel(logging.DEBUG if DEBUG else logging.INFO)
+
+    # Add request ID filter to root logger only if not in test mode
+    if os.getenv("USE_IN_MEMORY_DB", "false").lower() != "true":
+        request_id_filter = RequestIdFilter()
+        root_logger.addFilter(request_id_filter)
 
 # Create app logger
 logger = logging.getLogger(__name__)
@@ -62,6 +69,16 @@ def create_app():
     # Configure CORS
     logger.info(f"Configuring CORS with allowed origins: {CORS_ALLOWED_ORIGINS}")
     CORS(app, resources={r"/*": {"origins": CORS_ALLOWED_ORIGINS}}, supports_credentials=True)
+    
+    # Initialize metrics server if enabled
+    if os.getenv("ENABLE_METRICS", "true").lower() == "true":
+        try:
+            from utils.metrics import start_metrics_server
+            metrics_port = int(os.getenv("METRICS_PORT", "9100"))
+            start_metrics_server(port=metrics_port)
+            logger.info(f"Prometheus metrics server started on port {metrics_port}")
+        except Exception as e:
+            logger.error(f"Failed to start metrics server: {e}")
     
     # Initialize database on startup
     from db.connection import init_db
@@ -107,16 +124,92 @@ def create_app():
         return response
     
     # Register blueprints - all under versioned API prefix
-    app.register_blueprint(health_bp)  # Health check available at / and /v1/health
+    app.register_blueprint(health_bp)  # Health check available at / and API_PREFIX/health
     app.register_blueprint(interactions_bp, url_prefix=f"{API_PREFIX}/interactions")
     app.register_blueprint(posts_bp, url_prefix=f"{API_PREFIX}/posts")
     app.register_blueprint(recommendations_bp, url_prefix=f"{API_PREFIX}/recommendations")
     app.register_blueprint(privacy_bp, url_prefix=f"{API_PREFIX}/privacy")
     app.register_blueprint(analytics_bp, url_prefix=f"{API_PREFIX}/analytics")
+    app.register_blueprint(oauth_bp, url_prefix=f"{API_PREFIX}/oauth")
+    app.register_blueprint(timeline_bp)  # New timeline routes with injection capabilities
+    
+    # Register API documentation routes
+    from routes.docs import register_docs_routes
+    register_docs_routes(app)
+    
+    # Register setup GUI blueprint - only if enabled (disabled in production by default)
+    if os.getenv("ENABLE_SETUP_GUI", "false").lower() == "true":
+        logger.info("Setup GUI enabled - registering blueprint at /setup")
+        app.register_blueprint(setup_gui_bp, url_prefix='/setup')
+    else:
+        logger.info("Setup GUI disabled - set ENABLE_SETUP_GUI=true to enable")
     
     # Register proxy blueprint - this should be registered last to catch all other routes
     # The proxy will handle any requests that aren't handled by the specific blueprints above
     app.register_blueprint(proxy_bp, url_prefix=API_PREFIX)
+    
+    # Add direct API endpoints for Mastodon compatibility (required for Elk)
+    from flask import jsonify
+    from routes.proxy import get_authenticated_user
+    
+    @app.route('/api/v2/instance', methods=['GET'])
+    def get_instance_info():
+        """
+        Return Mastodon instance information.
+        Required by Elk for proper client integration.
+        """
+        return jsonify({
+            "uri": request.host,
+            "title": "Corgi Recommender",
+            "short_description": "Test instance for Corgi + Elk integration",
+            "description": "A test instance for Corgi Recommender + Elk integration",
+            "version": "4.3.0",
+            "urls": {},
+            "stats": {
+                "user_count": 1,
+                "status_count": 100,
+                "domain_count": 1
+            },
+            "thumbnail": "/static/assets/corgi-mascot.png",
+            "languages": ["en"],
+            "registrations": False,
+            "approval_required": False,
+            "contact_account": None
+        })
+    
+    @app.route('/api/v1/accounts/verify_credentials', methods=['GET'])
+    def verify_credentials():
+        """
+        Return user account information.
+        Required by Elk to verify user login and access token.
+        """
+        print("✅ verify_credentials called")
+        logger.info("verify_credentials endpoint called")
+        
+        # Return complete user object that Elk requires
+        return jsonify({
+            "id": "123",
+            "username": "demo_user",
+            "acct": "demo_user@mastodon.social",
+            "display_name": "Demo User",
+            "note": "Demo user for Corgi Recommender",
+            "url": "https://mastodon.social/@demo_user",
+            "avatar": "https://mastodon.social/avatars/original/missing.png",
+            "avatar_static": "https://mastodon.social/avatars/original/missing.png",
+            "header": "https://mastodon.social/headers/original/missing.png",
+            "header_static": "https://mastodon.social/headers/original/missing.png",
+            "followers_count": 0,
+            "following_count": 0,
+            "statuses_count": 0,
+            "bot": False,
+            "locked": False,
+            "source": {
+                "privacy": "public",
+                "sensitive": False,
+                "language": "en"
+            },
+            "created_at": "2023-01-01T00:00:00.000Z"
+        })
     
     # Register error handlers
     @app.errorhandler(404)

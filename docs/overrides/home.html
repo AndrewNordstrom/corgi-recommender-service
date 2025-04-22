@@ -1,0 +1,312 @@
+{% extends "main.html" %}
+
+{% block content %}
+<style>
+  .md-content__inner {
+    margin: 0;
+    padding-top: 0;
+  }
+  
+  .md-content__inner:before {
+    display: none;
+  }
+  
+  .hero {
+    position: relative;
+    padding: 6rem 1rem 4rem;
+    text-align: center;
+    overflow: hidden;
+  }
+  
+  .hero-background {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, var(--md-primary-fg-color) 0%, var(--md-primary-fg-color--light) 100%);
+    transform: skewY(-3deg);
+    transform-origin: top left;
+    z-index: -1;
+  }
+  
+  .hero h1 {
+    color: white;
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    font-weight: 700;
+  }
+  
+  .hero-tagline {
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 1.5rem;
+    font-weight: 400;
+    margin-bottom: 2rem;
+    max-width: 800px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+  
+  .hero-buttons {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    margin-bottom: 3rem;
+  }
+  
+  .hero-button {
+    display: inline-block;
+    padding: 0.8rem 1.6rem;
+    border-radius: 8px;
+    font-weight: 600;
+    transition: all 0.2s ease;
+    text-decoration: none;
+  }
+  
+  .hero-button-primary {
+    background-color: white;
+    color: var(--md-primary-fg-color);
+  }
+  
+  .hero-button-primary:hover {
+    background-color: var(--md-corgi-neutral-100);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  }
+  
+  .hero-button-secondary {
+    background-color: rgba(255, 255, 255, 0.1);
+    color: white;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+  }
+  
+  .hero-button-secondary:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+    border-color: rgba(255, 255, 255, 0.4);
+  }
+  
+  .hero-corgi {
+    margin: 0 auto 2rem;
+    animation: float 4s ease-in-out infinite;
+  }
+  
+  .hero-corgi img {
+    max-width: 300px;
+    height: auto;
+  }
+  
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+  }
+  
+  .features {
+    padding: 4rem 1rem;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+  
+  .features-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 2rem;
+    margin-top: 3rem;
+  }
+  
+  .feature-card {
+    background-color: var(--md-default-bg-color);
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    border: 1px solid var(--md-corgi-neutral-100);
+  }
+  
+  [data-md-color-scheme="slate"] .feature-card {
+    border-color: var(--md-corgi-neutral-700);
+  }
+  
+  .feature-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 12px rgba(0, 0, 0, 0.1);
+  }
+  
+  .feature-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    background-color: var(--md-corgi-amber-500);
+    margin-bottom: 1rem;
+  }
+  
+  .feature-icon svg {
+    width: 24px;
+    height: 24px;
+    fill: rgba(0, 0, 0, 0.87);
+  }
+  
+  .feature-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin-bottom: 0.75rem;
+  }
+  
+  .feature-description {
+    color: var(--md-corgi-neutral-600);
+    font-size: 0.95rem;
+    line-height: 1.5;
+  }
+  
+  [data-md-color-scheme="slate"] .feature-description {
+    color: var(--md-corgi-neutral-300);
+  }
+  
+  .cta {
+    background-color: var(--md-corgi-neutral-50);
+    padding: 4rem 1rem;
+    text-align: center;
+  }
+  
+  [data-md-color-scheme="slate"] .cta {
+    background-color: var(--md-corgi-neutral-900);
+  }
+  
+  .cta-title {
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: 1.5rem;
+  }
+  
+  .cta-description {
+    font-size: 1.1rem;
+    max-width: 600px;
+    margin: 0 auto 2rem;
+    color: var(--md-corgi-neutral-700);
+  }
+  
+  [data-md-color-scheme="slate"] .cta-description {
+    color: var(--md-corgi-neutral-300);
+  }
+  
+  .cta-button {
+    display: inline-block;
+    padding: 0.8rem 1.6rem;
+    border-radius: 8px;
+    font-weight: 600;
+    background-color: var(--md-corgi-amber-500);
+    color: rgba(0, 0, 0, 0.87);
+    text-decoration: none;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+  
+  .cta-button:hover {
+    background-color: var(--md-primary-fg-color--dark);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    transform: translateY(-2px);
+  }
+  
+  @media (max-width: 768px) {
+    .hero h1 {
+      font-size: 2.5rem;
+    }
+    
+    .hero-tagline {
+      font-size: 1.25rem;
+    }
+    
+    .hero-buttons {
+      flex-direction: column;
+      align-items: center;
+    }
+    
+    .features-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+
+<section class="hero">
+  <div class="hero-background"></div>
+  
+  <div class="hero-corgi">
+    <img src="/assets/corgi-hero.png" alt="Corgi Hero Image" width="300">
+  </div>
+  
+  <h1>Corgi</h1>
+  <p class="hero-tagline">A privacy-aware recommendation engine for the Fediverse. Small body. Big brain.</p>
+  
+  <div class="hero-buttons">
+    <a href="/quickstart/" class="hero-button hero-button-primary">Get Started</a>
+    <a href="/demo/" class="hero-button hero-button-secondary">Live Demo</a>
+  </div>
+</section>
+
+<section class="features">
+  <h2 style="text-align: center; margin-bottom: 0.5rem;">What is Corgi?</h2>
+  <p style="text-align: center; max-width: 800px; margin: 0 auto 2rem; color: var(--md-corgi-neutral-600);">
+    Corgi sits between your Mastodon client and server, enhancing your timeline with personalized recommendations.
+    No code changes needed to your favorite apps.
+  </p>
+  
+  <div class="features-grid">
+    <div class="feature-card">
+      <div class="feature-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path></svg>
+      </div>
+      <h3 class="feature-title">Better Content Discovery</h3>
+      <p class="feature-description">Find posts you'll love without relying on algorithmic feeds. Corgi learns your preferences through natural interactions.</p>
+    </div>
+    
+    <div class="feature-card">
+      <div class="feature-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z"></path></svg>
+      </div>
+      <h3 class="feature-title">Privacy-First Design</h3>
+      <p class="feature-description">Your data never leaves Corgi, and you control what's collected. Choose from three privacy levels to match your comfort.</p>
+    </div>
+    
+    <div class="feature-card">
+      <div class="feature-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M17 16l-4-4V8.82C14.16 8.4 15 7.3 15 6c0-1.66-1.34-3-3-3S9 4.34 9 6c0 1.3.84 2.4 2 2.82V12l-4 4H3v5h5v-3.05l4-4.2 4 4.2V21h5v-5h-4z"></path></svg>
+      </div>
+      <h3 class="feature-title">Universal Compatibility</h3>
+      <p class="feature-description">Works with any Mastodon client without modifications. Just change the API URL in your client settings.</p>
+    </div>
+    
+    <div class="feature-card">
+      <div class="feature-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M6 22h12l-6-6-6 6zM21 3H3c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h4v-2H3V5h18v12h-4v2h4c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2z"></path></svg>
+      </div>
+      <h3 class="feature-title">Transparent Proxy</h3>
+      <p class="feature-description">Corgi seamlessly passes through all Mastodon API requests, enhancing only what you need enhanced.</p>
+    </div>
+    
+    <div class="feature-card">
+      <div class="feature-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 16l4-4h-3V3h-2v9H8l4 4zm9-13h-6v1.99h6v14.03H3V4.99h6V3H3c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2z"></path></svg>
+      </div>
+      <h3 class="feature-title">Portable Preferences</h3>
+      <p class="feature-description">Your recommendation profile follows you, even if you change Mastodon instances. Take your experience anywhere.</p>
+    </div>
+    
+    <div class="feature-card">
+      <div class="feature-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M17 7h-4v2h4c1.65 0 3 1.35 3 3s-1.35 3-3 3h-4v2h4c2.76 0 5-2.24 5-5s-2.24-5-5-5zm-6 8H7c-1.65 0-3-1.35-3-3s1.35-3 3-3h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-2zm-3-4h8v2H8z"></path></svg>
+      </div>
+      <h3 class="feature-title">Open API</h3>
+      <p class="feature-description">Build your own integrations with our comprehensive API. Direct access for custom applications and clients.</p>
+    </div>
+  </div>
+</section>
+
+<section class="cta">
+  <h2 class="cta-title">Ready to enhance your Fediverse experience?</h2>
+  <p class="cta-description">Get started with Corgi in just a few minutes. No complicated setup required.</p>
+  <a href="/quickstart/" class="cta-button">Get Started</a>
+</section>
+
+{{ super() }}
+{% endblock %}

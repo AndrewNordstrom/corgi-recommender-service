@@ -8,7 +8,7 @@ The Corgi Recommender Service is a Flask-based microservice that provides person
 
 ### Key Components
 
-![Architecture Diagram](architecture-diagram.png)
+![Architecture Diagram](assets/architecture-diagram.png)
 
 The system consists of these main components:
 

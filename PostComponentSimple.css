@@ -1,0 +1,73 @@
+/* Styles for the Simplified React Post Component */
+
+.status {
+  padding: 15px;
+  border-bottom: 1px solid var(--border-color, #e6e6e6);
+}
+
+.status__profile {
+  display: flex;
+  margin-bottom: 10px;
+}
+
+.status__avatar-link {
+  margin-right: 10px;
+  text-decoration: none;
+}
+
+.status__avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.status__user-info {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.status__display-name {
+  text-decoration: none;
+  color: var(--text-color, #000);
+  font-weight: bold;
+  margin-bottom: 2px;
+}
+
+.status__display-name:hover {
+  text-decoration: underline;
+}
+
+.status__username {
+  text-decoration: none;
+  color: var(--text-muted, #6e767d);
+  font-size: 14px;
+}
+
+.status__username:hover {
+  text-decoration: underline;
+}
+
+.status__content {
+  margin-left: 58px; /* Align with the content after avatar */
+}
+
+/* Dark theme support */
+@media (prefers-color-scheme: dark) {
+  .status {
+    border-bottom-color: var(--dark-border-color, #2f3336);
+  }
+  
+  .status__display-name {
+    color: var(--dark-text-color, #e7e9ea);
+  }
+  
+  .status__username {
+    color: var(--dark-text-muted, #71767b);
+  }
+  
+  .status__content {
+    color: var(--dark-text-color, #e7e9ea);
+  }
+}

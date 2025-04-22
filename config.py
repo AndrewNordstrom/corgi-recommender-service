@@ -12,12 +12,45 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # API Configuration
-API_VERSION = "v1"
-API_PREFIX = f"/{API_VERSION}"
-HOST = os.getenv("HOST", "0.0.0.0")
-PORT = int(os.getenv("PORT", "5000"))
+API_VERSION = os.getenv("API_VERSION", "v1")
+# Allow explicit overriding of the full API_PREFIX or construct it from API_VERSION
+API_PREFIX = os.getenv("API_PREFIX", f"/api/{API_VERSION}")
+
+# Helper function to validate and parse port number
+def parse_port(port_str, default=5002):
+    """
+    Validate and parse port number from string.
+    
+    Args:
+        port_str: String representation of port number
+        default: Default port number if parsing fails
+        
+    Returns:
+        int: Valid port number between 1024 and 65535
+    """
+    try:
+        port = int(port_str)
+        # Check if port is in valid range
+        if port < 1024 or port > 65535:
+            print(f"WARNING: Port {port} outside valid range (1024-65535). Using default {default}.")
+            return default
+        return port
+    except (ValueError, TypeError):
+        if port_str:  # Only log if the string isn't empty
+            print(f"WARNING: Invalid port '{port_str}'. Using default {default}.")
+        return default
+
+# Allow dedicated CORGI_HOST/CORGI_PORT environment variables with fallbacks to HOST/PORT
+HOST = os.getenv("CORGI_HOST", os.getenv("HOST", "0.0.0.0"))
+PORT = parse_port(os.getenv("CORGI_PORT", os.getenv("PORT", "5002")))
+PROXY_PORT = parse_port(os.getenv("CORGI_PROXY_PORT", os.getenv("PROXY_PORT", "5003")))
 DEBUG = os.getenv("DEBUG", "False").lower() == "true"
 ENV = os.getenv("FLASK_ENV", "development")
+
+# SSL configuration for HTTPS
+USE_HTTPS = os.getenv("CORGI_USE_HTTPS", "True").lower() == "true"
+SSL_CERT_PATH = os.getenv("CORGI_SSL_CERT_PATH", os.path.join(os.path.dirname(__file__), 'certs', 'cert.pem'))
+SSL_KEY_PATH = os.getenv("CORGI_SSL_KEY_PATH", os.path.join(os.path.dirname(__file__), 'certs', 'key.pem'))
 
 # CORS Configuration
 CORS_ALLOWED_ORIGINS = os.getenv(
@@ -62,3 +95,10 @@ HEALTH_CHECK_TIMEOUT = int(os.getenv("HEALTH_CHECK_TIMEOUT", "5"))
 DEFAULT_MASTODON_INSTANCE = os.getenv("DEFAULT_MASTODON_INSTANCE", "https://mastodon.social")
 RECOMMENDATION_BLEND_RATIO = float(os.getenv("RECOMMENDATION_BLEND_RATIO", "0.3"))
 PROXY_TIMEOUT = int(os.getenv("PROXY_TIMEOUT", "10"))
+
+# Cold Start Settings
+COLD_START_ENABLED = os.getenv("COLD_START_ENABLED", "True").lower() == "true"
+COLD_START_POSTS_PATH = os.getenv("COLD_START_POSTS_PATH", 
+                                os.path.join(os.path.dirname(__file__), 'data', 'cold_start_posts.json'))
+COLD_START_POST_LIMIT = int(os.getenv("COLD_START_POST_LIMIT", "30"))
+ALLOW_COLD_START_FOR_ANONYMOUS = os.getenv("ALLOW_COLD_START_FOR_ANONYMOUS", "True").lower() == "true"
