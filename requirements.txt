@@ -2,7 +2,7 @@
 Flask==2.3.3
 flask-cors==4.0.2
 flask-swagger-ui==4.11.1
-psycopg2-binary==2.9.6
+psycopg2-binary>=2.9.9
 python-dotenv==1.0.0
 gunicorn>=22.0.1
 requests==2.32.3
@@ -13,7 +13,7 @@ Werkzeug==3.0.6
 MarkupSafe==3.0.2
 
 # Development and testing dependencies
-pytest==7.3.1
+pytest>=7.4.0
 pytest-cov==4.1.0
 pytest-env==0.8.1
 black==24.3.0
