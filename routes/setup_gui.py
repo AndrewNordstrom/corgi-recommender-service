@@ -8,6 +8,7 @@ import logging
 import subprocess
 import os
 import json
+import re
 from flask import Blueprint, render_template, request, jsonify, Response, current_app
 from db.connection import get_db_connection
 from utils.logging_decorator import log_route
@@ -105,6 +106,10 @@ def run_command():
         # Validate that the requested profile exists
         try:
             profile_name = profile_param.split('=')[1]
+            # Validate profile name format to prevent command injection
+            if not re.match(r'^[a-zA-Z0-9_-]+$', profile_name):
+                return jsonify({"status": "error", "message": "Invalid profile name format"}), 400
+                
             from agents.user_profiles import get_profile_by_name
             profile = get_profile_by_name(profile_name)
             logger.info(f"Validated agent profile: {profile_name}")
@@ -126,7 +131,11 @@ def run_command():
             if not profile:
                 return jsonify({"status": "error", "message": "Profile parameter required for run-agent"}), 400
                 
-            # Run the agent script
+            # Additional validation for profile parameter
+            if not re.match(r'^[a-zA-Z0-9_-]+$', profile):
+                return jsonify({"status": "error", "message": "Invalid profile name format"}), 400
+                
+            # Run the agent script with validated parameters
             process = subprocess.Popen(
                 ["./run-agent.sh", f"profile={profile}", "headless=true"],
                 stdout=subprocess.PIPE,
@@ -153,6 +162,10 @@ def run_command():
             })
         else:
             # For other commands, use make
+            # Validate make command to ensure only allowed commands are used
+            if command_parts[0] not in allowed_commands:
+                return jsonify({"status": "error", "message": "Command not allowed"}), 403
+                
             process = subprocess.Popen(
                 ["make", command_parts[0]],
                 stdout=subprocess.PIPE,

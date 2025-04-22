@@ -1,5 +1,5 @@
 # Core dependencies
-Flask==2.2.5
+Flask==2.3.3
 flask-cors==4.0.2
 flask-swagger-ui==4.11.1
 psycopg2-binary==2.9.6
@@ -7,6 +7,7 @@ python-dotenv==1.0.0
 gunicorn==22.0.0
 requests==2.32.3
 prometheus-client==0.16.0
+urllib3>=2.0.7
 
 # Development and testing dependencies
 pytest==7.3.1
