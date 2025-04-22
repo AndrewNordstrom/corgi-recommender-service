@@ -2279,7 +2279,7 @@
 </div>
 <h2 id="how-it-works">How It Works<a class="headerlink" href="#how-it-works" title="Permanent link">&para;</a></h2>
 <p>Corgi transparently proxies your Mastodon API requests, analyzing your interactions to learn your preferences. When you request your home timeline, Corgi enhances it with personalized recommendations, seamlessly blended with your regular feed.</p>
-<pre class="mermaid"><code>graph LR
+<pre class="mermaid"><code>flowchart LR
     A[Mastodon Client] --&gt;|API Requests| B[Corgi Middleware]
     B --&gt;|Enhanced Responses| A
     B --&gt;|Original Requests| C[Mastodon Instance]
