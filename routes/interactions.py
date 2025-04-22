@@ -76,6 +76,30 @@ def log_interaction():
             }
         }), 400
     
+    # Validate field types and lengths
+    if not isinstance(user_alias, str) or len(user_alias) > 255:
+        return jsonify({"error": "Invalid user_alias format or length"}), 400
+    
+    if not isinstance(post_id, str) or len(post_id) > 255:
+        return jsonify({"error": "Invalid post_id format or length"}), 400
+    
+    # Validate action_type against allowed values
+    ALLOWED_ACTIONS = [
+        'favorite', 'unfavorite', 'bookmark', 'unbookmark', 
+        'reblog', 'unreblog', 'reply', 'more_like_this', 
+        'less_like_this', 'view'
+    ]
+    
+    if action_type not in ALLOWED_ACTIONS:
+        return jsonify({
+            "error": "Invalid action_type",
+            "allowed_values": ALLOWED_ACTIONS
+        }), 400
+    
+    # Validate context is a dictionary if provided
+    if context and not isinstance(context, dict):
+        return jsonify({"error": "Context must be a dictionary"}), 400
+    
     # Normalize action types for consistency
     ACTION_TYPE_MAPPING = {
         "favourited": "favorite",

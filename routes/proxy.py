@@ -10,6 +10,7 @@ import logging.handlers
 import requests
 import json
 import os
+import re
 from flask import Blueprint, request, Response, jsonify, g, current_app
 from urllib.parse import urljoin, urlparse
 import time
@@ -36,16 +37,33 @@ logs_dir = os.path.join(repo_root, 'logs')
 # Ensure logs directory exists
 os.makedirs(logs_dir, exist_ok=True)
 
+# Secure the logs directory - restrict to user only (0700)
+try:
+    import stat
+    os.chmod(logs_dir, stat.S_IRUSR | stat.S_IWUSR | stat.S_IXUSR)
+except Exception as e:
+    logger.warning(f"Could not set secure permissions on logs directory: {e}")
+
 # Set up proxy-specific file logger
 proxy_logger = logging.getLogger('proxy')
 proxy_logger.setLevel(logging.INFO)
 
+# Use a secure log file with permissions set correctly
+log_file_path = os.path.join(logs_dir, 'proxy.log')
+
 # Add rotating file handler
 file_handler = logging.handlers.RotatingFileHandler(
-    os.path.join(logs_dir, 'proxy.log'),
+    log_file_path,
     maxBytes=10 * 1024 * 1024,  # 10 MB
     backupCount=5
 )
+
+# Secure the log file - restrict to user only (0600)
+try:
+    if os.path.exists(log_file_path):
+        os.chmod(log_file_path, stat.S_IRUSR | stat.S_IWUSR)
+except Exception as e:
+    logger.warning(f"Could not set secure permissions on log file: {e}")
 file_formatter = logging.Formatter(
     '%(asctime)s [%(levelname)s] %(message)s'
 )
@@ -59,11 +77,19 @@ interaction_logger.setLevel(logging.INFO)
 # Only add handler if it doesn't already exist
 if not interaction_logger.handlers:
     # Create file handler for proxy_interactions.log
+    interaction_log_path = os.path.join(logs_dir, 'proxy_interactions.log')
     interaction_handler = logging.handlers.RotatingFileHandler(
-        os.path.join(logs_dir, 'proxy_interactions.log'),
+        interaction_log_path,
         maxBytes=10 * 1024 * 1024,  # 10 MB
         backupCount=5
     )
+    
+    # Secure the interaction log file - restrict to user only (0600)
+    try:
+        if os.path.exists(interaction_log_path):
+            os.chmod(interaction_log_path, stat.S_IRUSR | stat.S_IWUSR)
+    except Exception as e:
+        logger.warning(f"Could not set secure permissions on interaction log file: {e}")
     
     # Use a simple formatter for clean logs
     interaction_formatter = logging.Formatter('%(asctime)s | %(message)s')
@@ -79,11 +105,19 @@ cold_start_logger.setLevel(logging.INFO)
 # Only add handler if it doesn't already exist
 if not cold_start_logger.handlers:
     # Create file handler for cold_start_interactions.log
+    cold_start_log_path = os.path.join(logs_dir, 'cold_start_interactions.log')
     cold_start_handler = logging.handlers.RotatingFileHandler(
-        os.path.join(logs_dir, 'cold_start_interactions.log'),
+        cold_start_log_path,
         maxBytes=10 * 1024 * 1024,  # 10 MB
         backupCount=5
     )
+    
+    # Secure the cold start log file - restrict to user only (0600)
+    try:
+        if os.path.exists(cold_start_log_path):
+            os.chmod(cold_start_log_path, stat.S_IRUSR | stat.S_IWUSR)
+    except Exception as e:
+        logger.warning(f"Could not set secure permissions on cold start log file: {e}")
     
     # Use a simple formatter for clean logs
     cold_start_formatter = logging.Formatter('%(asctime)s | %(message)s')
@@ -103,6 +137,68 @@ if os.environ.get('FLASK_ENV') == 'development':
 
 # Create blueprint
 proxy_bp = Blueprint('proxy', __name__)
+
+def sanitize_instance_url(url):
+    """
+    Validate and sanitize a Mastodon instance URL.
+    
+    Args:
+        url: The instance URL to sanitize
+        
+    Returns:
+        str: Sanitized URL with https:// scheme, or None if invalid
+    """
+    if not url:
+        return None
+    
+    # Ensure the URL has a scheme
+    if not url.startswith(('http://', 'https://')):
+        url = f"https://{url}"
+    
+    # Enforce HTTPS for security
+    if url.startswith('http://'):
+        url = url.replace('http://', 'https://', 1)
+    
+    # Parse the URL to validate its components
+    try:
+        parsed = urlparse(url)
+        
+        # Validate domain format
+        domain_pattern = r'^([a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}$'
+        if not re.match(domain_pattern, parsed.netloc):
+            logger.warning(f"Invalid domain in instance URL: {parsed.netloc}")
+            return None
+        
+        # Remove any paths from the URL - keep just the domain with scheme
+        url = f"{parsed.scheme}://{parsed.netloc}"
+        
+        # Exclude localhost in production unless explicitly allowed
+        if parsed.netloc == 'localhost' or parsed.netloc.startswith('127.0.0.') or parsed.netloc.startswith('0.0.0.'):
+            if os.environ.get('FLASK_ENV') == 'production' and os.environ.get('ALLOW_LOCAL_TESTING') != 'true':
+                logger.warning(f"Blocked localhost URL in production: {url}")
+                return None
+            
+        return url
+    except Exception as e:
+        logger.error(f"Error parsing instance URL: {e}")
+        return None$'
+        if not re.match(domain_pattern, parsed.netloc):
+            logger.warning(f"Invalid domain in instance URL: {parsed.netloc}")
+            return None
+        
+        # Remove any paths from the URL - keep just the domain with scheme
+        url = f"{parsed.scheme}://{parsed.netloc}"
+        
+        # Exclude localhost in production unless explicitly allowed
+        if parsed.netloc == 'localhost' or parsed.netloc.startswith('127.0.0.') or parsed.netloc.startswith('0.0.0.'):
+            if os.environ.get('FLASK_ENV') == 'production' and os.environ.get('ALLOW_LOCAL_TESTING') != 'true':
+                logger.warning(f"Blocked localhost URL in production: {url}")
+                return None
+            
+        return url
+    except Exception as e:
+        logger.error(f"Error parsing instance URL: {e}")
+        return None
 
 def load_cold_start_posts():
     """Load and prepare cold start posts from the configured JSON file.
@@ -158,18 +254,25 @@ def get_user_instance(req):
     instance = req.headers.get('X-Mastodon-Instance')
     if instance:
         logger.debug(f"Using instance from X-Mastodon-Instance header: {instance}")
-        # Ensure instance has scheme
-        if not instance.startswith(('http://', 'https://')):
-            instance = f"https://{instance}"
-        return instance
+        
+        # Validate and sanitize instance URL
+        instance = sanitize_instance_url(instance)
+        if instance:
+            return instance
+        else:
+            logger.warning(f"Invalid instance URL in X-Mastodon-Instance header, falling back to default")
     
     # Check for instance query parameter
     instance = req.args.get('instance')
     if instance:
         logger.debug(f"Using instance from query parameter: {instance}")
-        if not instance.startswith(('http://', 'https://')):
-            instance = f"https://{instance}"
-        return instance
+        
+        # Validate and sanitize instance URL
+        instance = sanitize_instance_url(instance)
+        if instance:
+            return instance
+        else:
+            logger.warning(f"Invalid instance URL in query parameter, falling back to default")
     
     # Try to extract from authorization token
     auth_header = req.headers.get('Authorization')
@@ -236,10 +339,13 @@ def get_authenticated_user(req):
         if user_info:
             return user_info['user_id']
     
-    # Try to get from query parameters (for development/testing)
-    user_id = req.args.get('user_id')
-    if user_id:
-        return user_id
+    # Check if development mode is explicitly enabled
+    if os.environ.get('FLASK_ENV') == 'development' and os.environ.get('ALLOW_QUERY_USER_ID') == 'true':
+        # Only allow query parameter user_id in development when explicitly enabled
+        user_id = req.args.get('user_id')
+        if user_id:
+            logger.warning(f"Using user_id from query parameter: {user_id} - THIS IS INSECURE AND ONLY FOR DEVELOPMENT")
+            return user_id
     
     # No user identified
     return None

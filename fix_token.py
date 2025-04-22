@@ -49,15 +49,14 @@ def fix_token_assignment():
             print(f"{user['user_id']:<20} {user['token_snippet']:<20}")
         print("=" * 50)
         
-        # Verify which user now has the token
-        token = "YOUR_ELK_TOKEN"
+        # Verify which user now has the new token
         cursor.execute(
             """
             SELECT user_id, instance_url
             FROM user_identities
             WHERE access_token = ?
             """,
-            (token,)
+            (new_demo_token,)
         )
         
         result = cursor.fetchone()

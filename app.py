@@ -17,8 +17,10 @@ import time
 import os
 import uuid
 import sys
-from flask import Flask, request, g, Response
+import secrets
+from flask import Flask, request, g, Response, session, abort, jsonify
 from flask_cors import CORS
+from functools import wraps
 
 # Import configuration
 from config import API_PREFIX, HOST, PORT, DEBUG, CORS_ALLOWED_ORIGINS, ENV
@@ -62,13 +64,44 @@ if len(root_logger.handlers) == 0:
 # Create app logger
 logger = logging.getLogger(__name__)
 
+def csrf_protect(f):
+    """CSRF protection decorator for state-changing routes (POST, PUT, DELETE)."""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        # Only check CSRF for state-changing methods
+        if request.method in ['POST', 'PUT', 'DELETE']:
+            token = request.headers.get('X-CSRF-Token')
+            session_token = session.get('csrf_token')
+            
+            # Validate the token
+            if not token or not session_token or token != session_token:
+                logger.warning(f"CSRF token validation failed: {token} != {session_token}")
+                return jsonify({"error": "CSRF token validation failed"}), 403
+        
+        return f(*args, **kwargs)
+    return decorated_function
+
 def create_app():
     """Create and configure the Flask application."""
     app = Flask(__name__)
     
-    # Configure CORS
+    # Set a secret key for session management and CSRF protection
+    app.secret_key = os.getenv('SECRET_KEY', secrets.token_hex(16))
+    
+    if ENV == 'production' and app.secret_key == secrets.token_hex(16):
+        logger.warning("Using a randomly generated secret key in production is insecure!")
+        logger.warning("Set the SECRET_KEY environment variable to a strong, consistent value.")
+    
+    # Configure CORS with strict origin validation
     logger.info(f"Configuring CORS with allowed origins: {CORS_ALLOWED_ORIGINS}")
-    CORS(app, resources={r"/*": {"origins": CORS_ALLOWED_ORIGINS}}, supports_credentials=True)
+    CORS(app, 
+         resources={r"/*": {
+             "origins": CORS_ALLOWED_ORIGINS,
+             "allow_headers": ["Content-Type", "Authorization", "X-Request-ID"],
+             "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+             "expose_headers": ["X-Request-ID", "X-Process-Time", "X-Service-Version"]
+         }}, 
+         supports_credentials=True)
     
     # Initialize metrics server if enabled
     if os.getenv("ENABLE_METRICS", "true").lower() == "true":
@@ -89,7 +122,7 @@ def create_app():
         logger.error(f"Failed to initialize database on startup: {e}")
         # Continue without failing - the service might be able to start without DB initially
     
-    # Request ID middleware
+    # Request ID and CSRF middleware
     @app.before_request
     def before_request():
         # Use existing request ID from header or generate a new one
@@ -98,8 +131,13 @@ def create_app():
             request_id = str(uuid.uuid4())
         g.request_id = request_id
         g.start_time = time.time()
+        
+        # Generate CSRF token for the session if it doesn't exist
+        if 'csrf_token' not in session:
+            session['csrf_token'] = secrets.token_hex(16)
+            logger.debug(f"Generated new CSRF token for session")
     
-    # Add request ID header to all responses
+    # Add request ID header and CSRF token to all responses
     @app.after_request
     def after_request(response):
         # Add request ID to response headers
@@ -112,6 +150,19 @@ def create_app():
         
         # Add tracing and observability headers
         response.headers['X-Service-Version'] = os.getenv('APP_VERSION', 'dev')
+        
+        # Include CSRF token in response headers for JS clients
+        if 'csrf_token' in session:
+            response.headers['X-CSRF-Token'] = session['csrf_token']
+        
+        # Set security headers
+        response.headers['X-Content-Type-Options'] = 'nosniff'
+        response.headers['X-Frame-Options'] = 'SAMEORIGIN'
+        response.headers['X-XSS-Protection'] = '1; mode=block'
+        
+        # Set Content Security Policy in production
+        if ENV == 'production':
+            response.headers['Content-Security-Policy'] = "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'"
         
         # Log the request details
         status_code = response.status_code

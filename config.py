@@ -62,10 +62,21 @@ CORS_ALLOWED_ORIGINS = os.getenv(
 DB_CONFIG = {
     'host': os.getenv('POSTGRES_HOST', 'localhost'),
     'port': os.getenv('DB_PORT', '5432'),
-    'user': os.getenv('POSTGRES_USER', 'postgres'),
-    'password': os.getenv('POSTGRES_PASSWORD', 'postgres'),
+    'user': os.getenv('POSTGRES_USER', ''),
+    'password': os.getenv('POSTGRES_PASSWORD', ''),
     'dbname': os.getenv('POSTGRES_DB', 'corgi_recommender'),
 }
+
+# Validate required database credentials for production
+if ENV == "production" and (not DB_CONFIG['user'] or not DB_CONFIG['password']):
+    raise ValueError("POSTGRES_USER and POSTGRES_PASSWORD environment variables must be set in production")
+elif not DB_CONFIG['user'] or not DB_CONFIG['password']:
+    # In development, allow fallback to system user authentication if no credentials provided
+    print("WARNING: Database credentials not provided. Using system user authentication.")
+    if not DB_CONFIG['user']:
+        import getpass
+        DB_CONFIG['user'] = getpass.getuser()
+        print(f"Using system username: {DB_CONFIG['user']}")
 
 # User Privacy Settings
 USER_HASH_SALT = os.getenv("USER_HASH_SALT", "")
