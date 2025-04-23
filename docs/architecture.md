@@ -4,7 +4,7 @@ This document outlines the architecture of the Corgi Recommender Service, explai
 
 ## System Overview
 
-The Corgi Recommender Service is a Flask-based microservice that provides personalized content recommendations for Mastodon users. It tracks user interactions, analyzes preferences, and delivers tailored content suggestions.
+The Corgi Recommender Service is a modern web service that provides personalized content recommendations for Mastodon users. It tracks user interactions, analyzes preferences, and delivers tailored content suggestions while maintaining user privacy.
 
 ### Key Components
 
@@ -12,8 +12,8 @@ The Corgi Recommender Service is a Flask-based microservice that provides person
 
 The system consists of these main components:
 
-1. **API Layer**: Flask routes handling client requests
-2. **Database Layer**: PostgreSQL database for data persistence
+1. **API Layer**: Web routes handling client requests
+2. **Database Layer**: SQLAlchemy ORM for database abstraction and persistence
 3. **Core Engine**: Ranking algorithm and recommendation logic
 4. **Utility Services**: Privacy controls, logging, and validation
 
@@ -21,24 +21,26 @@ The system consists of these main components:
 
 ### API Layer
 
-The API layer uses Flask blueprints to organize endpoints by functionality:
+The API layer uses modular route organization by functionality:
 
 - **Interactions API**: Logs and queries user interactions with posts
 - **Recommendations API**: Provides personalized content suggestions
 - **Privacy API**: Manages user privacy settings
+- **Timeline API**: Delivers and augments timeline data
 
-Each blueprint is defined in its own module within the `routes/` directory, promoting code organization and maintainability.
+Each component is defined in its own module within the `routes/` directory, promoting code organization and maintainability.
 
 ### Database Layer
 
-The service uses PostgreSQL for data storage, with these primary tables:
+The service uses SQLAlchemy ORM for database abstraction, supporting both SQLite (development) and PostgreSQL (production) with these primary models:
 
-- **post_metadata**: Stores post content and metadata
-- **interactions**: Records user engagement with posts
-- **post_rankings**: Stores personalized ranking scores
-- **privacy_settings**: Manages user privacy preferences
+- **PostMetadata**: Stores post content and metadata
+- **UserInteraction**: Records user engagement with posts
+- **UserAlias**: Maps pseudonymized user identifiers
+- **AuthorPreference**: Tracks user preferences for authors
+- **RecommendationLog**: Records recommendation history
 
-Database access is handled through a connection pool (using `psycopg2`), providing efficient connection management and query execution.
+Database access is handled through SQLAlchemy sessions, providing efficient connection management, query execution, and database portability. The database interface is cleanly abstracted through the `db.interface` module.
 
 ### Core Engine
 
@@ -83,15 +85,15 @@ Supporting components include:
 
 ### 1. Pseudonymization of User IDs
 
-User IDs are hashed with a salt before storage to enhance privacy. This allows the system to track user preferences without storing raw identifiers.
+User IDs are hashed with HMAC-SHA256 before storage to enhance privacy. This allows the system to track user preferences without storing raw identifiers, implemented in the `db.privacy` module.
 
-### 2. Database Connection Pooling
+### 2. Database Abstraction with SQLAlchemy
 
-Connection pooling is used to efficiently manage database connections, reducing the overhead of establishing new connections for each request.
+SQLAlchemy ORM provides database portability, allowing the system to work seamlessly with both SQLite and PostgreSQL. This enables easier development, testing, and deployment across different environments.
 
-### 3. Blueprint-Based API Design
+### 3. Modular API Design
 
-Flask blueprints provide a modular approach to API design, allowing clear separation of concerns and easier maintenance.
+The API is designed in a modular way, with clear separation of concerns between routes, database access, and business logic, making the codebase easier to maintain and extend.
 
 ### 4. Mastodon-Compatible Response Format
 
@@ -99,7 +101,7 @@ Responses follow Mastodon API conventions, enabling direct integration with exis
 
 ### 5. Three-Tier Privacy Model
 
-The system offers three privacy levels (full, limited, none) to give users control over data collection while balancing recommendation quality.
+The system offers three privacy levels (FULL, LIMITED, NONE) represented as an enum, giving users control over data collection while balancing recommendation quality.
 
 ## Scalability Considerations
 
@@ -108,33 +110,40 @@ The system offers three privacy levels (full, limited, none) to give users contr
 - Single server deployment
 - In-memory recommendation processing
 - No distributed caching
+- Limited batch processing capabilities
 
 ### Potential Improvements
 
 - Introduce worker queues for asynchronous ranking generation
 - Implement Redis-based caching for recommendations
 - Add database sharding for high-volume deployments
+- Support for distributed processing with Celery or similar tools
 
 ## Security Considerations
 
 The service implements several security measures:
 
-- User data pseudonymization
+- User data pseudonymization with HMAC-SHA256
 - Configurable CORS policies
-- Robust input validation
+- Robust input validation and sanitization
 - Request ID tracking for audit trails
+- SQLAlchemy ORM to prevent SQL injection
+- Exception handling that prevents information leakage
 
 ## Development and Testing
 
 The service includes:
 
-- Comprehensive testing framework
+- Comprehensive testing framework with pytest
 - Validation tool for end-to-end testing
 - Environment-specific configuration
+- Support for SQLite in development environments
+- Database migration tools for versioning schema changes
 
 ## References
 
-- [Flask Documentation](https://flask.palletsprojects.com/)
+- [SQLAlchemy Documentation](https://docs.sqlalchemy.org/)
+- [SQLite Documentation](https://www.sqlite.org/docs.html)
 - [PostgreSQL Documentation](https://www.postgresql.org/docs/)
 - [Mastodon API Reference](https://docs.joinmastodon.org/api/)
 - [Content Recommendation Best Practices](https://www.example.org/recommendations)

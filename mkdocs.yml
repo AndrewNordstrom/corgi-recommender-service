@@ -119,12 +119,21 @@ nav:
     - Agent Framework: agent_guide.md
     - Validator: validator-guide.md
     - Client Integration: client/README.md
+  - Database:
+    - Overview: database/index.md
+    - Schema: database/schema.md
+    - Configuration: database/configuration.md
+    - Interface: database/interface.md
+    - CLI: database/cli.md
+    - SQLAlchemy Models: database/models.md
   - Examples:
     - Elk Integration: examples/elk.md
     - Python Client: examples/python.md
     - CLI Tool: examples/cli.md
   - Compatibility: COMPATIBILITY.md
   - FAQ: faq.md
+  - Documentation:
+    - Style Guide: STYLE_GUIDE.md
 
 repo_name: AndrewNordstrom/corgi-recommender-service
 repo_url: https://github.com/AndrewNordstrom/corgi-recommender-service
