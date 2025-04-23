@@ -2,6 +2,46 @@
 
 This document outlines security issues that were identified and fixed in the Corgi Recommender Service.
 
+## Recent Fixes (April 2025)
+
+### High Severity Issues Fixed
+
+1. **Flask Debug Mode in simple_test_server.py**
+   - Fixed by disabling debug mode in production (`debug=False`)
+   - Prevents exposing sensitive information and remote code execution
+
+2. **Clear-text Logging of Sensitive Information in tools/dev_check.py**
+   - Fixed by implementing logging redaction for sensitive data
+   - Added regex pattern matching to redact passwords, tokens, keys, and secrets
+
+3. **Swagger UI Bundle Vulnerabilities**
+   - Created README.md with instructions for updating Swagger UI
+   - Recommended updating to the latest version to fix string escaping and other vulnerabilities
+
+### Medium Severity Issues Fixed
+
+1. **DOM Text Reinterpreted as HTML in templates/setup.html**
+   - Fixed by replacing `innerHTML` with safer DOM manipulation methods
+   - Used `document.createTextNode()` to prevent XSS attacks
+
+2. **Reflected Server-Side Cross-Site Scripting in special_proxy.py and special_proxy_fixed.py**
+   - Added URL validation and escaping
+   - Implemented whitelisting of allowed domains for redirects
+   - Used HTML escaping for rendered content
+
+3. **Information Exposure Through Exceptions**
+   - Implemented standardized error handlers in all services
+   - Added global exception handlers for Flask applications
+   - Ensured error messages don't leak sensitive information to clients
+   
+### Next.js Frontend Vulnerabilities
+
+All Next.js vulnerabilities have been resolved by updating to version 15.3.1, which includes security patches for:
+- Authorization Bypass in Next.js Middleware
+- Next.js Cache Poisoning
+- Next.js Server-Side Request Forgery
+- Denial of Service issues
+
 ## 1. Fixed Hardcoded Credentials/Secrets
 
 - **fix_token.py**: Removed hardcoded token `"YOUR_ELK_TOKEN"` and replaced it with dynamically generated token.

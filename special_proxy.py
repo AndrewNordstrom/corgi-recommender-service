@@ -32,6 +32,22 @@ app = Flask(__name__)
 from flask_cors import CORS
 CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)
 
+# Custom error handler for all exceptions
+@app.errorhandler(Exception)
+def handle_exception(e):
+    """
+    Global exception handler that logs the full error but returns a generic message
+    to prevent information leakage to potential attackers.
+    """
+    # Log the full error for debugging
+    logger.error(f"Unhandled exception: {str(e)}", exc_info=True)
+    
+    # Return a generic error message
+    return jsonify({
+        "status": "error",
+        "message": "An internal server error occurred"
+    }), 500
+
 @app.before_request
 def setup_sqlite_connection():
     """Setup SQLite connection for all requests"""
@@ -226,6 +242,17 @@ def mock_oauth_redirect():
     if not redirect_uri:
         return "Error: No redirect URI provided", 400
     
+    # Validate redirect URI to prevent open redirect
+    if not redirect_uri.startswith(('http://', 'https://')):
+        return "Error: Invalid redirect URI", 400
+        
+    # Further restrict to only allow certain domains
+    allowed_domains = ['localhost', '127.0.0.1', 'elk.zone', 'corgi-recommender.example.com']
+    from urllib.parse import urlparse
+    parsed_uri = urlparse(redirect_uri)
+    if not any(parsed_uri.netloc.endswith(domain) for domain in allowed_domains):
+        return "Error: Redirect URI domain not allowed", 403
+    
     # Add code parameter to redirect URI
     if '?' in redirect_uri:
         redirect_url = f"{redirect_uri}&code=mock_auth_code"
@@ -234,15 +261,19 @@ def mock_oauth_redirect():
     
     logger.info(f"Redirecting to: {redirect_url}")
     
+    # Escape the URL to prevent XSS
+    import html
+    safe_redirect_url = html.escape(redirect_url)
+    
     return f"""
     <!DOCTYPE html>
     <html>
     <head>
         <title>Redirecting...</title>
-        <meta http-equiv="refresh" content="0;url={redirect_url}">
+        <meta http-equiv="refresh" content="0;url={safe_redirect_url}">
     </head>
     <body>
-        <p>Redirecting to Elk... If you are not redirected, <a href="{redirect_url}">click here</a>.</p>
+        <p>Redirecting to Elk... If you are not redirected, <a href="{safe_redirect_url}">click here</a>.</p>
     </body>
     </html>
     """

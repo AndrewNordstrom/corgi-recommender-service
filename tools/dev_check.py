@@ -22,6 +22,7 @@ import time
 import logging
 import requests
 import psycopg2
+import re
 from datetime import datetime
 
 # ANSI color codes for terminal output
@@ -51,10 +52,14 @@ def print_result(check_name, success, message=None, error=None):
     print(f"{BOLD}{check_name}{RESET}: {status}")
     
     if message and success:
-        print(f"  {GREEN}{message}{RESET}")
+        # Redact any potentially sensitive information before logging
+        redacted_message = re.sub(r'(password|token|key|secret)=\S+', r'\1=*****', str(message))
+        print(f"  {GREEN}{redacted_message}{RESET}")
     
     if error and not success:
-        print(f"  {RED}{error}{RESET}")
+        # Redact any potentially sensitive information before logging
+        redacted_error = re.sub(r'(password|token|key|secret)=\S+', r'\1=*****', str(error))
+        print(f"  {RED}{redacted_error}{RESET}")
     
     return success
 

@@ -238,7 +238,8 @@ def update_privacy_setting():
         })
     except Exception as e:
         logger.error(f"Failed to update privacy settings: {e}")
-        return jsonify({"status": "error", "message": str(e)}), 500
+        # Don't expose exception details to the client
+        return jsonify({"status": "error", "message": "An error occurred while updating privacy settings"}), 500
 
 @setup_gui_bp.route('/api/validation-results', methods=['GET'])
 @log_route
@@ -263,7 +264,28 @@ def get_validation_results():
         })
     except Exception as e:
         logger.error(f"Failed to get validation results: {e}")
-        return jsonify({"status": "error", "message": str(e)}), 500
+        # Don't expose exception details to the client
+        return jsonify({"status": "error", "message": "An error occurred while retrieving validation results"}), 500
+
+def handle_exception(func_name, error):
+    """
+    Standardized exception handler that logs the full error but returns a generic message to the client.
+    
+    Args:
+        func_name (str): The name of the function where the error occurred
+        error (Exception): The exception that was raised
+        
+    Returns:
+        tuple: A JSON response with a generic error message and a 500 status code
+    """
+    # Log the full error details for debugging
+    logger.error(f"Error in {func_name}: {error}")
+    
+    # Return a generic error message to the client
+    return jsonify({
+        "status": "error", 
+        "message": "An internal server error occurred. Please try again later."
+    }), 500
 
 def log_command_output(command, stdout, stderr):
     """

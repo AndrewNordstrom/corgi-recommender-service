@@ -310,7 +310,9 @@
         function showOutput(message, isError = false) {
             const outputArea = document.getElementById('output-area');
             const timestamp = new Date().toLocaleTimeString();
-            outputArea.innerHTML += `\n[${timestamp}] ${isError ? '❌ ERROR: ' : ''}${message}`;
+            // Create a text node instead of using innerHTML to prevent XSS
+            const textNode = document.createTextNode(`\n[${timestamp}] ${isError ? '❌ ERROR: ' : ''}${message}`);
+            outputArea.appendChild(textNode);
             outputArea.scrollTop = outputArea.scrollHeight;
         }
         
@@ -319,10 +321,14 @@
             const element = document.getElementById(elementId);
             if (isLoading) {
                 element.disabled = true;
-                element.innerHTML = `<span class="loader"></span> ${element.textContent}`;
+                element.textContent = '';
+                const loaderSpan = document.createElement('span');
+                loaderSpan.className = 'loader';
+                element.appendChild(loaderSpan);
+                element.appendChild(document.createTextNode(` ${element.getAttribute('data-original-text') || 'Loading...'}` ));
             } else {
                 element.disabled = false;
-                element.innerHTML = element.textContent;
+                element.textContent = element.getAttribute('data-original-text') || element.textContent;
             }
         }
         
