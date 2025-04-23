@@ -197,7 +197,7 @@ def run_command():
         }), 504
     except Exception as e:
         logger.error(f"Failed to run command {command}: {e}")
-        return jsonify({"status": "error", "message": str(e)}), 500
+        return handle_exception("run_command", e)
 
 @setup_gui_bp.route('/api/update-privacy', methods=['POST'])
 @log_route

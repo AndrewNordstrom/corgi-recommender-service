@@ -196,7 +196,7 @@ def log_interaction():
                     except Exception as e:
                         logger.error(f"Error adding stub entry for post {post_id}: {e}")
                         return jsonify({
-                            "error": f"Failed to create stub entry for post: {e}"
+                            "error": "Failed to create stub entry for post"
                         }), 500
                 
                 if post_exists:

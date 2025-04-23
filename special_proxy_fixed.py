@@ -934,11 +934,10 @@ def proxy_to_mastodon(path):
             f"Error: {str(e)}"
         )
         
-        # Return a clear error message
+        # Return a generic error message without exposing exception details
         return jsonify({
             "error": "An unexpected error occurred while processing your request",
-            "path": path,
-            "details": str(e)
+            "path": path
         }), 500
 
 def load_cold_start_posts():

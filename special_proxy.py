@@ -416,7 +416,7 @@ def proxy_to_mastodon(path):
         return jsonify({
             "error": "Failed to proxy request to Mastodon instance",
             "instance": instance_url,
-            "details": str(e)
+            "status": "connection_failed"
         }), 502
 
 @app.route('/api/v1/timelines/home', methods=['GET'])

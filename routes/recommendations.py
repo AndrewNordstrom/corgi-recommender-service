@@ -122,7 +122,7 @@ def generate_rankings():
             }), 201
     except Exception as e:
         logger.error(f"Error during ranking generation: {e}")
-        return jsonify({"error": f"Ranking generation error: {str(e)}"}), 500
+        return jsonify({"error": "An internal error occurred during ranking generation"}), 500
 
 @recommendations_bp.route('/timelines/recommended', methods=['GET'])
 @log_route
@@ -372,8 +372,8 @@ def get_recommendations():
                         return jsonify({
                             "user_id": user_id,
                             "recommendations": [],
-                            "message": f"Error generating recommendations: {str(e)}",
-                            "debug_info": {"error": str(e)}
+                            "message": "Unable to generate recommendations at this time",
+                            "debug_info": {"error_occurred": True}
                         })
                 
                 # Get recommendations and join with posts

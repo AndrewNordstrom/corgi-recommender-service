@@ -62,8 +62,8 @@ def log_route(f):
             logger.info(f"Request failed: {request.method} {request.path} in {execution_time:.3f}s")
             
             return jsonify({
-                "error": str(e),
-                "type": e.__class__.__name__
+                "error": "An internal server error occurred",
+                "status": "error"
             }), 500
             
     return decorated_function
