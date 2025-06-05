@@ -102,6 +102,36 @@ if not USER_HASH_SALT:
             "WARNING: USER_HASH_SALT not set. Using an empty salt is not secure for production!"
         )
 
+# Redis Cache Settings
+REDIS_ENABLED = os.getenv("REDIS_ENABLED", "True").lower() == "true"
+REDIS_HOST = os.getenv("REDIS_HOST", "localhost")
+REDIS_PORT = int(os.getenv("REDIS_PORT", "6379"))
+REDIS_DB = int(os.getenv("REDIS_DB", "0"))
+REDIS_PASSWORD = os.getenv("REDIS_PASSWORD", None)
+
+# Construct Redis URL
+if REDIS_PASSWORD:
+    REDIS_URL = f"redis://:{REDIS_PASSWORD}@{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}"
+else:
+    REDIS_URL = f"redis://{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}"
+
+# Allow override of Redis URL from environment
+REDIS_URL = os.getenv("REDIS_URL", REDIS_URL)
+
+# Redis TTL Settings
+REDIS_TTL = int(os.getenv("REDIS_TTL", "3600"))  # Default cache TTL: 1 hour
+REDIS_TTL_RECOMMENDATIONS = int(os.getenv("REDIS_TTL_RECOMMENDATIONS", "3600"))  # 1 hour
+REDIS_TTL_TIMELINE = int(os.getenv("REDIS_TTL_TIMELINE", "300"))  # 5 minutes
+REDIS_TTL_PROFILE = int(os.getenv("REDIS_TTL_PROFILE", "600"))  # 10 minutes
+REDIS_TTL_POST = int(os.getenv("REDIS_TTL_POST", "1800"))  # 30 minutes
+REDIS_TTL_HEALTH = int(os.getenv("REDIS_TTL_HEALTH", "60"))  # 1 minute
+REDIS_TTL_INTERACTIONS = int(os.getenv("REDIS_TTL_INTERACTIONS", "600"))  # 10 minutes
+REDIS_TTL_PRIVACY = int(os.getenv("REDIS_TTL_PRIVACY", "3600"))  # 1 hour
+REDIS_TTL_OPTOUT_STATUS = int(os.getenv("REDIS_TTL_OPTOUT_STATUS", "172800"))  # 48 hours
+
+# Rate limiting storage URL (uses same Redis as cache)
+RATE_LIMITING_STORAGE_URL = os.getenv("RATE_LIMITING_STORAGE_URL", REDIS_URL)
+
 # Recommendation Algorithm Settings
 ALGORITHM_CONFIG = {
     "weights": {
@@ -136,3 +166,69 @@ COLD_START_POST_LIMIT = int(os.getenv("COLD_START_POST_LIMIT", "30"))
 ALLOW_COLD_START_FOR_ANONYMOUS = (
     os.getenv("ALLOW_COLD_START_FOR_ANONYMOUS", "True").lower() == "true"
 )
+
+# Testing Configuration Class
+class TestingConfig:
+    """Configuration class for testing environment."""
+    
+    TESTING = True
+    DEBUG = True
+    ENV = "testing"
+    
+    # Use in-memory SQLite for testing
+    DB_CONFIG = {
+        "host": "localhost",
+        "port": "5432", 
+        "user": "test_user",
+        "password": "test_password",
+        "dbname": "test_corgi_recommender",
+    }
+    
+    # Disable Redis for testing to avoid external dependencies
+    REDIS_ENABLED = False
+    
+    # Short TTLs for testing
+    REDIS_TTL = 10
+    REDIS_TTL_RECOMMENDATIONS = 10
+    REDIS_TTL_TIMELINE = 5
+    REDIS_TTL_PROFILE = 5
+    REDIS_TTL_POST = 10
+    REDIS_TTL_HEALTH = 5
+    REDIS_TTL_INTERACTIONS = 5
+    REDIS_TTL_PRIVACY = 10
+    REDIS_TTL_OPTOUT_STATUS = 20
+    
+    # Testing-specific settings
+    USER_HASH_SALT = "test_salt_123"
+    API_VERSION = "v1"
+    API_PREFIX = "/api/v1"
+    HOST = "localhost"
+    PORT = 5999  # Different port for testing
+    PROXY_PORT = 5998
+    USE_HTTPS = False
+    
+    # Algorithm config for testing
+    ALGORITHM_CONFIG = {
+        "weights": {
+            "author_preference": 0.4,
+            "content_engagement": 0.3,
+            "recency": 0.3,
+        },
+        "time_decay_days": 7,
+        "min_interactions": 0,
+        "max_candidates": 10,  # Smaller for faster testing
+        "include_synthetic": True,
+    }
+    
+    # Health check settings
+    HEALTH_CHECK_TIMEOUT = 1  # Faster for testing
+    
+    # Proxy settings
+    DEFAULT_MASTODON_INSTANCE = "https://mastodon.social"
+    RECOMMENDATION_BLEND_RATIO = 0.3
+    PROXY_TIMEOUT = 2  # Shorter timeout for testing
+    
+    # Cold start settings
+    COLD_START_ENABLED = True
+    COLD_START_POST_LIMIT = 5  # Smaller for testing
+    ALLOW_COLD_START_FOR_ANONYMOUS = True

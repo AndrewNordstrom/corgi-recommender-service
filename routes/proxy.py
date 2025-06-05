@@ -17,6 +17,7 @@ import time
 import datetime
 import os
 import re
+import hashlib
 
 from db.connection import get_db_connection
 from utils.logging_decorator import log_route
@@ -1671,3 +1672,33 @@ def proxy_metrics():
         metrics["reset"] = True
 
     return jsonify(metrics)
+
+
+def generate_proxy_cache_key(endpoint, params, user_id, instance):
+    """
+    Generate a cache key for proxy requests.
+    
+    Args:
+        endpoint: The API endpoint being requested
+        params: Query parameters dict
+        user_id: User ID (if any)
+        instance: Mastodon instance URL
+        
+    Returns:
+        str: Cache key for this request
+    """
+    # Sort params for consistent key generation
+    sorted_params = sorted(params.items()) if params else []
+    params_str = "&".join([f"{k}={v}" for k, v in sorted_params])
+    
+    # Create cache key components
+    key_parts = [
+        endpoint or "",
+        params_str,
+        user_id or "anonymous",
+        instance or "default"
+    ]
+    
+    # Join and hash for consistent key
+    key_string = "|".join(key_parts)
+    return hashlib.md5(key_string.encode()).hexdigest()

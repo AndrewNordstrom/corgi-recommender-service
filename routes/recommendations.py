@@ -18,6 +18,15 @@ from utils.logging_decorator import log_route
 # Set up logging
 logger = logging.getLogger(__name__)
 
+# Check if async tasks (Celery) are available
+try:
+    from utils.celery_app import celery
+    ASYNC_TASKS_AVAILABLE = True
+    logger.info("Async tasks (Celery) are available")
+except ImportError:
+    ASYNC_TASKS_AVAILABLE = False
+    logger.warning("Async tasks (Celery) are not available - running in synchronous mode")
+
 # Create blueprint
 recommendations_bp = Blueprint("recommendations", __name__)
 

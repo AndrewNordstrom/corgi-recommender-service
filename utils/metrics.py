@@ -48,6 +48,38 @@ RECOMMENDATION_INTERACTIONS = Counter(
     ["action_type", "post_type"],
 )
 
+# Cache metrics
+CACHE_HIT_TOTAL = Counter(
+    "corgi_cache_hit_total",
+    "Total number of cache hits",
+    ["cache_type", "endpoint"],
+)
+
+CACHE_MISS_TOTAL = Counter(
+    "corgi_cache_miss_total", 
+    "Total number of cache misses",
+    ["cache_type", "endpoint"],
+)
+
+CACHE_ERROR_TOTAL = Counter(
+    "corgi_cache_error_total",
+    "Total number of cache errors", 
+    ["cache_type", "error_type"],
+)
+
+CACHE_EVICTIONS_TOTAL = Counter(
+    "corgi_cache_evictions_total",
+    "Total number of cache evictions",
+    ["cache_type", "reason"],
+)
+
+CACHE_OPERATION_SECONDS = Histogram(
+    "corgi_cache_operation_seconds",
+    "Time taken for cache operations",
+    ["operation", "cache_type"],
+    buckets=[0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0],
+)
+
 # Histograms - track distribution of values
 RECOMMENDATION_SCORES = Histogram(
     "corgi_recommendation_scores",
@@ -314,3 +346,106 @@ def force_metrics_flush():
     except Exception as e:
         logger.error(f"Error manually flushing metrics: {e}")
         return False
+
+
+def track_cache_hit(cache_type, endpoint):
+    """
+    Track a cache hit event.
+
+    Args:
+        cache_type: Type of cache (e.g., 'redis', 'memory')
+        endpoint: API endpoint that was cached
+    """
+    CACHE_HIT_TOTAL.labels(cache_type=cache_type, endpoint=endpoint).inc()
+
+
+def track_cache_miss(cache_type, endpoint):
+    """
+    Track a cache miss event.
+
+    Args:
+        cache_type: Type of cache (e.g., 'redis', 'memory')
+        endpoint: API endpoint that missed cache
+    """
+    CACHE_MISS_TOTAL.labels(cache_type=cache_type, endpoint=endpoint).inc()
+
+
+def track_cache_error(cache_type, error_type):
+    """
+    Track a cache error event.
+
+    Args:
+        cache_type: Type of cache (e.g., 'redis', 'memory')
+        error_type: Type of error (e.g., 'connection', 'timeout')
+    """
+    CACHE_ERROR_TOTAL.labels(cache_type=cache_type, error_type=error_type).inc()
+
+
+def track_cache_eviction(cache_type, reason):
+    """
+    Track a cache eviction event.
+
+    Args:
+        cache_type: Type of cache (e.g., 'redis', 'memory')
+        reason: Reason for eviction (e.g., 'ttl_expired', 'memory_pressure')
+    """
+    CACHE_EVICTIONS_TOTAL.labels(cache_type=cache_type, reason=reason).inc()
+
+
+def get_cache_hit_rate(cache_type, endpoint):
+    """
+    Calculate cache hit rate for a specific cache type and endpoint.
+
+    Args:
+        cache_type: Type of cache
+        endpoint: API endpoint
+
+    Returns:
+        float: Hit rate as a percentage (0-100)
+    """
+    try:
+        hits = CACHE_HIT_TOTAL.labels(cache_type=cache_type, endpoint=endpoint)._value._value
+        misses = CACHE_MISS_TOTAL.labels(cache_type=cache_type, endpoint=endpoint)._value._value
+        total = hits + misses
+        if total == 0:
+            return 0.0
+        return (hits / total) * 100
+    except Exception as e:
+        logger.error(f"Error calculating cache hit rate: {e}")
+        return 0.0
+
+
+def track_cache_operation_time(operation: str, cache_type: str, duration: float):
+    """
+    Track the time taken for a cache operation.
+
+    Args:
+        operation: Type of operation (e.g., 'get', 'set', 'delete')
+        cache_type: Type of cache (e.g., 'redis', 'memory')
+        duration: Duration in seconds
+    """
+    CACHE_OPERATION_SECONDS.labels(operation=operation, cache_type=cache_type).observe(duration)
+
+
+def track_cache_ttl(cache_type: str, ttl_seconds: int):
+    """
+    Track cache TTL values for monitoring cache expiration patterns.
+
+    Args:
+        cache_type: Type of cache (e.g., 'redis', 'memory')
+        ttl_seconds: TTL value in seconds
+    """
+    # For now, we'll just log this - could add a histogram if needed
+    logger.debug(f"Cache TTL set: {cache_type} = {ttl_seconds}s")
+
+
+def track_cache_size(cache_type: str, size_bytes: int):
+    """
+    Track cache size for monitoring memory usage.
+
+    Args:
+        cache_type: Type of cache (e.g., 'redis', 'memory')
+        size_bytes: Size in bytes
+    """
+    # For now, we'll just log this - could add a gauge if needed
+    logger.debug(f"Cache size: {cache_type} = {size_bytes} bytes")
