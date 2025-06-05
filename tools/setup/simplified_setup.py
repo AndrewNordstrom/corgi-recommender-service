@@ -9,16 +9,19 @@ import sqlite3
 import sys
 
 # Set up logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] %(message)s')
-logger = logging.getLogger('setup')
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s"
+)
+logger = logging.getLogger("setup")
 
 # Define the SQLite database file path
-DB_FILE = os.path.join(os.path.dirname(__file__), 'corgi_demo.db')
+DB_FILE = os.path.join(os.path.dirname(__file__), "corgi_demo.db")
+
 
 def setup_database():
     """Create SQLite database with required tables"""
     logger.info(f"Setting up SQLite database at {DB_FILE}")
-    
+
     # SQL to create tables
     create_tables_sql = """
     -- Table: user_identities
@@ -44,16 +47,16 @@ def setup_database():
     -- Create indexes
     CREATE INDEX IF NOT EXISTS idx_user_identities_access_token ON user_identities(access_token);
     """
-    
+
     try:
         # Connect to SQLite database (create if it doesn't exist)
         conn = sqlite3.connect(DB_FILE)
         cursor = conn.cursor()
-        
+
         # Create tables
         cursor.executescript(create_tables_sql)
         conn.commit()
-        
+
         logger.info("Database schema created successfully")
         return conn
     except Exception as e:
@@ -62,25 +65,25 @@ def setup_database():
             conn.close()
         return None
 
+
 def link_mastodon_user(conn, user_id, instance_url, access_token):
     """Link a user to a Mastodon account"""
     try:
         # Ensure instance_url has the correct format
-        if instance_url and not instance_url.startswith(('http://', 'https://')):
+        if instance_url and not instance_url.startswith(("http://", "https://")):
             instance_url = f"https://{instance_url}"
-        
+
         logger.info(f"Linking user {user_id} to {instance_url} with provided token")
-        
+
         # Create cursor
         cursor = conn.cursor()
-        
+
         # Check if the user already exists
         cursor.execute(
-            "SELECT user_id FROM user_identities WHERE user_id = ?",
-            (user_id,)
+            "SELECT user_id FROM user_identities WHERE user_id = ?", (user_id,)
         )
         result = cursor.fetchone()
-        
+
         if result:
             # Update existing record
             logger.info(f"Updating existing identity for user {user_id}")
@@ -92,7 +95,7 @@ def link_mastodon_user(conn, user_id, instance_url, access_token):
                     updated_at = CURRENT_TIMESTAMP
                 WHERE user_id = ?
                 """,
-                (instance_url, access_token, user_id)
+                (instance_url, access_token, user_id),
             )
         else:
             # Create new record
@@ -103,9 +106,9 @@ def link_mastodon_user(conn, user_id, instance_url, access_token):
                 (user_id, instance_url, access_token)
                 VALUES (?, ?, ?)
                 """,
-                (user_id, instance_url, access_token)
+                (user_id, instance_url, access_token),
             )
-        
+
         # Also set privacy settings to 'full' to allow personalization
         cursor.execute(
             """
@@ -113,49 +116,49 @@ def link_mastodon_user(conn, user_id, instance_url, access_token):
             (user_id, tracking_level)
             VALUES (?, 'full')
             """,
-            (user_id,)
+            (user_id,),
         )
-        
+
         # Commit the transaction
         conn.commit()
         logger.info(f"Successfully linked user {user_id} to {instance_url}")
-        
+
         # Verify the token was saved correctly
         cursor.execute(
-            "SELECT access_token FROM user_identities WHERE user_id = ?",
-            (user_id,)
+            "SELECT access_token FROM user_identities WHERE user_id = ?", (user_id,)
         )
         saved_token = cursor.fetchone()[0]
         logger.info(f"Verified saved token: {saved_token[:5]}...")
-        
+
         return True
     except Exception as e:
         logger.error(f"Error linking user: {e}")
         return False
+
 
 def main():
     # User information
     user_id = "demo_user"
     instance_url = "mastodon.social"
     access_token = "_Tb8IUyXBZ5Y8NmUcwY0-skXWQgP7xTVMZCFkqvZRIc"
-    
+
     # Setup database
     conn = setup_database()
     if not conn:
         print("Failed to set up database")
         sys.exit(1)
-    
+
     try:
         # Link the user
         if link_mastodon_user(conn, user_id, instance_url, access_token):
             print(f"\nSuccessfully linked user {user_id} to {instance_url}")
             print(f"Access token registered and ready to use with Elk")
-            
+
             # Test token lookup
             cursor = conn.cursor()
             cursor.execute(
-                "SELECT instance_url FROM user_identities WHERE access_token = ?", 
-                (access_token,)
+                "SELECT instance_url FROM user_identities WHERE access_token = ?",
+                (access_token,),
             )
             result = cursor.fetchone()
             if result:
@@ -169,6 +172,7 @@ def main():
         # Close the connection
         if conn:
             conn.close()
+
 
 if __name__ == "__main__":
     main()

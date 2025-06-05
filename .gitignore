@@ -29,17 +29,41 @@ coverage/
 
 # Environment variables
 .env
-.env.local
+.env.*
+!.env.example
+.env.backup
+.env.bak
+.env.temp
+.env.postgres.temp
 
 # Local development
 .vscode/
 .idea/
+.cursor/
 *.swp
 *.swo
 
-# Logs
+# Logs and reports
 logs/
 *.log
+*.pid
+server_startup.log
+proxy_server.log
+frontend.log
+elk_startup.log
+corgi_server.log
+corgi_validation.log
+stress_test_90min.log
+
+# Security reports and audits
+bandit_*.json
+security_audit_*.json
+dependency_security_*.json
+dependency_vulnerabilities_*.json
+baseline_results.json
+regression_analysis_*.json
+verification_reports/
+resource_status_test.json
 
 # Flask
 instance/
@@ -57,6 +81,7 @@ Thumbs.db
 *.db
 *.sqlite
 *.sqlite3
+corgi_demo.db
 
 # Certificates and keys
 *.pem
@@ -66,6 +91,7 @@ Thumbs.db
 *.der
 *.p12
 *.pfx
+certs/
 
 # Generated files
 *.pid
@@ -74,6 +100,88 @@ Thumbs.db
 # Frontend build files
 frontend/.next/
 frontend/node_modules/
+frontend/package-lock.json.bak
+frontend/package.json.bak
+
+# SDK build files
+sdk/node_modules/
+sdk/dist/
+sdk/.tsbuildinfo
+sdk/coverage/
+
+# Test and benchmark results
+.benchmarks/
+todo_backups/
+
+# Documentation build
+docs/_build/
+site/
+
+# Backup files
+*.backup
+*.bak
+index.html.backup
+
+# Temporary development files
+quick_*.py
+test_*.html
+debug_*.html
+simple_*.py
+demo_*.py
+check_*.py
+fix_*.py
+link_*.py
+analyze_*.py
+add_*.py
+create_*.py
+manage_*.py
+setup_*.py
+run_*.py
+start_*.py
+update_*.py
+*_test_helper.py
+*_temp.py
+
+# Integration and testing files in root
+test_*.sh
+start_*.sh
+elk_*.js
+elk_*.env
+integrate_*.sh
+
+# Documentation files that should be in docs/
+*.md.backup
+NEXT_STEPS_*.md
+OAUTH_*.md
+PHASE_*.md
+*_PLAN.md
+*_REPORT.md
+*_SUMMARY.md
+*_COMPLETE.md
+*_IMPLEMENTATION*.md
+*_DESIGN*.md
+*_AUDIT*.md
+PROJECT_STATUS_REPORT.md
+ROADMAP.md
+DEV_LOG.md
+TODO_*.md
+COMPREHENSIVE_*.md
+RED_TEAM_*.md
+SECURITY_*.md
+WORKER_QUEUE_*.md
+TRANSPARENT_PROXY_*.md
+SEAMLESS_INTEGRATION_*.md
+RBAC_*.md
+
+# Configuration files that should be in config/
+*.conf
+docker-compose-*.yml
+
+# Build and deployment files
+render.yaml
+fly.toml
+Procfile
 
 # Any files that might contain secrets/tokens
-corgi_demo.db
+Real_user_posts.txt
+validation_report.json

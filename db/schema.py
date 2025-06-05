@@ -118,10 +118,11 @@ CREATE INDEX IF NOT EXISTS idx_user_identities_access_token ON user_identities(a
 CREATE INDEX IF NOT EXISTS idx_user_identities_mastodon_id ON user_identities(mastodon_id);
 """
 
+
 def create_tables(conn):
     """
     Create database tables if they don't exist.
-    
+
     Args:
         conn: Database connection
     """
@@ -129,19 +130,20 @@ def create_tables(conn):
         # Create tables
         logger.info("Creating database tables...")
         cur.execute(CREATE_TABLES_SQL)
-        
+
         # Create indexes
         logger.info("Creating table indexes...")
         cur.execute(CREATE_INDEXES_SQL)
-        
+
         # Commit the transaction
         conn.commit()
         logger.info("Database schema created successfully")
 
+
 def reset_tables(conn):
     """
     Reset (drop and recreate) all tables - use only in development!
-    
+
     Args:
         conn: Database connection
     """
@@ -149,46 +151,52 @@ def reset_tables(conn):
         logger.warning("Dropping all tables - THIS WILL DELETE ALL DATA!")
         cur.execute(DROP_TABLES_SQL)
         conn.commit()
-        
+
     # Recreate tables
     create_tables(conn)
     logger.info("Database reset complete")
 
+
 def check_schema_version(conn):
     """
     Check if schema needs migration by looking for required columns.
-    
+
     Args:
         conn: Database connection
-        
+
     Returns:
         bool: True if schema is up to date, False if migration needed
     """
     try:
         with conn.cursor() as cur:
             # Check if post_metadata has language column
-            cur.execute("""
+            cur.execute(
+                """
                 SELECT column_name 
                 FROM information_schema.columns 
                 WHERE table_name='post_metadata' AND column_name='language'
-            """)
+            """
+            )
             has_language = cur.fetchone() is not None
-            
+
             # Check if post_rankings has recommendation_reason column
-            cur.execute("""
+            cur.execute(
+                """
                 SELECT column_name 
                 FROM information_schema.columns 
                 WHERE table_name='post_rankings' AND column_name='recommendation_reason'
-            """)
+            """
+            )
             has_reason = cur.fetchone() is not None
-            
+
             # Add more checks as schema evolves
-            
+
             # Return True if all expected columns exist
             return has_language and has_reason
     except Exception as e:
         logger.error(f"Error checking schema version: {e}")
         return False
+
 
 # SQLite schema for in-memory testing mode
 CREATE_SQLITE_TABLES_SQL = """
@@ -242,43 +250,48 @@ CREATE TABLE IF NOT EXISTS privacy_settings (
 );
 """
 
+
 def create_sqlite_tables(conn):
     """
     Create SQLite tables for in-memory testing.
-    
+
     Args:
         conn: SQLite database connection
     """
     cursor = conn.cursor()
-    
+
     # Create the tables
     logger.info("Creating SQLite in-memory tables...")
     cursor.executescript(CREATE_SQLITE_TABLES_SQL)
-    
+
     # Create indexes
     logger.info("Creating SQLite indexes...")
-    cursor.executescript("""
+    cursor.executescript(
+        """
         CREATE INDEX IF NOT EXISTS idx_interactions_user_id ON interactions(user_id);
         CREATE INDEX IF NOT EXISTS idx_interactions_post_id ON interactions(post_id);
         CREATE INDEX IF NOT EXISTS idx_posts_author_id ON posts(author_id);
         CREATE INDEX IF NOT EXISTS idx_recommendations_user_id ON recommendations(user_id);
-    """)
-    
+    """
+    )
+
     # Commit changes
     conn.commit()
     logger.info("SQLite in-memory database schema created successfully")
 
+
 def init_db(conn=None):
     """
     Initialize the database schema.
-    
+
     Can be called directly or via the db.connection module.
-    
+
     Args:
         conn: Optional database connection (if None, will create one)
     """
     if conn is None:
         from db.connection import get_db_connection
+
         with get_db_connection() as conn:
             if USE_IN_MEMORY_DB:
                 create_sqlite_tables(conn)
@@ -286,16 +299,20 @@ def init_db(conn=None):
                 try:
                     # Check if tables exist first
                     with conn.cursor() as cur:
-                        cur.execute("SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'post_metadata')")
+                        cur.execute(
+                            "SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'post_metadata')"
+                        )
                         tables_exist = cur.fetchone()[0]
-                        
+
                     if not tables_exist:
                         # No tables, create them all
                         create_tables(conn)
                     else:
                         # Tables exist, check if they need updates
                         if not check_schema_version(conn):
-                            logger.info("Schema needs upgrade - performing migrations...")
+                            logger.info(
+                                "Schema needs upgrade - performing migrations..."
+                            )
                             # Future: Add migration logic here
                 except Exception as e:
                     logger.error(f"Database initialization error: {e}")
@@ -307,9 +324,11 @@ def init_db(conn=None):
             try:
                 # Check if tables exist first
                 with conn.cursor() as cur:
-                    cur.execute("SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'post_metadata')")
+                    cur.execute(
+                        "SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'post_metadata')"
+                    )
                     tables_exist = cur.fetchone()[0]
-                    
+
                 if not tables_exist:
                     # No tables, create them all
                     create_tables(conn)
