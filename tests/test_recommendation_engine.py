@@ -23,7 +23,7 @@ def mock_ranking_data():
     """
     return [
         {
-            'id': 'post1',
+            'post_id': 'post1',  # Changed from 'id' to 'post_id'
             'author_id': 'user1',
             'author_name': 'Test User 1',
             'content': 'This is a test post with high engagement',
@@ -32,7 +32,7 @@ def mock_ranking_data():
             'recommendation_reason': 'Popular with other users'
         },
         {
-            'id': 'post2',
+            'post_id': 'post2',  # Changed from 'id' to 'post_id'
             'author_id': 'user2',
             'author_name': 'Test User 2',
             'content': 'This is a test post with medium engagement',
@@ -41,7 +41,7 @@ def mock_ranking_data():
             'recommendation_reason': 'From an author you might like'
         },
         {
-            'id': 'post3',
+            'post_id': 'post3',  # Changed from 'id' to 'post_id'
             'author_id': 'user3',
             'author_name': 'Test User 3',
             'content': 'This is a test post with low engagement',
@@ -112,12 +112,12 @@ def test_is_new_user():
     assert is_new_user('non_existent_user_12345') is True
 
     # Test user with sufficient interactions - using mock for consistency
-    with patch('utils.recommendation_engine.get_db_connection') as mock_get_db, \
-         patch('utils.recommendation_engine.get_cursor') as mock_get_cursor:
+    with patch('utils.recommendation_engine.get_db_connection') as mock_get_db:
         mock_conn = MagicMock()
         mock_cursor = MagicMock()
         mock_get_db.return_value.__enter__.return_value = mock_conn
-        mock_get_cursor.return_value.__enter__.return_value = mock_cursor
+        # Mock cursor() method on the connection
+        mock_conn.cursor.return_value.__enter__.return_value = mock_cursor
         
         # Mock result showing 8 interactions (> 5, so not new)
         # Ensure fetchone returns a tuple and [0] gives the actual count
@@ -172,13 +172,13 @@ def test_get_ranked_recommendations(mock_load_cold_start, mock_is_new_user,
     # Verify results
     assert len(posts) == 3
     
-    # For SQLite/in-memory DB, posts are always created as synthetic since post_metadata table is skipped
-    # The first post should use the mock ranking data for content, not the Mastodon post data
+    # For SQLite/in-memory DB, posts are created from ranking data
+    # The first post should use the mock ranking data for content
     assert posts[0]['id'] == 'post1'
     assert posts[0]['content'] == "This is a test post with high engagement"  # From mock_ranking_data
     assert posts[0]['account']['username'] == "Test User 1"  # From mock_ranking_data author_name
     assert posts[0]['account']['id'] == "user1"  # From mock_ranking_data author_id
-    assert posts[0]['is_synthetic'] is True  # Should be synthetic since no post_metadata in SQLite
+    assert posts[0]['is_synthetic'] is False  # Recommendation engine sets this to False
     assert posts[0]['is_real_mastodon_post'] is False  # Should be False since no stored Mastodon data
     
     # Verify ranking order

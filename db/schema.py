@@ -248,6 +248,20 @@ CREATE TABLE IF NOT EXISTS privacy_settings (
     tracking_level TEXT CHECK (tracking_level IN ('full', 'limited', 'none')) DEFAULT 'full',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Table: user_identities
+-- Stores user identity information for linking Mastodon accounts to internal user IDs
+CREATE TABLE IF NOT EXISTS user_identities (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id TEXT NOT NULL UNIQUE,
+    instance_url TEXT NOT NULL,
+    mastodon_id TEXT,
+    access_token TEXT,
+    refresh_token TEXT,
+    token_scope TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
 """
 
 

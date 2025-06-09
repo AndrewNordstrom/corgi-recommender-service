@@ -75,3 +75,7 @@ def log_route(f):
             )
 
     return decorated_function
+
+
+# Alias for API routes - same functionality as log_route
+log_api_call = log_route

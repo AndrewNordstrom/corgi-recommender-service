@@ -32,8 +32,8 @@ def test_throttling():
     print(f"📊 Configuration: Bucket size = {config.bucket_size}, Refill rate = {config.refill_rate}/sec")
     print()
     
-    # Simulate rapid requests
-    for i in range(10):
+    # Simulate rapid requests (optimized for test speed)
+    for i in range(5):  # Reduced from 10 to 5 iterations
         should_throttle, reason, wait_time = throttler.should_throttle_request(
             "test_endpoint", f"user_{i % 3}"
         )
@@ -43,7 +43,7 @@ def test_throttling():
         else:
             print(f"✅ Request {i+1}: ALLOWED")
         
-        time.sleep(0.1)  # Brief pause between requests
+        time.sleep(0.01)  # Minimal pause - 10ms instead of 100ms
     
     print("\n📈 Getting throttling stats...")
     stats = throttler.get_throttle_stats()

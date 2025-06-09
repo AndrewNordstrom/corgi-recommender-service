@@ -1,0 +1,265 @@
+name: Quality Gate - Test Suite Protection
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  test-suite-protection:
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        python-version: [3.11, 3.12]
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+        
+    - name: Cache dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+          
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install pytest-cov pytest-xdist pytest-timeout
+        
+    - name: Set up test environment
+      run: |
+        # Configure test database and environment
+        export TESTING=true
+        export DATABASE_URL=sqlite:///:memory:
+        export REDIS_URL=redis://localhost:6379/1
+        
+    - name: Start Redis for testing
+      uses: supercharge/redis-github-action@1.4.0
+      with:
+        redis-version: 7
+        
+    - name: Run full test suite (ZERO FAILURES REQUIRED)
+      run: |
+        echo "🎯 PROTECTING 100% GREEN TEST SUITE 🎯"
+        echo "Any failure here will block the merge!"
+        python -m pytest \
+          --tb=short \
+          --cov=. \
+          --cov-report=xml \
+          --cov-report=term-missing \
+          --timeout=300 \
+          --maxfail=1 \
+          -v
+          
+    - name: Verify 100% success rate
+      run: |
+        # Extract test results and verify perfection
+        TEST_RESULT=$(python -m pytest --tb=no -q | tail -1)
+        echo "Test Result: $TEST_RESULT"
+        
+        # Fail if ANY tests failed
+        if echo "$TEST_RESULT" | grep -q "FAILED"; then
+          echo "❌ QUALITY GATE FAILURE: Tests failed!"
+          echo "🚨 100% green test suite requirement violated!"
+          exit 1
+        fi
+        
+        # Verify we have 396+ passing tests
+        PASSED_COUNT=$(echo "$TEST_RESULT" | grep -o '[0-9]* passed' | grep -o '[0-9]*')
+        if [ "$PASSED_COUNT" -lt 396 ]; then
+          echo "❌ QUALITY GATE FAILURE: Expected 396+ tests, got $PASSED_COUNT"
+          exit 1
+        fi
+        
+        echo "✅ QUALITY GATE PASSED: $PASSED_COUNT tests passing, 0 failures!"
+        echo "🎉 100% green test suite protected!"
+        
+    - name: Check for warnings
+      run: |
+        # Run tests and capture warnings
+        python -m pytest --tb=no -q 2>&1 | grep -i "warning" > warnings.txt || true
+        WARNING_COUNT=$(wc -l < warnings.txt)
+        
+        echo "Warning count: $WARNING_COUNT"
+        if [ "$WARNING_COUNT" -gt 100 ]; then
+          echo "⚠️  High warning count detected: $WARNING_COUNT warnings"
+          echo "Consider addressing these in future PRs"
+        fi
+        
+    - name: Performance regression check
+      run: |
+        # Check if any test takes longer than 5 seconds
+        python -m pytest --durations=5 --tb=no -q | grep -E "[0-9]+\.[0-9]+s" > durations.txt || true
+        
+        # Check for tests over 5 seconds
+        if grep -q "[5-9]\.[0-9]s\|[0-9][0-9]\.[0-9]s" durations.txt; then
+          echo "⚠️  Performance regression detected - tests over 5s found"
+          echo "Consider optimizing slow tests"
+        fi
+        
+    - name: Upload coverage reports
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./coverage.xml
+        flags: unittests
+        name: codecov-umbrella
+        
+    - name: Export Test Metrics
+      if: always()
+      run: |
+        echo "📊 Exporting test metrics for monitoring..."
+        python scripts/test_metrics_exporter.py || true
+        
+    - name: Performance Regression Check
+      run: |
+        echo "🔍 Running performance regression analysis..."
+        python scripts/check_performance_regression.py || true
+        
+    - name: Quality gate success notification
+      if: success()
+      run: |
+        echo "🎉🎉🎉 QUALITY GATE SUCCESS! 🎉🎉🎉"
+        echo "✅ 100% green test suite maintained"
+        echo "✅ No regressions detected" 
+        echo "✅ Code ready for merge"
+        echo "📊 Metrics exported for monitoring"
+
+  security-scan:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: 3.12
+        
+    - name: Install security tools
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install pip-audit bandit safety semgrep
+        
+    - name: Dependency Vulnerability Scan
+      run: |
+        echo "🔒 Scanning dependencies for known vulnerabilities..."
+        
+        # pip-audit for Python package vulnerabilities
+        echo "📦 Running pip-audit..."
+        pip-audit --format=json --output=pip-audit-report.json --progress-spinner=off || true
+        pip-audit --format=table --progress-spinner=off
+        
+        # Safety for additional vulnerability database
+        echo "🛡️ Running safety check..."
+        safety check --json --output=safety-report.json || true
+        safety check --short-report || true
+        
+    - name: Static Security Analysis
+      run: |
+        echo "🔍 Running static security analysis..."
+        
+        # Bandit for Python security issues
+        echo "🔒 Running bandit..."
+        bandit -r . -f json -o bandit-report.json -ll || true
+        bandit -r . -ll --skip B101,B601 # Skip assert and shell usage in tests
+        
+        # Semgrep for additional security patterns
+        echo "⚡ Running semgrep..."
+        semgrep --config=auto --json --output=semgrep-report.json . || true
+        semgrep --config=auto --error . || true
+        
+    - name: SQL Injection & OWASP Check
+      run: |
+        echo "🛡️ Checking for SQL injection and OWASP vulnerabilities..."
+        
+        # Custom security checks for SQL injection patterns
+        echo "Scanning for potential SQL injection patterns..."
+        grep -r "SELECT.*WHERE.*=" --include="*.py" . || echo "No obvious SQL injection patterns found"
+        
+        # Check for hardcoded secrets/passwords
+        echo "Scanning for hardcoded secrets..."
+        grep -r -i "password\s*=" --include="*.py" . || echo "No hardcoded passwords found"
+        grep -r -i "secret\s*=" --include="*.py" . || echo "No hardcoded secrets found"
+        
+    - name: Upload Security Reports
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: security-reports
+        path: |
+          pip-audit-report.json
+          safety-report.json
+          bandit-report.json
+          semgrep-report.json
+
+  performance-regression:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: 3.12
+        
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install pytest-benchmark memory-profiler
+        
+    - name: Performance Baseline Testing
+      run: |
+        echo "⚡ Running performance regression detection..."
+        
+        # Run the three historically slowest tests with timing
+        echo "📊 Testing previously slow tests..."
+        python -m pytest tests/test_load_testing_framework.py::TestLoadTestingIntegration::test_baseline_load_test_execution --durations=1 -v
+        python -m pytest tests/test_performance_monitoring_complete.py::test_anomaly_detection --durations=1 -v  
+        python -m pytest tests/test_throttling.py::test_throttling --durations=1 -v
+        
+    - name: Full Suite Performance Analysis
+      run: |
+        echo "🔍 Analyzing full test suite performance..."
+        
+        # Run full suite with detailed timing
+        python -m pytest --durations=20 --tb=no -q > test-durations.txt
+        
+        # Check for performance regressions
+        echo "Slowest tests:"
+        head -20 test-durations.txt
+        
+        # Alert if any test takes more than 5 seconds
+        if grep -q "[5-9]\.[0-9][0-9]s\|[0-9][0-9]\.[0-9][0-9]s" test-durations.txt; then
+          echo "⚠️ Performance regression detected - tests over 5s found:"
+          grep "[5-9]\.[0-9][0-9]s\|[0-9][0-9]\.[0-9][0-9]s" test-durations.txt
+          echo "Consider optimizing these tests"
+        else
+          echo "✅ No performance regressions detected"
+        fi
+        
+    - name: Memory Usage Analysis
+      run: |
+        echo "💾 Analyzing memory usage patterns..."
+        
+        # Run memory-intensive tests with profiling
+        python -m memory_profiler -m pytest tests/test_performance_benchmarks.py::TestPerformanceBenchmarks::test_resource_utilization_monitoring -v || true
+        
+    - name: Upload Performance Reports
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: performance-reports
+        path: |
+          test-durations.txt 

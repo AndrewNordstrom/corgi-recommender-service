@@ -11,4 +11,13 @@ scrape_configs:
 
   - job_name: 'prometheus'
     static_configs:
+
+  # Test Suite Metrics
+  - job_name: 'test-metrics'
+    static_configs:
+      - targets: ['localhost:8000']
+    scrape_interval: 30s
+    metrics_path: /metrics
+    scheme: http
+
       - targets: ['localhost:9090']

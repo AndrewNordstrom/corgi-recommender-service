@@ -25,6 +25,7 @@ class PrivacyLevel(enum.Enum):
     NONE = "none"
     LIMITED = "limited"
     FULL = "full"
+    PUBLIC = "public"
 
 # Enum for interaction types
 class InteractionType(enum.Enum):
@@ -46,7 +47,9 @@ class UserAlias(Base):
     privacy_level = Column(Enum(PrivacyLevel), default=PrivacyLevel.FULL)
     
     # Relationships
-    interactions = relationship("UserInteraction", back_populates="user_alias", cascade="all, delete-orphan")
+    interactions = relationship("Interaction", back_populates="user_alias", cascade="all, delete-orphan")
+    timelines = relationship("UserTimeline", back_populates="user_alias", cascade="all, delete-orphan")
+    old_interactions = relationship("UserInteraction", back_populates="user_alias", cascade="all, delete-orphan")
     author_preferences = relationship("AuthorPreference", back_populates="user_alias", cascade="all, delete-orphan")
     recommendation_logs = relationship("RecommendationLog", back_populates="user_alias", cascade="all, delete-orphan")
 
@@ -104,7 +107,7 @@ class UserInteraction(Base):
     context = Column(JSON, nullable=True)
     
     # Relationships
-    user_alias = relationship("UserAlias", back_populates="interactions")
+    user_alias = relationship("UserAlias", back_populates="old_interactions")
     post = relationship("PostMetadata", back_populates="interactions")
     
     __table_args__ = (
@@ -153,6 +156,101 @@ class RecommendationLog(Base):
     __table_args__ = (
         {'sqlite_autoincrement': True}
     )
+
+class Post(Base):
+    """
+    Model for social media posts stored in the database.
+    """
+    __tablename__ = "posts"
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    post_id = Column(String(64), unique=True, nullable=False, index=True)
+    author_name = Column(String(255), nullable=False, index=True)
+    content = Column(Text, nullable=False)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow, index=True)
+    privacy_level = Column(Enum(PrivacyLevel), default=PrivacyLevel.PUBLIC, index=True)
+    language = Column(String(10), default='en', index=True)
+    is_synthetic = Column(Boolean, default=False, index=True)
+    post_metadata = Column(JSON, default={})
+    
+    # Relationships
+    interactions = relationship("Interaction", back_populates="post", cascade="all, delete-orphan")
+    crawled_posts = relationship("CrawledPost", back_populates="post", cascade="all, delete-orphan")
+
+
+class Interaction(Base):
+    """
+    Model for user interactions with posts.
+    """
+    __tablename__ = "interactions"
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    alias_id = Column(String(64), ForeignKey("user_aliases.alias_id"), nullable=False, index=True)
+    post_id = Column(String(64), ForeignKey("posts.post_id"), nullable=False, index=True)
+    interaction_type = Column(Enum(InteractionType), nullable=False, index=True)
+    timestamp = Column(DateTime, default=datetime.datetime.utcnow, index=True)
+    context = Column(JSON, default={})
+    
+    # Relationships
+    user_alias = relationship("UserAlias", back_populates="interactions")
+    post = relationship("Post", back_populates="interactions")
+
+
+class CrawledPost(Base):
+    """
+    Model for posts that have been crawled from external sources.
+    """
+    __tablename__ = "crawled_posts"
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    post_id = Column(String(64), ForeignKey("posts.post_id"), nullable=False, index=True)
+    source_url = Column(String(500), nullable=False)
+    crawled_at = Column(DateTime, default=datetime.datetime.utcnow, index=True)
+    crawler_version = Column(String(50))
+    status = Column(String(50), default='active', index=True)
+    crawl_metadata = Column(JSON, default={})
+    
+    # Relationships
+    post = relationship("Post", back_populates="crawled_posts")
+
+
+class UserTimeline(Base):
+    """
+    Model for user timeline data and preferences.
+    """
+    __tablename__ = "user_timelines"
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    alias_id = Column(String(64), ForeignKey("user_aliases.alias_id"), nullable=False, index=True)
+    timeline_type = Column(String(50), default='home', index=True)
+    last_updated = Column(DateTime, default=datetime.datetime.utcnow, index=True)
+    preferences = Column(JSON, default={})
+    cached_data = Column(JSON, default={})
+    
+    # Relationships
+    user_alias = relationship("UserAlias", back_populates="timelines")
+    cached_recommendations = relationship("CachedRecommendation", back_populates="timeline", cascade="all, delete-orphan")
+
+
+class CachedRecommendation(Base):
+    """
+    Model for cached recommendation results.
+    """
+    __tablename__ = "cached_recommendations"
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    timeline_id = Column(Integer, ForeignKey("user_timelines.id"), nullable=False, index=True)
+    post_id = Column(String(64), ForeignKey("posts.post_id"), nullable=False, index=True)
+    score = Column(Float, nullable=False, index=True)
+    rank_position = Column(Integer, nullable=False, index=True)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow, index=True)
+    expires_at = Column(DateTime, index=True)
+    algorithm_version = Column(String(50))
+    cache_metadata = Column(JSON, default={})
+    
+    # Relationships
+    timeline = relationship("UserTimeline", back_populates="cached_recommendations")
+    post = relationship("Post")
 
 # This function will be used to handle JSON serialization/deserialization
 def json_serializer(obj):

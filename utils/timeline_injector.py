@@ -16,6 +16,11 @@ logger = logging.getLogger(__name__)
 
 def get_post_timestamp(post: Dict) -> datetime:
     """Extract datetime object from post's created_at field."""
+    # Handle missing created_at field
+    if "created_at" not in post:
+        from datetime import timezone
+        return datetime.now(timezone.utc)
+    
     if isinstance(post["created_at"], datetime):
         # Make sure it's timezone-aware
         if post["created_at"].tzinfo is None:
@@ -91,11 +96,14 @@ def tag_as_injected(post: Dict) -> Dict:
     """
     Mark a post as injected for frontend identification and add metadata.
 
-    This adds the required 'injected' flag and 'injection_metadata' fields
-    for transparency in clients like Elk.
+    This adds the required 'injected' flag, 'is_recommendation' flag, and 
+    'injection_metadata' fields for transparency in clients like Elk.
     """
     result = deepcopy(post)
     result["injected"] = True
+    
+    # CRITICAL: Set is_recommendation for seamless ELK display
+    result["is_recommendation"] = True
 
     # Skip if metadata is already present (e.g., from recommendation engine)
     if "injection_metadata" not in result:
@@ -105,6 +113,12 @@ def tag_as_injected(post: Dict) -> Dict:
             "strategy": "general_recommendation",
             "explanation": "Suggested content we think you might find interesting",
         }
+    
+    # Add recommendation reason for ELK compatibility
+    if "recommendation_reason" not in result:
+        result["recommendation_reason"] = result["injection_metadata"].get(
+            "explanation", "Recommended for you"
+        )
 
     return result
 

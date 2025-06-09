@@ -153,18 +153,20 @@ def test_get_post_by_id(mock_get_db, mock_get_cursor, client, mock_db_conn):
     mock_get_db.return_value.__enter__.return_value = mock_conn
     mock_get_cursor.return_value.__enter__.return_value = mock_cursor_fixture
     
-    # Mock data for PostgreSQL path (8 fields: post_id, author_id, author_name, content, content_type, created_at, interaction_counts, mastodon_post)
-    from datetime import datetime
-    interaction_counts = {"favorites": 10, "reblogs": 5}
+    # Mock data for SQLite path (5 fields: post_id, author_id, content, created_at, metadata)
+    import json
+    metadata = {
+        "author_name": "Author Name",
+        "content_type": "text", 
+        "interaction_counts": {"favorites": 10, "reblogs": 5},
+        "mastodon_post": None
+    }
     mock_cursor_fixture.fetchone.return_value = (
         "post123",                          # post_id
         "author456",                        # author_id
-        "Author Name",                      # author_name
         "Post content",                     # content
-        "text",                             # content_type
-        datetime.fromisoformat("2023-01-01T12:00:00"),  # created_at
-        interaction_counts,                 # interaction_counts (dict)
-        None                                # mastodon_post (None means fallback to legacy format)
+        "2023-01-01T12:00:00",              # created_at
+        json.dumps(metadata)                # metadata (JSON string)
     )
     
     # Make request - use correct API prefix

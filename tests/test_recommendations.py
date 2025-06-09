@@ -21,6 +21,7 @@ def mock_db_conn():
     return mock_conn, mock_cursor
 
 
+@patch('routes.recommendations.USE_IN_MEMORY_DB', False)
 @patch('routes.recommendations.get_db_connection')
 def test_get_recommendations(mock_get_db, client, mock_db_conn):
     """Test getting recommendations for a user."""
@@ -85,6 +86,7 @@ def test_get_recommendations(mock_get_db, client, mock_db_conn):
     assert query_found, "PostgreSQL post rankings query not found"
 
 
+@patch('routes.recommendations.USE_IN_MEMORY_DB', False)
 @patch('routes.recommendations.generate_rankings_for_user')
 @patch('routes.recommendations.get_db_connection')
 def test_get_recommendations_no_rankings(mock_get_db, mock_generate_rankings_for_user, client, mock_db_conn):
@@ -152,6 +154,7 @@ def test_get_recommendations_no_rankings(mock_get_db, mock_generate_rankings_for
     mock_generate_rankings_for_user.assert_not_called()
 
 
+@patch('routes.recommendations.USE_IN_MEMORY_DB', False)
 @patch('routes.recommendations.get_db_connection')
 def test_generate_rankings(mock_get_db, client, mock_db_conn):
     """Test generating rankings for a user (PostgreSQL path)."""
@@ -384,7 +387,8 @@ def test_recommended_timeline_with_filters(mock_get_db, client, mock_db_conn):
     mock_get_db.return_value = mock_conn
     
     # Mock database results for SQLite mode
-    mock_cursor.fetchone.return_value = (5,)  # 5 recommendations
+    # First call returns 5 recommendations exist, second call fetches them
+    mock_cursor.fetchone.side_effect = [(5,), (5,)]  # 5 recommendations
     mock_cursor.fetchall.return_value = []  # Empty result for simplicity
     
     # Mock USE_IN_MEMORY_DB to be True for SQLite testing
@@ -402,10 +406,9 @@ def test_recommended_timeline_with_filters(mock_get_db, client, mock_db_conn):
         
         # Verify we called execute with proper parameters
         expected_query_fragments = [
-            "WHERE r.user_id = ?",
-            "AND r.score >= ?",
-            "AND r.post_id < ?",
-            "ORDER BY r.score DESC LIMIT ?"
+            "WHERE r.user_id = ? AND r.score >= ? AND r.post_id < ?",
+            "ORDER BY r.score DESC",
+            "LIMIT ?"
         ]
         
         # Get the actual query that was executed
@@ -415,17 +418,18 @@ def test_recommended_timeline_with_filters(mock_get_db, client, mock_db_conn):
         found_all_fragments = False
         for args, _ in called_args_list:
             query = args[0]
+            params = args[1] if len(args) > 1 else None
             if all(fragment in query for fragment in expected_query_fragments):
                 # Check parameters
-                params = args[1]
-                if (params[0] == user_alias and 
+                if (params and len(params) >= 4 and
+                    params[0] == user_alias and 
                     params[1] == 0.7 and 
                     params[2] == "post999" and
                     params[3] == 5):
                     found_all_fragments = True
                     break
         
-        assert found_all_fragments, "Expected SQL query fragments with correct parameters were not found"
+        assert found_all_fragments, f"Expected SQL query fragments with correct parameters were not found. Queries executed: {[args[0] for args, _ in called_args_list]}"
 
 
 @patch('routes.recommendations.get_db_connection')
@@ -454,7 +458,7 @@ def test_recommended_timeline_parameter_validation(mock_get_db, client, mock_db_
     assert "must be between 1 and 100" in data["error"]
 
 
-@patch('routes.recommendations.generate_rankings_for_user')
+@patch('core.ranking_algorithm.generate_rankings_for_user')
 @patch('routes.recommendations.get_db_connection')
 def test_recommended_timeline_auto_generate(mock_get_db, mock_generate_rankings_for_user, client, mock_db_conn):
     """Test auto-generation of rankings when none exist."""

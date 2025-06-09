@@ -67,6 +67,7 @@ class ResponsibleCrawler:
     def __init__(self, redis_client=None):
         self.redis_client = redis_client or redis.Redis(host='localhost', port=6379, db=0, decode_responses=True)
         self.instance_metrics = {}
+        self.instance_health_cache = self.instance_metrics  # Alias for backward compatibility
         self.response_times = defaultdict(lambda: deque(maxlen=100))  # Last 100 response times
         self.lock = Lock()
         

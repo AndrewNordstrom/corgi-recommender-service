@@ -49,8 +49,9 @@ class BaselineKPIMeasurer:
         Args:
             config_path: Path to the KPI configuration file
         """
-        self.config = self._load_kpi_config(config_path)
+        # Initialize logger FIRST before using it in other methods
         self.logger = logging.getLogger(__name__)
+        self.config = self._load_kpi_config(config_path)
         self.base_url = "http://localhost:5011"  # Updated for current port
         
     def _load_kpi_config(self, config_path: str) -> Dict[str, Any]:

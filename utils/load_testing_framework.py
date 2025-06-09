@@ -99,6 +99,11 @@ class LoadTestResult:
     start_time: datetime
     end_time: datetime
     
+    @property
+    def test_name(self) -> str:
+        """Get test name from configuration."""
+        return self.test_config.test_name
+    
     # Request metrics
     total_requests: int
     successful_requests: int
@@ -295,44 +300,68 @@ class LoadTestingFramework:
         """Get test users matching the specified profile characteristics."""
         profile = self.user_profiles.get(profile_type)
         if not profile:
-            raise ValueError(f"Unknown profile type: {profile_type}")
+            # For unknown profile types, generate synthetic users
+            self.logger.warning(f"Unknown profile type: {profile_type}, generating synthetic users")
+            return [f"synthetic_{profile_type}_{i}" for i in range(count)]
         
         min_interactions, max_interactions = profile.interaction_count_range
         
-        with get_db_connection() as conn:
-            with get_cursor(conn) as cursor:
-                cursor.execute("""
-                    SELECT user_alias, COUNT(*) as interaction_count
-                    FROM interactions 
-                    WHERE created_at >= NOW() - INTERVAL '30 days'
-                    GROUP BY user_alias 
-                    HAVING COUNT(*) BETWEEN %s AND %s
-                    ORDER BY RANDOM() 
-                    LIMIT %s
-                """, (min_interactions, max_interactions, count))
-                
-                return [row[0] for row in cursor.fetchall()]
+        try:
+            with get_db_connection() as conn:
+                with get_cursor(conn) as cursor:
+                    cursor.execute("""
+                        SELECT user_alias, COUNT(*) as interaction_count
+                        FROM interactions 
+                        WHERE created_at >= NOW() - INTERVAL '30 days'
+                        GROUP BY user_alias 
+                        HAVING COUNT(*) BETWEEN %s AND %s
+                        ORDER BY RANDOM() 
+                        LIMIT %s
+                    """, (min_interactions, max_interactions, count))
+                    
+                    users = [row[0] for row in cursor.fetchall()]
+                    
+                    # If not enough users found, generate synthetic ones
+                    while len(users) < count:
+                        users.append(f"synthetic_{profile_type}_{len(users)}")
+                    
+                    return users[:count]
+        except Exception as e:
+            self.logger.warning(f"Database query failed for profile {profile_type}: {e}, generating synthetic users")
+            return [f"synthetic_{profile_type}_{i}" for i in range(count)]
     
-    def create_mixed_user_set(self, total_users: int) -> List[Tuple[str, str]]:
+    def create_mixed_user_set(self, total_users: int, user_profiles: Optional[List[UserProfile]] = None) -> List[Tuple[str, str]]:
         """Create a realistic mix of user profiles for load testing."""
-        # Distribution: 20% new, 40% casual, 30% active, 10% power
-        new_count = int(total_users * 0.2)
-        casual_count = int(total_users * 0.4)
-        active_count = int(total_users * 0.3)
-        power_count = total_users - new_count - casual_count - active_count
-        
         users_with_profiles = []
         
-        for profile_type, count in [
-            ('new_user', new_count),
-            ('casual_user', casual_count),
-            ('active_user', active_count),
-            ('power_user', power_count)
-        ]:
-            if count > 0:
-                profile_users = self.get_test_users_by_profile(profile_type, count)
-                for user_id in profile_users:
-                    users_with_profiles.append((user_id, profile_type))
+        if user_profiles:
+            # Use provided user profiles with equal distribution
+            profiles_per_type = total_users // len(user_profiles)
+            remaining_users = total_users % len(user_profiles)
+            
+            for i, profile in enumerate(user_profiles):
+                count = profiles_per_type + (1 if i < remaining_users else 0)
+                if count > 0:
+                    profile_users = self.get_test_users_by_profile(profile.profile_type, count)
+                    for user_id in profile_users:
+                        users_with_profiles.append((user_id, profile.profile_type))
+        else:
+            # Default distribution: 20% new, 40% casual, 30% active, 10% power
+            new_count = int(total_users * 0.2)
+            casual_count = int(total_users * 0.4)
+            active_count = int(total_users * 0.3)
+            power_count = total_users - new_count - casual_count - active_count
+            
+            for profile_type, count in [
+                ('new_user', new_count),
+                ('casual_user', casual_count),
+                ('active_user', active_count),
+                ('power_user', power_count)
+            ]:
+                if count > 0:
+                    profile_users = self.get_test_users_by_profile(profile_type, count)
+                    for user_id in profile_users:
+                        users_with_profiles.append((user_id, profile_type))
         
         # Fill any gaps with casual users
         while len(users_with_profiles) < total_users:
@@ -371,7 +400,10 @@ class LoadTestingFramework:
                              config: LoadTestConfiguration, 
                              result: LoadTestResult) -> Dict[str, Any]:
         """Simulate a realistic user session with the recommendation system."""
-        profile = self.user_profiles[profile_type]
+        profile = self.user_profiles.get(profile_type)
+        if not profile:
+            # Use default casual_user profile for unknown types
+            profile = self.user_profiles['casual_user']
         session_results = {
             'user_id': user_id,
             'profile_type': profile_type,
@@ -452,6 +484,10 @@ class LoadTestingFramework:
                 break
         
         return session_results
+    
+    def run_load_test(self, config: LoadTestConfiguration) -> LoadTestResult:
+        """Run a load test with the given configuration. Alias for execute_load_test."""
+        return self.execute_load_test(config)
     
     def execute_load_test(self, config: LoadTestConfiguration) -> LoadTestResult:
         """Execute a comprehensive load test with the given configuration."""

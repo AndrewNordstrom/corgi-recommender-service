@@ -3,115 +3,112 @@ version: '3.8'
 services:
   # PostgreSQL Database
   postgres:
-    image: postgres:15
+    image: postgres:15-alpine
+    container_name: corgi-postgres
+    env_file: .env
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-postgres}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
-      POSTGRES_DB: ${POSTGRES_DB:-corgi_recommender}
-    ports:
-      - '5432:5432'
+      - POSTGRES_USER=${POSTGRES_USER:-corgi}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-corgi123}
+      - POSTGRES_DB=${POSTGRES_DB:-corgi_db}
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "${POSTGRES_HOST_PORT:-5432}:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-corgi}"]
       interval: 10s
       timeout: 5s
       retries: 5
     networks:
-      - recommender_network
+      - corgi-network
+    profiles:
+      - standalone
+      - demo
 
-  # Recommender Service
-  api:
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: corgi-redis
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    ports:
+      - "${REDIS_HOST_PORT:-6379}:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - corgi-network
+    profiles:
+      - standalone
+      - demo
+
+  # Corgi API Service
+  corgi-api:
     build:
       context: .
-      dockerfile: Dockerfile
-    container_name: corgi-recommender-api
+      dockerfile: corgi-api.Dockerfile
+    container_name: corgi-api
+    env_file: .env
     environment:
-      - POSTGRES_HOST=postgres
-      - DB_PORT=5432
-      - POSTGRES_USER=${POSTGRES_USER:-postgres}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
-      - POSTGRES_DB=${POSTGRES_DB:-corgi_recommender}
-      - PORT=5000
-      - HOST=0.0.0.0
-      - DEBUG=${DEBUG:-False}
-      - FLASK_ENV=${FLASK_ENV:-development}
-      - USER_HASH_SALT=${USER_HASH_SALT:-corgi-recommender-salt-123}
-      - CORS_ALLOWED_ORIGINS=${CORS_ALLOWED_ORIGINS:-*}
-      - RANKING_WEIGHT_AUTHOR=${RANKING_WEIGHT_AUTHOR:-0.4}
-      - RANKING_WEIGHT_ENGAGEMENT=${RANKING_WEIGHT_ENGAGEMENT:-0.3}
-      - RANKING_WEIGHT_RECENCY=${RANKING_WEIGHT_RECENCY:-0.3}
-      - RANKING_INCLUDE_SYNTHETIC=${RANKING_INCLUDE_SYNTHETIC:-False}
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-corgi}:${POSTGRES_PASSWORD:-corgi123}@postgres:5432/${POSTGRES_DB:-corgi_db}
+      - REDIS_URL=redis://redis:6379
+      - PYTHONUNBUFFERED=1
+      - CORGI_ENV=${CORGI_ENV:-development}
     ports:
-      - '5000:5000'
+      - "${CORGI_API_HOST_PORT:-5002}:5000"
     depends_on:
       postgres:
         condition: service_healthy
-    networks:
-      - recommender_network
-    restart: unless-stopped
-    
-  # Agent Framework (not started by default)
-  agent:
-    build:
-      context: .
-      dockerfile: agents/Dockerfile
-    container_name: corgi-agent
-    environment:
-      - CLAUDE_DISABLE_INTERNET=${CLAUDE_DISABLE_INTERNET:-true}
-      - CLAUDE_ALLOWED_DOMAINS=${CLAUDE_ALLOWED_DOMAINS:-localhost,api}
-      - HEADLESS_MODE=${HEADLESS_MODE:-true}
-      - CORGI_SERVICE_URL=http://api:5000
-      - DEFAULT_MAX_TOKENS=${DEFAULT_MAX_TOKENS:-500000}
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     volumes:
-      - ./.env:/app/.env:ro
       - ./logs:/app/logs
-    depends_on:
-      - api
+      - ./data:/app/data
     networks:
-      - recommender_network
+      - corgi-network
     profiles:
-      - agent  # This container won't start by default, only when specified
-    command: >
-      --profile ${AGENT_PROFILE:-tech_fan}
-      ${AGENT_ARGS}
-      
-  # Multi-agent runner (not started by default)
-  multi-agent:
-    build:
-      context: .
-      dockerfile: agents/Dockerfile
-    container_name: corgi-multi-agent
-    environment:
-      - CLAUDE_DISABLE_INTERNET=${CLAUDE_DISABLE_INTERNET:-true}
-      - CLAUDE_ALLOWED_DOMAINS=${CLAUDE_ALLOWED_DOMAINS:-localhost,api}
-      - HEADLESS_MODE=${HEADLESS_MODE:-true}
-      - CORGI_SERVICE_URL=http://api:5000
-      - DEFAULT_MAX_TOKENS=${DEFAULT_MAX_TOKENS:-500000}
-    volumes:
-      - ./.env:/app/.env:ro
-      - ./logs:/app/logs
-    depends_on:
-      - api
-    networks:
-      - recommender_network
-    profiles:
-      - multi-agent  # This container won't start by default
-    entrypoint: ["/bin/bash", "-c"]
-    command: >
-      "
-      echo 'Running multiple agents for testing...' &&
-      for profile in tech_fan news_skeptic meme_lover privacy_tester; do
-        timestamp=$$(date +%Y%m%d_%H%M%S) &&
-        echo \"Starting agent: $${profile}\" &&
-        python /app/agents/test_runner.py --profile $${profile} --no-llm --headless --output /app/logs/multi_runs/$${profile}_$${timestamp}.json --host http://api:5000 &
-      done &&
-      wait
-      "
+      - standalone
+      - demo
 
-networks:
-  recommender_network:
-    driver: bridge
+  # ELK Client Service (Frontend)
+  elk-client:
+    build:
+      context: .
+      dockerfile: elk-client.Dockerfile
+    container_name: elk-client
+    environment:
+      - NUXT_PUBLIC_CORGI_API_BASE=http://corgi-api:5000
+      - NODE_ENV=production
+    ports:
+      - "${ELK_CLIENT_HOST_PORT:-3000}:3000"
+    depends_on:
+      corgi-api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - corgi-network
+    profiles:
+      - demo
 
 volumes:
   postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+
+networks:
+  corgi-network:
+    driver: bridge
+    name: corgi-network

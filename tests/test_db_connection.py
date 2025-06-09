@@ -15,70 +15,68 @@ def mock_pool():
     return MagicMock()
 
 
-@patch('db.connection.init_pg_pool')
+@patch('db.connection.SimpleConnectionPool')
 @patch('db.connection.USE_IN_MEMORY_DB', False)  # Test PostgreSQL path
-def test_initialize_connection_pool_success(mock_init_pg_pool):
+def test_initialize_connection_pool_success(mock_pool_class):
     """Test successful connection pool initialization."""
-    # Setup mock to return True (success)
-    mock_init_pg_pool.return_value = True
+    # Setup mock pool
+    mock_pool = MagicMock()
+    mock_pool_class.return_value = mock_pool
     
     # Call the function
     result = initialize_connection_pool()
     
     # Verify success
     assert result is True
-    mock_init_pg_pool.assert_called_once()
+    mock_pool_class.assert_called_once()
 
 
-@patch('db.connection.init_pg_pool')
+@patch('db.connection.SimpleConnectionPool')
 @patch('db.connection.USE_IN_MEMORY_DB', False)  # Test PostgreSQL path
-def test_initialize_connection_pool_failure(mock_init_pg_pool):
+def test_initialize_connection_pool_failure(mock_pool_class):
     """Test handling of connection pool initialization failure."""
     # Setup mock to raise exception
-    mock_init_pg_pool.side_effect = Exception("Connection error")
+    mock_pool_class.side_effect = Exception("Connection error")
     
     # Call the function
     result = initialize_connection_pool()
     
     # Verify failure
     assert result is False
-    mock_init_pg_pool.assert_called_once()
+    mock_pool_class.assert_called_once()
 
 
-@patch('db.connection.get_pg_connection')
+@patch('db.connection.pool')
 @patch('db.connection.initialize_connection_pool')
 @patch('db.connection.USE_IN_MEMORY_DB', False)  # Test PostgreSQL path
-def test_get_db_connection_retry_success(mock_initialize_pool, mock_get_pg_conn):
+def test_get_db_connection_retry_success(mock_initialize_pool, mock_pool):
     """Test connection retry when pool initialization is needed."""
     # Setup successful initialization
     mock_initialize_pool.return_value = True
     
-    # Create a mock connection context manager
+    # Create a mock connection
     mock_conn = MagicMock()
-    mock_context = MagicMock()
-    mock_context.__enter__.return_value = mock_conn
-    mock_context.__exit__.return_value = None
-    mock_get_pg_conn.return_value = mock_context
+    mock_pool.getconn.return_value = mock_conn
     
     # Use the connection
     with get_db_connection() as conn:
         assert conn is mock_conn
     
     # Verify connection operations
-    mock_get_pg_conn.assert_called_once()
-    mock_context.__enter__.assert_called_once()
-    mock_context.__exit__.assert_called_once()
+    mock_pool.getconn.assert_called_once()
+    mock_pool.putconn.assert_called_once_with(mock_conn)
 
 
 @patch('time.sleep')
 @patch('db.connection.initialize_connection_pool')
-@patch('db.connection.get_pg_connection')
 @patch('db.connection.USE_IN_MEMORY_DB', False)  # Test PostgreSQL path
-def test_get_db_connection_retry_failure(mock_get_pg_conn, mock_initialize_pool, mock_sleep):
+def test_get_db_connection_retry_failure(mock_initialize_pool, mock_sleep):
     """Test connection retry failure after multiple attempts."""
-    # Setup connection to fail and initialization to succeed but not help
-    mock_get_pg_conn.side_effect = Exception("Connection failed")
-    mock_initialize_pool.return_value = True
+    # Setup initialization to fail
+    mock_initialize_pool.return_value = False
+    
+    # Set pool to None to simulate failed initialization
+    db.connection.pool = None
     
     # Try to get a connection - should raise exception
     with pytest.raises(Exception) as exc_info:
@@ -89,7 +87,7 @@ def test_get_db_connection_retry_failure(mock_get_pg_conn, mock_initialize_pool,
     assert "Database connection failed" in str(exc_info.value)
     
     # Verify that initialization was attempted (part of error recovery)
-    mock_initialize_pool.assert_called()
+    assert mock_initialize_pool.call_count >= 1
 
 
 @patch('db.schema.create_tables')

@@ -157,7 +157,7 @@ def start_metrics_server(port=9100):
     Args:
         port: Port number to serve metrics on (default: 9100)
     """
-    global metrics_thread, _should_stop
+    global metrics_thread, _should_stop, USE_FILE_BASED_METRICS
 
     try:
         # Check if a server is already running on this port
@@ -194,7 +194,6 @@ def start_metrics_server(port=9100):
         logger.warning("Falling back to file-based metrics collection")
 
         # Enable file-based metrics as fallback
-        # No need for global declaration since it's module-level
         USE_FILE_BASED_METRICS = True
 
         # Start background flush thread if not already running

@@ -90,7 +90,7 @@ class TestAsyncRecommendations:
     @pytest.mark.skipif(not ASYNC_TASKS_AVAILABLE, reason="Async tasks not available")
     def test_task_status_endpoint(self, client):
         """Test the task status polling endpoint."""
-        with patch('routes.recommendations.celery') as mock_celery:
+        with patch('utils.celery_app.celery') as mock_celery:
             # Mock successful task
             mock_result = Mock()
             mock_result.state = 'SUCCESS'
@@ -118,7 +118,7 @@ class TestAsyncRecommendations:
     @pytest.mark.skipif(not ASYNC_TASKS_AVAILABLE, reason="Async tasks not available")
     def test_task_status_pending(self, client):
         """Test task status when task is pending."""
-        with patch('routes.recommendations.celery') as mock_celery:
+        with patch('utils.celery_app.celery') as mock_celery:
             mock_result = Mock()
             mock_result.state = 'PENDING'
             mock_celery.AsyncResult.return_value = mock_result
@@ -135,7 +135,7 @@ class TestAsyncRecommendations:
     @pytest.mark.skipif(not ASYNC_TASKS_AVAILABLE, reason="Async tasks not available")  
     def test_task_status_failure(self, client):
         """Test task status when task failed."""
-        with patch('routes.recommendations.celery') as mock_celery:
+        with patch('utils.celery_app.celery') as mock_celery:
             mock_result = Mock()
             mock_result.state = 'FAILURE'
             mock_result.info = {'error': 'Test error', 'user_id': 'test_user'}
@@ -154,7 +154,7 @@ class TestAsyncRecommendations:
     @pytest.mark.skipif(not ASYNC_TASKS_AVAILABLE, reason="Async tasks not available")
     def test_task_cancellation(self, client):
         """Test task cancellation endpoint."""
-        with patch('routes.recommendations.celery') as mock_celery:
+        with patch('utils.celery_app.celery') as mock_celery:
             # Mock task that can be cancelled
             mock_result = Mock()
             mock_result.state = 'PENDING'
@@ -178,7 +178,7 @@ class TestAsyncRecommendations:
     @pytest.mark.skipif(not ASYNC_TASKS_AVAILABLE, reason="Async tasks not available")
     def test_task_cancel_completed(self, client):
         """Test attempting to cancel an already completed task."""
-        with patch('routes.recommendations.celery') as mock_celery:
+        with patch('utils.celery_app.celery') as mock_celery:
             mock_result = Mock()
             mock_result.state = 'SUCCESS'
             mock_result.result = {'user_id': 'test_user', 'rankings_count': 10}
@@ -215,28 +215,28 @@ class TestAsyncRecommendations:
         with patch('utils.cache.get_cached_recommendations') as mock_get_cache:
             with patch('utils.cache.cache_get') as mock_cache_get:
                 with patch('routes.recommendations.generate_rankings_async') as mock_task:
-                    # Mock stale cache data - must be a list for recommendations
-                    mock_get_cache.return_value = [{'id': 1, 'content': 'test'}]
-                    mock_cache_get.return_value = {
-                        'timestamp': time.time() - 7200  # 2 hours ago (stale)
-                    }
-                    
-                    mock_result = Mock()
-                    mock_result.id = 'refresh-task-123'
-                    mock_task.delay.return_value = mock_result
-                    
-                    # Must explicitly request async for the new conservative logic
-                    response = client.get('/api/v1/recommendations?user_id=test_user&cache_timeout=3600&async=true')
-                    
-                    # With async=true, should trigger async processing, not return stale cache
-                    assert response.status_code == 202  # Async processing
-                    data = response.get_json()
-                    
-                    assert data['status'] == 'processing'
-                    assert 'task_id' in data
-                    assert data['async_enabled'] is True
-                    
-                    if ASYNC_TASKS_AVAILABLE:
+                    with patch('routes.recommendations.ASYNC_TASKS_AVAILABLE', True):
+                        # Mock stale cache data - must be a list for recommendations
+                        mock_get_cache.return_value = [{'id': 1, 'content': 'test'}]
+                        mock_cache_get.return_value = {
+                            'timestamp': time.time() - 7200  # 2 hours ago (stale)
+                        }
+                        
+                        mock_result = Mock()
+                        mock_result.id = 'refresh-task-123'
+                        mock_task.delay.return_value = mock_result
+                        
+                        # Must explicitly request async for the new conservative logic
+                        response = client.get('/api/v1/recommendations?user_id=test_user&cache_timeout=3600&async=true')
+                        
+                        # With async=true, should trigger async processing, not return stale cache
+                        assert response.status_code == 202  # Async processing
+                        data = response.get_json()
+                        
+                        assert data['status'] == 'processing'
+                        assert 'task_id' in data
+                        assert data['async_enabled'] is True
+                        
                         # Async task should be triggered
                         mock_task.delay.assert_called_once()
     
@@ -271,7 +271,7 @@ class TestAsyncIntegration:
             pytest.skip("Async tasks not available")
         
         with patch('routes.recommendations.generate_rankings_async') as mock_task:
-            with patch('routes.recommendations.celery') as mock_celery:
+            with patch('utils.celery_app.celery') as mock_celery:
                 # Step 1: Queue async task
                 mock_result = Mock()
                 mock_result.id = 'integration-test-123'

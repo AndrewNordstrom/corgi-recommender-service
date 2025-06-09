@@ -91,13 +91,14 @@ def test_celery_integration():
         print("\n🚀 Ready for Phase 2: Parallel Implementation")
         print("   Next: Create async API endpoints and caching layer")
         
-        return True
+        # Assert success instead of returning values
+        assert True  # Test passed successfully
         
     except Exception as e:
         print(f"❌ Test failed: {e}")
         import traceback
         traceback.print_exc()
-        return False
+        assert False, f"Celery integration test failed: {e}"
 
 if __name__ == "__main__":
     success = test_celery_integration()

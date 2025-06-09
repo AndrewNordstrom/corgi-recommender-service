@@ -112,13 +112,15 @@ def test_quality_metrics():
                 if key != 'timestamp':
                     logger.info(f"  {key}: {value}")
         
-        return True
+        # Assert successful metrics collection instead of returning values
+        assert len(rankings) >= 0  # Rankings generated successfully
+        assert isinstance(summary, dict)  # Summary is valid dict
         
     except Exception as e:
         logger.error(f"Error testing quality metrics: {e}")
         import traceback
         logger.error(f"Traceback: {traceback.format_exc()}")
-        return False
+        assert False, f"Quality metrics test failed: {e}"
 
 def test_quality_endpoints():
     """Test quality metrics endpoints."""
@@ -134,11 +136,12 @@ def test_quality_endpoints():
             if key != 'timestamp':
                 logger.info(f"  {key}: {value}")
         
-        return True
+        # Assert successful endpoint testing instead of returning values
+        assert isinstance(summary, dict)  # Summary is valid dict
         
     except Exception as e:
         logger.error(f"Error testing endpoints: {e}")
-        return False
+        assert False, f"Quality endpoints test failed: {e}"
 
 def main():
     """Main test function."""

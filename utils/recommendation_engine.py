@@ -190,6 +190,7 @@ def get_ranked_recommendations(user_id: str, limit: int = 10) -> List[Dict]:
                 # Otherwise, create a new Mastodon-compatible post
                 formatted_post = {
                     "id": post["post_id"],
+                    "post_id": post["post_id"],
                     "content": post.get("content", "No content available"),
                     "created_at": post.get("created_at", datetime.now().isoformat()),
                     "account": {
@@ -279,3 +280,129 @@ def get_ranked_recommendations(user_id: str, limit: int = 10) -> List[Dict]:
         ).inc(len(cold_start_posts))
 
         return cold_start_posts
+
+
+def load_static_cold_start_posts(limit: int = 10) -> List[Dict]:
+    """
+    Load static cold start posts from pre-defined content.
+    
+    This provides baseline recommendations when dynamic content is not available.
+    
+    Args:
+        limit: Maximum number of posts to return
+        
+    Returns:
+        List of static cold start posts
+    """
+    try:
+        # Return a subset of the static cold start posts
+        all_static_posts = load_cold_start_posts()
+        return all_static_posts[:limit]
+        
+    except Exception as e:
+        logger.error(f"Error loading static cold start posts: {e}")
+        return []
+
+
+def get_dynamic_cold_start_posts(language: str = 'en', limit: int = 10) -> List[Dict]:
+    """
+    Get dynamic cold start posts based on current trends and language preferences.
+    
+    Args:
+        language: Language preference for posts
+        limit: Maximum number of posts to return
+        
+    Returns:
+        List of trending posts formatted for display
+    """
+    try:
+        from db.connection import get_db_connection
+        
+        # Try to get trending posts from the last 24 hours
+        with get_db_connection() as conn:
+            cur = conn.cursor()
+            cur.execute("""
+                SELECT 
+                    post_id,
+                    author_id,
+                    content,
+                    created_at,
+                    metadata
+                FROM posts 
+                WHERE 
+                    created_at > datetime('now', '-24 hours')
+                ORDER BY created_at DESC
+                LIMIT ?
+            """, (limit,))
+            
+            posts = cur.fetchall()
+            
+            if not posts:
+                # Fall back to recent posts
+                cur.execute("""
+                    SELECT 
+                        post_id,
+                        author_id,
+                        content,
+                        created_at,
+                        metadata
+                    FROM posts 
+                    ORDER BY created_at DESC
+                    LIMIT ?
+                """, (limit,))
+                
+                posts = cur.fetchall()
+        
+        # Format posts as Mastodon-compatible objects
+        formatted_posts = []
+        for post in posts:
+            post_id, author_id, content, created_at, metadata = post
+            
+            # Parse metadata JSON if it exists
+            try:
+                metadata_dict = json.loads(metadata) if metadata else {}
+            except:
+                metadata_dict = {}
+            
+            # Extract author name from author_id or use default
+            author_name = author_id.split('@')[0] if '@' in author_id else (author_id or 'unknown')
+            
+            formatted_post = {
+                "id": post_id,
+                "post_id": post_id,
+                "content": content or "No content available",
+                "created_at": created_at.isoformat() if hasattr(created_at, 'isoformat') else str(created_at),
+                "account": {
+                    "id": f"dynamic_{author_name}",
+                    "username": author_name,
+                    "display_name": author_name or "Unknown User",
+                    "url": f"https://example.com/@{author_name}",
+                },
+                "media_attachments": [],
+                "mentions": [],
+                "tags": [],
+                "emojis": [],
+                "favourites_count": metadata_dict.get('favorites', 0),
+                "reblogs_count": metadata_dict.get('boosts', 0),
+                "replies_count": metadata_dict.get('replies', 0),
+                "language": language,
+                "is_real_mastodon_post": False,
+                "is_synthetic": False,
+                "injected": True,
+                "injection_metadata": {
+                    "source": "dynamic_cold_start",
+                    "strategy": "recent",
+                    "language": language,
+                    "explanation": "Recent post from database",
+                },
+            }
+            
+            formatted_posts.append(formatted_post)
+        
+        logger.info(f"Generated {len(formatted_posts)} dynamic cold start posts for language '{language}'")
+        return formatted_posts
+        
+    except Exception as e:
+        logger.error(f"Error generating dynamic cold start posts: {e}")
+        # Fall back to static cold start posts
+        return load_cold_start_posts()[:limit]

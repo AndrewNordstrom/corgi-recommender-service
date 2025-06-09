@@ -109,6 +109,7 @@ class MastodonAPIClient:
         })
         self.rate_limit_remaining = 300  # Default Mastodon rate limit
         self.rate_limit_reset = time.time()
+        self.last_response_headers = {}  # Track last response headers
         
         logger.debug(f"Initialized Mastodon client for {self.instance_url}")
 
@@ -156,6 +157,7 @@ class MastodonAPIClient:
                         self.rate_limit_reset = time.time() + 900
             
             response.raise_for_status()
+            self.last_response_headers = dict(response.headers)  # Store headers
             return response.json()
             
         except requests.exceptions.RequestException as e:
@@ -164,6 +166,20 @@ class MastodonAPIClient:
         except ValueError as e:
             logger.error(f"Invalid JSON response from {url}: {e}")
             return None
+
+    def get_timeline(self, timeline_type: str = "public", limit: int = 40, local: bool = False) -> List[MastodonPost]:
+        """
+        Fetch posts from a timeline (alias for get_public_timeline for compatibility).
+        
+        Args:
+            timeline_type: Type of timeline (currently only "public" supported)
+            limit: Number of posts to fetch (max 40)
+            local: If True, fetch only local posts; if False, fetch federated timeline
+            
+        Returns:
+            List of MastodonPost objects
+        """
+        return self.get_public_timeline(limit=limit, local=local)
 
     def get_public_timeline(self, limit: int = 40, local: bool = False) -> List[MastodonPost]:
         """

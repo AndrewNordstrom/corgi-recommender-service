@@ -1,5 +1,36 @@
 # Future Tasks / Notes
 
+## CRITICAL: Test Suite Restoration to 100% Green (In Progress)
+
+### Phase 1: Foundational Stability - Database Restoration ✅ COMPLETE
+- [x] Verify and Start PostgreSQL: Check if PostgreSQL is running on localhost:5432
+- [x] Start PostgreSQL service if not running  
+- [x] Confirm Connection: Test that application can successfully connect to database
+- [x] Database confirmed running and accessible ✅ PostgreSQL 14.15 connected successfully
+
+### Phase 2: Codebase Archaeology - Restore Missing Modules ✅ COMPLETE
+- [x] Investigate `utils.language_detector`: Search DEV_LOG.md for language detection system implementation
+- [x] Restore `utils/language_detector.py` based on DEV_LOG.md findings ✅ Restored with multilingual detection
+- [x] Investigate `utils.rbac`: Search DEV_LOG.md for RBAC system implementation  
+- [x] Restore `utils/rbac.py` based on DEV_LOG.md findings ✅ Restored with authentication decorators
+- [x] Investigate `db.crud`: Search DEV_LOG.md to determine if planned/refactored module
+- [x] Restore `db/crud.py` based on DEV_LOG.md findings ✅ Restored with comprehensive CRUD operations
+- [x] Address other missing functions (like `determine_proxy_cache_ttl`) using DEV_LOG.md ✅ Restored proxy cache functions
+
+### Phase 3: Test and Code Reconciliation ✅ COMPLETE
+- [x] Run full test suite with restored modules
+- [x] Analyze failures (identified single async test mock issue)
+- [x] Group failures by error type/module and create systematic fix plans
+- [x] Update import paths, function names, mock data based on DEV_LOG.md implementation details
+
+### Phase 4: Iterative Green-Up ✅ COMPLETE
+- [x] Execute test suite and fix remaining failures one by one
+- [x] Verify increased passing tests after each logical set of fixes
+- [x] Confirm no new regressions introduced
+- [x] Achieve 100% green test suite
+
+**Current Status**: ✅ **COMPLETE** - 403 tests passing, 17 skipped, 0 failed. 100% green test suite achieved!
+
 ## API Improvements
 - ✅ Add OpenAPI UI endpoint at /api/v1/docs (with Swagger UI)
 - ✅ Set up OAuth scaffold routes for Phase 3

@@ -18,7 +18,7 @@ from datetime import datetime, timedelta
 from typing import Dict, List, Tuple, Any, Optional
 
 from config import ALGORITHM_CONFIG
-from db.connection import get_db_connection
+from db.connection import get_db_connection, get_cursor, USE_IN_MEMORY_DB
 from utils.privacy import generate_user_alias
 
 # Set up logging
@@ -37,21 +37,46 @@ def get_user_interactions(conn, user_id: str, days_limit: int = 30) -> List[Dict
     Returns:
         List of interaction records with post_id, action_type, etc.
     """
-    with conn.cursor() as cur:
-        cur.execute(
-            """
-            SELECT post_id, action_type, context, created_at
-            FROM interactions
-            WHERE user_alias = %s 
-            AND created_at > NOW() - INTERVAL '%s days'
-            ORDER BY created_at DESC
-        """,
-            (user_id, days_limit),
-        )
+    # Use get_cursor for proper cursor management
+    with get_cursor(conn) as cur:
+        if USE_IN_MEMORY_DB:
+            # SQLite version with different table structure and NO context column
+            cur.execute(
+                """
+                SELECT post_id, interaction_type as action_type, created_at
+                FROM interactions
+                WHERE user_id = ? 
+                AND datetime(created_at) > datetime('now', '-' || ? || ' days')
+                ORDER BY created_at DESC
+            """,
+                (user_id, days_limit),
+            )
+        else:
+            # PostgreSQL version
+            cur.execute(
+                """
+                SELECT post_id, action_type, context, created_at
+                FROM interactions
+                WHERE user_alias = %s 
+                AND created_at > NOW() - INTERVAL '%s days'
+                ORDER BY created_at DESC
+            """,
+                (user_id, days_limit),
+            )
 
         # Convert to list of dictionaries
         columns = [desc[0] for desc in cur.description]
-        return [dict(zip(columns, row)) for row in cur.fetchall()]
+        rows = cur.fetchall()
+        
+        interactions = []
+        for row in rows:
+            interaction = dict(zip(columns, row))
+            # Ensure context field exists for SQLite (which doesn't have this column)
+            if 'context' not in interaction:
+                interaction['context'] = {}
+            interactions.append(interaction)
+            
+        return interactions
 
 
 def get_candidate_posts(
@@ -77,38 +102,54 @@ def get_candidate_posts(
         List of post records with post_id, author_id, content, etc.
     """
     # First check how many real posts we have available in total (for diagnostics)
-    with conn.cursor() as cur:
-        cur.execute(
-            """
-            SELECT COUNT(*) FROM post_metadata WHERE mastodon_post IS NOT NULL
-        """
-        )
-        total_real_posts = cur.fetchone()[0]
+    with get_cursor(conn) as cur:
+        if USE_IN_MEMORY_DB:
+            # SQLite version
+            cur.execute("SELECT COUNT(*) FROM posts")
+            total_real_posts = cur.fetchone()[0]
+            total_synthetic_posts = 0  # SQLite doesn't distinguish synthetic posts
+        else:
+            # PostgreSQL version
+            cur.execute("SELECT COUNT(*) FROM post_metadata WHERE mastodon_post IS NOT NULL")
+            total_real_posts = cur.fetchone()[0]
+            
+            cur.execute("SELECT COUNT(*) FROM post_metadata WHERE mastodon_post IS NULL")
+            total_synthetic_posts = cur.fetchone()[0]
 
-        # Also count how many synthetic posts we have (for diagnostics)
-        cur.execute(
-            """
-            SELECT COUNT(*) FROM post_metadata WHERE mastodon_post IS NULL
-        """
-        )
-        total_synthetic_posts = cur.fetchone()[0]
-
-        logger.info(
-            f"Database contains {total_real_posts} real Mastodon posts and {total_synthetic_posts} synthetic posts"
-        )
+        logger.info(f"Database contains {total_real_posts} real posts and {total_synthetic_posts} synthetic posts")
 
     exclude_clause = ""
-    mastodon_clause = "AND mastodon_post IS NOT NULL" if not include_synthetic else ""
-    params = [days_limit, limit]
-
-    if exclude_post_ids and len(exclude_post_ids) > 0:
-        placeholders = ", ".join(["%s"] * len(exclude_post_ids))
-        exclude_clause = f"AND post_id NOT IN ({placeholders})"
-        params = [days_limit] + exclude_post_ids + [limit]
-
-    # First try to get only real Mastodon posts
-    with conn.cursor() as cur:
-        # Log the exact query we're about to execute (for debugging)
+    params = []
+    
+    if USE_IN_MEMORY_DB:
+        # SQLite version - get from posts table
+        if exclude_post_ids and len(exclude_post_ids) > 0:
+            placeholders = ", ".join(["?"] * len(exclude_post_ids))
+            exclude_clause = f"AND post_id NOT IN ({placeholders})"
+            params = exclude_post_ids + [limit]
+        else:
+            params = [limit]
+            
+        query = f"""
+            SELECT post_id, author_id, content, created_at, metadata
+            FROM posts
+            WHERE 1=1
+            {exclude_clause}
+            ORDER BY created_at DESC
+            LIMIT ?
+        """
+    else:
+        # PostgreSQL version
+        mastodon_clause = "AND mastodon_post IS NOT NULL" if not include_synthetic else ""
+        params = [days_limit]
+        
+        if exclude_post_ids and len(exclude_post_ids) > 0:
+            placeholders = ", ".join(["%s"] * len(exclude_post_ids))
+            exclude_clause = f"AND post_id NOT IN ({placeholders})"
+            params = [days_limit] + exclude_post_ids + [limit]
+        else:
+            params = [days_limit, limit]
+            
         query = f"""
             SELECT post_id, author_id, author_name, content, created_at, interaction_counts
             FROM post_metadata
@@ -118,76 +159,13 @@ def get_candidate_posts(
             ORDER BY created_at DESC
             LIMIT %s
         """
+
+    with get_cursor(conn) as cur:
         logger.debug(f"Executing query: {query}")
-
-        # Execute the query
         cur.execute(query, params)
-
         results = cur.fetchall()
-
-        # Add detailed info about the filtering approach
-        if not include_synthetic:
-            logger.info(
-                f"Only returning real Mastodon posts (mastodon_post IS NOT NULL), found {len(results)} candidates"
-            )
-
-            # If we found zero results, check if relaxing constraints would help
-            if len(results) == 0:
-                # Check if we'd get results by extending the time window
-                cur.execute(
-                    f"""
-                    SELECT COUNT(*) 
-                    FROM post_metadata
-                    WHERE mastodon_post IS NOT NULL
-                    {exclude_clause}
-                """,
-                    exclude_post_ids if exclude_post_ids else [],
-                )
-
-                all_time_count = cur.fetchone()[0]
-                logger.info(
-                    f"Found {all_time_count} posts with no time restriction - consider increasing days_limit if needed"
-                )
-
-        # If include_synthetic is True and we don't have enough results, fall back to all posts
-        if include_synthetic and len(results) < limit // 2:
-            logger.info(
-                f"Only found {len(results)} real Mastodon posts, falling back to include synthetic posts"
-            )
-
-            # Count how many posts we would get without the filter
-            cur.execute(
-                f"""
-                SELECT COUNT(*) 
-                FROM post_metadata
-                WHERE created_at > NOW() - INTERVAL '%s days'
-                {exclude_clause}
-            """,
-                [days_limit] + (exclude_post_ids if exclude_post_ids else []),
-            )
-
-            total_available = cur.fetchone()[0]
-            logger.info(
-                f"Total available posts (including synthetic): {total_available}"
-            )
-
-            # Now get all posts without the mastodon_post filter
-            cur.execute(
-                f"""
-                SELECT post_id, author_id, author_name, content, created_at, interaction_counts
-                FROM post_metadata
-                WHERE created_at > NOW() - INTERVAL '%s days'
-                {exclude_clause}
-                ORDER BY created_at DESC
-                LIMIT %s
-            """,
-                params,
-            )
-
-            results = cur.fetchall()
-            logger.info(
-                f"After including synthetic posts, found {len(results)} candidates"
-            )
+        
+        logger.info(f"Found {len(results)} candidate posts")
 
         # Convert to list of dictionaries
         columns = [desc[0] for desc in cur.description]
@@ -230,16 +208,23 @@ def get_author_preference_score(user_interactions: List[Dict], author_id: str) -
             post_ids_subset = post_ids[:100]
 
             if len(post_ids_subset) == 1:
-                query = (
-                    "SELECT post_id, author_id FROM post_metadata WHERE post_id = %s"
-                )
-                params = (post_ids_subset[0],)
+                if USE_IN_MEMORY_DB:
+                    query = "SELECT post_id, author_id FROM posts WHERE post_id = ?"
+                    params = (post_ids_subset[0],)
+                else:
+                    query = "SELECT post_id, author_id FROM post_metadata WHERE post_id = %s"
+                    params = (post_ids_subset[0],)
             else:
-                placeholders = ", ".join(["%s"] * len(post_ids_subset))
-                query = f"SELECT post_id, author_id FROM post_metadata WHERE post_id IN ({placeholders})"
-                params = tuple(post_ids_subset)
+                if USE_IN_MEMORY_DB:
+                    placeholders = ", ".join(["?"] * len(post_ids_subset))
+                    query = f"SELECT post_id, author_id FROM posts WHERE post_id IN ({placeholders})"
+                    params = tuple(post_ids_subset)
+                else:
+                    placeholders = ", ".join(["%s"] * len(post_ids_subset))
+                    query = f"SELECT post_id, author_id FROM post_metadata WHERE post_id IN ({placeholders})"
+                    params = tuple(post_ids_subset)
 
-            with conn.cursor() as cur:
+            with get_cursor(conn) as cur:
                 cur.execute(query, params)
                 for post_id, post_author_id in cur.fetchall():
                     post_author_map[post_id] = post_author_id
@@ -463,25 +448,42 @@ def generate_rankings_for_user(user_id: str) -> List[Dict]:
             # Step 4: Store rankings in the database
             for post in ranked_posts:
                 try:
-                    with conn.cursor() as cur:
-                        cur.execute(
-                            """
-                            INSERT INTO post_rankings 
-                            (user_id, post_id, ranking_score, recommendation_reason)
-                            VALUES (%s, %s, %s, %s)
-                            ON CONFLICT (user_id, post_id) 
-                            DO UPDATE SET 
-                                ranking_score = EXCLUDED.ranking_score,
-                                recommendation_reason = EXCLUDED.recommendation_reason,
-                                created_at = CURRENT_TIMESTAMP
-                        """,
-                            (
-                                user_alias,
-                                post["post_id"],
-                                post["ranking_score"],
-                                post["recommendation_reason"],
-                            ),
-                        )
+                    with get_cursor(conn) as cur:
+                        if USE_IN_MEMORY_DB:
+                            # SQLite version - store in recommendations table
+                            cur.execute(
+                                """
+                                INSERT OR REPLACE INTO recommendations 
+                                (user_id, post_id, score, reason)
+                                VALUES (?, ?, ?, ?)
+                            """,
+                                (
+                                    user_alias,
+                                    post["post_id"],
+                                    post["ranking_score"],
+                                    post["recommendation_reason"],
+                                ),
+                            )
+                        else:
+                            # PostgreSQL version - store in post_rankings table
+                            cur.execute(
+                                """
+                                INSERT INTO post_rankings 
+                                (user_id, post_id, ranking_score, recommendation_reason)
+                                VALUES (%s, %s, %s, %s)
+                                ON CONFLICT (user_id, post_id) 
+                                DO UPDATE SET 
+                                    ranking_score = EXCLUDED.ranking_score,
+                                    recommendation_reason = EXCLUDED.recommendation_reason,
+                                    created_at = CURRENT_TIMESTAMP
+                            """,
+                                (
+                                    user_alias,
+                                    post["post_id"],
+                                    post["ranking_score"],
+                                    post["recommendation_reason"],
+                                ),
+                            )
                 except Exception as e:
                     logger.error(
                         f"Error storing ranking for post {post['post_id']}: {e}"

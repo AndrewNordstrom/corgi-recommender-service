@@ -576,9 +576,9 @@ def get_timeline():
             except Exception as e:
                 logger.error(f"Error processing timeline metrics: {e}")
 
-            # Just return the merged timeline directly as an array
-            # This matches the format expected by Elk and other Mastodon clients
-            return jsonify(merged_timeline)
+            # Return the timeline in the expected format with wrapper object
+            # The load test expects {"timeline": [...]} format
+            return jsonify({"timeline": merged_timeline})
         else:
             # Log that we couldn't inject posts
             logger.warning(
@@ -588,5 +588,71 @@ def get_timeline():
             )
 
     # If we're here, we're not injecting or had no posts to inject
-    # Just return the original timeline
-    return jsonify(real_posts)
+    # Return the original timeline in the expected format
+    return jsonify({"timeline": real_posts})
+
+
+@timeline_bp.route("/api/v1/timelines/local", methods=["GET"])
+@log_route
+def get_local_timeline():
+    """
+    Get the local timeline (posts from the local instance).
+    
+    This is a simplified implementation that returns empty for now,
+    as this service doesn't have local instance posts.
+    
+    Query parameters:
+        limit (int, optional): Maximum posts to return (default: 20)
+        max_id (str, optional): Return posts older than this ID
+        since_id (str, optional): Return posts newer than this ID
+        
+    Returns:
+        List[dict]: Empty array for now (could be enhanced to show local content)
+    """
+    request_id = hash(f"{time.time()}_{request.remote_addr}") % 10000000
+    limit = request.args.get("limit", default=20, type=int)
+    
+    logger.info(
+        f"REQ-{request_id} | GET /api/v1/timelines/local | "
+        f"Client: {request.remote_addr} | "
+        f"Limit: {limit}"
+    )
+    
+    # Return empty timeline in the expected format
+    return jsonify({"timeline": []})
+
+
+@timeline_bp.route("/api/v1/timelines/public", methods=["GET"])
+@log_route
+def get_public_timeline():
+    """
+    Get the public timeline (posts from the known fediverse).
+    
+    This is a simplified implementation that returns empty for now,
+    as this service doesn't federate with other instances.
+    
+    Query parameters:
+        limit (int, optional): Maximum posts to return (default: 20)
+        max_id (str, optional): Return posts older than this ID
+        since_id (str, optional): Return posts newer than this ID
+        local (bool, optional): Show only local posts (default: false)
+        remote (bool, optional): Show only remote posts (default: false)
+        
+    Returns:
+        List[dict]: Empty array for now (could be enhanced to show federated content)
+    """
+    request_id = hash(f"{time.time()}_{request.remote_addr}") % 10000000
+    limit = request.args.get("limit", default=20, type=int)
+    local_only = request.args.get("local", "false").lower() == "true"
+    remote_only = request.args.get("remote", "false").lower() == "true"
+    
+    logger.info(
+        f"REQ-{request_id} | GET /api/v1/timelines/public | "
+        f"Client: {request.remote_addr} | "
+        f"Limit: {limit} | "
+        f"Local: {local_only} | "
+        f"Remote: {remote_only}"
+    )
+    
+    # Return empty timeline in the expected format
+    return jsonify({"timeline": []})

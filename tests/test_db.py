@@ -57,7 +57,7 @@ def test_get_recommendations():
     test_user = generate_user_alias("test_user_123", "example.com")
     
     # Get recommendations for the user
-    recommendations = get_recommendations(test_user, max_recommendations=5)
+    recommendations = get_recommendations(test_user, limit=5)
     
     logger.info(f"Found {len(recommendations)} recommendations for user {test_user}")
     if recommendations:
@@ -67,7 +67,7 @@ def test_get_recommendations():
 def test_cold_start_recommendations():
     """Test getting cold start recommendations."""
     # Get cold start recommendations
-    recommendations = get_cold_start_recommendations(max_recommendations=3)
+    recommendations = get_cold_start_recommendations(limit=3)
     
     logger.info(f"Found {len(recommendations)} cold start recommendations")
     if recommendations:

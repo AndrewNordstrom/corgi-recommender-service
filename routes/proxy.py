@@ -19,7 +19,7 @@ import os
 import re
 import hashlib
 
-from db.connection import get_db_connection
+from db.connection import get_db_connection, get_cursor, USE_IN_MEMORY_DB
 from utils.logging_decorator import log_route
 from utils.privacy import get_user_privacy_level, generate_user_alias
 from config import (
@@ -27,6 +27,11 @@ from config import (
     COLD_START_POSTS_PATH,
     COLD_START_POST_LIMIT,
     ALLOW_COLD_START_FOR_ANONYMOUS,
+    PROXY_CACHE_TTL_TIMELINE,
+    PROXY_CACHE_TTL_PROFILE,
+    PROXY_CACHE_TTL_INSTANCE,
+    PROXY_CACHE_TTL_STATUS,
+    PROXY_CACHE_TTL_DEFAULT
 )
 from utils.user_signals import (
     get_weighted_post_selection,
@@ -308,12 +313,15 @@ def get_user_by_token(token):
     """
     try:
         with get_db_connection() as conn:
-            with conn.cursor() as cur:
+            with get_cursor(conn) as cur:
+                # Use correct placeholder syntax based on database type
+                placeholder = "?" if USE_IN_MEMORY_DB else "%s"
+                
                 cur.execute(
-                    """
+                    f"""
                     SELECT user_id, instance_url, access_token 
                     FROM user_identities 
-                    WHERE access_token = %s
+                    WHERE access_token = {placeholder}
                 """,
                     (token,),
                 )
@@ -1702,3 +1710,65 @@ def generate_proxy_cache_key(endpoint, params, user_id, instance):
     # Join and hash for consistent key
     key_string = "|".join(key_parts)
     return hashlib.md5(key_string.encode()).hexdigest()
+
+
+def determine_proxy_cache_ttl(endpoint):
+    """
+    Determine the appropriate TTL for a proxy cache entry based on endpoint type.
+    
+    Args:
+        endpoint: The API endpoint being requested
+        
+    Returns:
+        int: TTL in seconds
+    """
+    if not endpoint:
+        return PROXY_CACHE_TTL_DEFAULT
+    
+    endpoint = endpoint.lower()
+    
+    # Timeline endpoints - short TTL for fresh content
+    if 'timeline' in endpoint:
+        return PROXY_CACHE_TTL_TIMELINE
+    
+    # Profile/account endpoints - medium TTL
+    if 'account' in endpoint:
+        return PROXY_CACHE_TTL_PROFILE
+    
+    # Instance info endpoints - long TTL (rarely changes)
+    if 'instance' in endpoint or 'custom_emojis' in endpoint:
+        return PROXY_CACHE_TTL_INSTANCE
+    
+    # Status/post endpoints - medium TTL
+    if 'status' in endpoint:
+        return PROXY_CACHE_TTL_STATUS
+    
+    # Default TTL for other endpoints
+    return PROXY_CACHE_TTL_DEFAULT
+
+
+def should_cache_proxy_request(endpoint, method, status_code):
+    """
+    Determine if a proxy request should be cached.
+    
+    Args:
+        endpoint: The API endpoint being requested
+        method: HTTP method
+        status_code: Response status code
+        
+    Returns:
+        bool: True if request should be cached, False otherwise
+    """
+    # Only cache GET requests
+    if method.upper() != 'GET':
+        return False
+    
+    # Only cache successful responses
+    if status_code != 200:
+        return False
+    
+    # Don't cache interaction endpoints (favorites, boosts, etc.)
+    if endpoint and any(action in endpoint.lower() for action in ['favourite', 'unfavourite', 'reblog', 'unreblog', 'bookmark', 'unbookmark']):
+        return False
+    
+    return True

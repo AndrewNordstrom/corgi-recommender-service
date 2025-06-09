@@ -68,7 +68,9 @@ def test_empty_timeline_injection():
     assert injected_count == len(result), "All posts should be injected"
     
     logger.info("✅ Test passed: Empty timeline injection works correctly")
-    return result
+    # Assert proper injection behavior instead of returning values
+    assert len(result) == injected_count
+    assert all(post.get("injected") is True for post in result)
 
 def test_stub_post_injection():
     """Test injection with a stub post that should be ignored."""
@@ -115,7 +117,9 @@ def test_stub_post_injection():
     assert stub_count == 0, "Stub post should be ignored"
     
     logger.info("✅ Test passed: Stub post injection works correctly")
-    return result
+    # Assert proper injection behavior instead of returning values
+    assert all(not post.get("stub_for_injection", False) for post in result)
+    assert all(post.get("injected") is True for post in result)
 
 if __name__ == "__main__":
     print("\n=== Testing Empty Timeline Injection ===")

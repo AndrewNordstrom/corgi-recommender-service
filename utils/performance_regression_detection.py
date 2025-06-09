@@ -25,7 +25,7 @@ from enum import Enum
 from typing import Dict, List, Optional, Tuple, Any, Union
 import numpy as np
 from scipy import stats
-from db.connection import get_db_connection, get_cursor
+from db.connection import get_db_connection, get_cursor, USE_IN_MEMORY_DB
 from utils.performance_benchmarking import PerformanceBenchmark
 from utils.performance_monitoring import PerformanceMonitoringSystem, PerformanceAlert, PerformanceThreshold
 import utils.metrics as metrics
@@ -772,17 +772,22 @@ class PerformanceRegressionDetector:
         """Get benchmark data from database."""
         try:
             with get_db_connection() as conn:
-                with get_cursor(conn) as cursor:
-                    cursor.execute("""
-                        SELECT * FROM performance_benchmarks WHERE id = %s
-                    """, (benchmark_id,))
+                with get_cursor(conn) as cur:
+                    # Use correct placeholder syntax based on database type
+                    placeholder = "?" if USE_IN_MEMORY_DB else "%s"
                     
-                    row = cursor.fetchone()
-                    if not row:
-                        return None
+                    cur.execute(f"SELECT * FROM performance_benchmarks WHERE id = {placeholder}", (benchmark_id,))
                     
-                    columns = [desc[0] for desc in cursor.description]
-                    return dict(zip(columns, row))
+                    row = cur.fetchone()
+                    if row:
+                        # Convert to dict format
+                        if hasattr(cur, 'description') and cur.description:
+                            columns = [desc[0] for desc in cur.description]
+                            return dict(zip(columns, row))
+                        else:
+                            # Fallback for mock testing
+                            return None
+                    return None
                     
         except Exception as e:
             self.logger.error(f"Error getting benchmark data: {e}")
@@ -793,9 +798,12 @@ class PerformanceRegressionDetector:
         try:
             with get_db_connection() as conn:
                 with get_cursor(conn) as cursor:
-                    cursor.execute("""
+                    # Use correct placeholder syntax based on database type
+                    placeholder = "?" if USE_IN_MEMORY_DB else "%s"
+                    
+                    cursor.execute(f"""
                         SELECT id FROM performance_benchmarks 
-                        WHERE benchmark_type = %s 
+                        WHERE benchmark_type = {placeholder}
                         ORDER BY test_timestamp DESC 
                         LIMIT 1
                     """, (benchmark_type,))
@@ -812,20 +820,34 @@ class PerformanceRegressionDetector:
         try:
             with get_db_connection() as conn:
                 with get_cursor(conn) as cursor:
-                    cursor.execute(f"""
-                        SELECT {metric_name} as value, 
-                               benchmark_type = 'baseline' as is_baseline,
-                               test_timestamp
-                        FROM performance_benchmarks 
-                        WHERE test_timestamp > NOW() - INTERVAL '%s days'
-                        AND {metric_name} IS NOT NULL
-                        ORDER BY test_timestamp DESC
-                    """, (days,))
+                    # Use correct placeholder syntax based on database type
+                    if USE_IN_MEMORY_DB:
+                        # SQLite syntax
+                        cursor.execute(f"""
+                            SELECT {metric_name} as value, 
+                                   CASE WHEN benchmark_type = 'baseline' THEN 1 ELSE 0 END as is_baseline,
+                                   test_timestamp
+                            FROM performance_benchmarks 
+                            WHERE test_timestamp > datetime('now', '-? days')
+                            AND {metric_name} IS NOT NULL
+                            ORDER BY test_timestamp DESC
+                        """, (days,))
+                    else:
+                        # PostgreSQL syntax
+                        cursor.execute(f"""
+                            SELECT {metric_name} as value, 
+                                   benchmark_type = 'baseline' as is_baseline,
+                                   test_timestamp
+                            FROM performance_benchmarks 
+                            WHERE test_timestamp > NOW() - INTERVAL '%s days'
+                            AND {metric_name} IS NOT NULL
+                            ORDER BY test_timestamp DESC
+                        """, (days,))
                     
                     return [
                         {
                             'value': row[0],
-                            'is_baseline': row[1],
+                            'is_baseline': bool(row[1]),
                             'timestamp': row[2]
                         }
                         for row in cursor.fetchall()

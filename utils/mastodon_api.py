@@ -94,15 +94,15 @@ class MastodonAPIClient:
         try:
             cached_data = cache_get(cache_key)
             if cached_data:
-                CACHE_HIT_TOTAL.inc()
+                CACHE_HIT_TOTAL.labels(cache_type='redis', endpoint='mastodon_status').inc()
                 logger.debug(f"Cache hit for status {post_id} from {instance_url}")
                 return cached_data
             else:
-                CACHE_MISS_TOTAL.inc()
+                CACHE_MISS_TOTAL.labels(cache_type='redis', endpoint='mastodon_status').inc()
                 logger.debug(f"Cache miss for status {post_id} from {instance_url}")
                 return None
         except Exception as e:
-            CACHE_ERROR_TOTAL.labels(operation='get').inc()
+            CACHE_ERROR_TOTAL.labels(cache_type='redis', error_type='get').inc()
             logger.error(f"Cache error getting status {post_id}: {e}")
             return None
 
@@ -127,7 +127,7 @@ class MastodonAPIClient:
                 logger.debug(f"Cached status {post_id} from {instance_url} for {ttl}s")
             return success
         except Exception as e:
-            CACHE_ERROR_TOTAL.labels(operation='set').inc()
+            CACHE_ERROR_TOTAL.labels(cache_type='redis', error_type='set').inc()
             logger.error(f"Cache error storing status {post_id}: {e}")
             return False
 

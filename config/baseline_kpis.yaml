@@ -1,0 +1,155 @@
+# Corgi Recommender Service - Baseline KPIs Configuration
+# This file defines the performance baselines and thresholds for stress testing
+
+kpis:
+  latency:
+    api_p50_target: 100
+    api_p95_target: 500
+    api_p99_target: 1000
+    algorithm_p50_target: 50
+    algorithm_p95_target: 200
+    algorithm_p99_target: 400
+    db_query_p95_target: 50
+    db_query_p99_target: 100
+    units: milliseconds
+    
+  throughput:
+    minimum_rps: 50
+    target_rps: 100
+    peak_rps: 200
+    algorithm_executions_per_second: 150
+    celery_tasks_per_second: 50
+    units: requests_per_second
+    
+  error_rate:
+    maximum_percentage: 2.0
+    target_percentage: 0.5
+    warning_percentage: 1.0
+    units: percentage
+    
+  resources:
+    cpu:
+      api_server_limit: 90
+      worker_limit: 95
+      database_limit: 80
+      warning_threshold: 70
+    memory:
+      api_server_limit_mb: 3584
+      worker_limit_mb: 1536
+      database_limit_mb: 4096
+      redis_limit_mb: 2048
+    connections:
+      database_pool_limit: 95
+      redis_connection_limit: 1000
+      warning_threshold: 80
+    units: 
+      cpu: percentage
+      memory: megabytes
+      connections: count
+
+quality_metrics:
+  recommendation_score:
+    minimum: 0.5
+    target: 0.7
+    excellent: 0.85
+  diversity_score:
+    minimum: 0.3
+    target: 0.5
+    excellent: 0.7
+  coverage:
+    minimum: 0.6
+    target: 0.8
+    excellent: 0.9
+
+celery_metrics:
+  queue_length:
+    warning: 500
+    critical: 1000
+    maximum: 2000
+  task_success_rate:
+    minimum: 95
+    target: 99
+    units: percentage
+  task_execution_time_p95:
+    warning: 5000
+    critical: 10000
+    units: milliseconds
+
+cache_metrics:
+  hit_rate:
+    minimum: 60
+    target: 80
+    excellent: 90
+    units: percentage
+  eviction_rate:
+    warning: 10
+    critical: 20
+    units: percentage_per_minute
+  memory_usage:
+    warning: 80
+    critical: 90
+    units: percentage
+
+monitoring:
+  prometheus:
+    url: http://localhost:9090
+    scrape_interval: 10
+    retention_days: 7
+  grafana:
+    url: http://localhost:3000
+    dashboard_uid: corgi-stress-test
+  sampling:
+    interval_seconds: 10
+    aggregation_window: 300
+    percentile_calculation_method: histogram
+    
+stress_test_scenarios:
+  baseline:
+    concurrent_users: 200
+    duration_minutes: 30
+    ramp_up_seconds: 60
+  peak_load:
+    concurrent_users: 1000
+    duration_minutes: 30
+    ramp_up_seconds: 300
+    ramp_down_seconds: 300
+  endurance:
+    concurrent_users: 200
+    duration_minutes: 360
+    ramp_up_seconds: 600
+  spike:
+    baseline_users: 100
+    spike_users: 2000
+    spike_duration_seconds: 300
+    recovery_time_seconds: 300
+
+thresholds:
+  # Define pass/fail criteria for stress tests
+  latency:
+    p95_increase_limit: 100  # Max 100% increase from baseline
+    p99_increase_limit: 150  # Max 150% increase from baseline
+  error_rate:
+    absolute_limit: 5.0  # Fail if error rate exceeds 5%
+  resource_exhaustion:
+    cpu_sustained_limit: 95  # Fail if CPU stays above 95% for >60s
+    memory_growth_limit: 20   # Fail if memory grows >20% during test
+  recovery:
+    max_recovery_time: 300    # Must recover within 5 minutes
+    
+reporting:
+  output_format: 
+    - html
+    - json
+    - csv
+  include_graphs: true
+  include_raw_data: false
+  summary_metrics:
+    - p50_latency
+    - p95_latency
+    - p99_latency
+    - error_rate
+    - throughput
+    - peak_cpu
+    - peak_memory
+    - queue_depth
+    - cache_hit_rate 

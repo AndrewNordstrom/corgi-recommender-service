@@ -1,0 +1,14 @@
+Method,Name,Error,Occurrences
+GET,/api/v1/recommendations,CatchResponseError('Unexpected status code: 500'),7568
+GET,/api/v1/posts/recommended,CatchResponseError('Status code: 0'),136
+GET,/api/v1/posts,CatchResponseError('Status code: 0'),143
+GET,/api/v1/metrics/recommendations/[user_id],CatchResponseError('Metrics fetch failed: 0'),77
+GET,/api/v1/timelines/local,CatchResponseError('Timeline fetch failed: 0'),409
+POST,/api/v1/interactions,CatchResponseError('Interaction logging failed: 500'),3797
+GET,/api/v1/timelines/public,CatchResponseError('Timeline fetch failed: 0'),436
+POST,/api/v1/interactions,CatchResponseError('Interaction logging failed: 0'),820
+GET,/api/v1/recommendations/status/[task_id],CatchResponseError('Task status check failed: 0'),195
+GET,/api/v1/posts/trending,CatchResponseError('Status code: 0'),141
+GET,/api/v1/recommendations,CatchResponseError('Unexpected status code: 0'),1634
+PUT,/api/v1/users/[user_id]/preferences,CatchResponseError('Preference update failed: 0'),120
+GET,/api/v1/timelines/home,CatchResponseError('Timeline fetch failed: 0'),419

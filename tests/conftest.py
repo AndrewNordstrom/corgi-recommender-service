@@ -3,10 +3,19 @@ Test fixtures for the Corgi Recommender Service.
 """
 
 import os
+
+# Set test environment FIRST before any other imports
+os.environ["USE_IN_MEMORY_DB"] = "true"
+os.environ["FLASK_ENV"] = "testing"
+os.environ["DEBUG"] = "True"
+os.environ["POSTGRES_DB"] = "corgi_recommender_test"
+os.environ["USER_HASH_SALT"] = "test-salt-for-pytest"
+
 import pytest
 import threading
 import time
-from unittest.mock import patch
+import logging
+from unittest.mock import patch, MagicMock
 import psycopg2
 
 from app import create_app
@@ -15,12 +24,6 @@ from app import create_app
 @pytest.fixture
 def app():
     """Create a Flask app for testing."""
-    # Setup environment variables for testing
-    os.environ["FLASK_ENV"] = "testing"
-    os.environ["DEBUG"] = "True"
-    os.environ["POSTGRES_DB"] = "corgi_recommender_test"
-    os.environ["USER_HASH_SALT"] = "test-salt-for-pytest"
-
     app = create_app()
     app.config["TESTING"] = True
 
@@ -70,3 +73,51 @@ def init_test_db():
         )
 
     conn.close()
+
+
+@pytest.fixture
+def experiment_id():
+    """Provide a test experiment ID for A/B testing experiments."""
+    # Return a mock experiment ID for testing
+    return 12345
+
+
+@pytest.fixture
+def logger():
+    """Create a logger for testing agent features."""
+    logger = logging.getLogger('test_logger')
+    logger.setLevel(logging.INFO)
+    
+    # Remove existing handlers to avoid duplicates
+    logger.handlers.clear()
+    
+    # Create console handler with formatting
+    console_handler = logging.StreamHandler()
+    formatter = logging.Formatter(
+        '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    )
+    console_handler.setFormatter(formatter)
+    logger.addHandler(console_handler)
+    
+    return logger
+
+
+@pytest.fixture
+def mocked_redis_client():
+    """Create a mocked Redis client for testing API caching."""
+    mock_redis = MagicMock()
+    
+    # Set up common Redis method return values
+    mock_redis.get.return_value = None  # Default: no cached data
+    mock_redis.set.return_value = True
+    mock_redis.delete.return_value = 1
+    mock_redis.keys.return_value = []
+    mock_redis.flushdb.return_value = True
+    
+    return mock_redis
+
+
+@pytest.fixture
+def variant_ids():
+    """Create test variant IDs for A/B testing and performance monitoring tests."""
+    return [1001, 1002, 1003]

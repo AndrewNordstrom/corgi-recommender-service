@@ -1,0 +1,38 @@
+groups:
+- name: test_suite_alerts
+  rules:
+  - alert: TestSuiteFailureRate
+    annotations:
+      description: Test suite success rate is {{ $value }}%, which is below the 95%
+        threshold.
+      summary: Test suite success rate is below 95%
+    expr: test_suite_success_rate < 95
+    for: 5m
+    labels:
+      severity: warning
+  - alert: TestSuiteCriticalFailure
+    annotations:
+      description: '{{ $value }} tests are failing, which indicates a serious issue.'
+      summary: High number of test failures detected
+    expr: test_suite_failed_total > 10
+    for: 1m
+    labels:
+      severity: critical
+  - alert: TestPerformanceRegression
+    annotations:
+      description: Test suite duration is {{ $value }} seconds, exceeding the 2-minute
+        threshold.
+      summary: Test suite taking too long to execute
+    expr: test_suite_duration_seconds > 120
+    for: 10m
+    labels:
+      severity: warning
+  - alert: SecurityVulnerabilitiesDetected
+    annotations:
+      description: '{{ $value }} security vulnerabilities found. Review and update
+        dependencies.'
+      summary: Security vulnerabilities detected in dependencies
+    expr: security_vulnerabilities_total > 0
+    for: 0m
+    labels:
+      severity: high

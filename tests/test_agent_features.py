@@ -17,15 +17,23 @@ import sys
 import logging
 import argparse
 from typing import Dict, Any, List
+import pytest
+from unittest.mock import MagicMock, patch
 
 # Add the parent directory to the path to enable imports
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from agents.browser_agent import BrowserAgent
-from agents.token_tracker import TokenTracker
-from agents.user_profiles import get_profile_by_name, list_available_profiles
-from agents.interaction_logger import InteractionLogger
-from agents.feedback_module import FeedbackModule
+# Import the agent features (if available)
+try:
+    from agents.browser_agent import BrowserAgent
+    from agents.token_tracker import TokenTracker
+    from agents.user_profiles import get_profile_by_name, list_available_profiles
+    from agents.interaction_logger import InteractionLogger
+    from agents.feedback_module import FeedbackModule
+    AGENTS_AVAILABLE = True
+except ImportError as e:
+    print(f"Agent features not available: {e}")
+    AGENTS_AVAILABLE = False
 
 
 def setup_logging() -> logging.Logger:
@@ -77,7 +85,11 @@ def test_token_tracking(logger):
     # Log the summary
     token_tracker.log_summary()
     
-    return summary
+    # Assert proper tracking functionality instead of returning values
+    assert summary['total_tokens'] == 2600
+    assert summary['total_cost'] > 0
+    assert 'usage_by_model' in summary
+    assert len(summary['usage_by_model']) == 2
 
 
 def test_browser_agent_no_llm(logger):
@@ -102,7 +114,7 @@ def test_browser_agent_no_llm(logger):
         logger.info(f"Using profile: {profile.name}")
     except ValueError as e:
         logger.error(f"Error getting profile: {str(e)}")
-        return None
+        assert False, f"Failed to get profile: {str(e)}"
     
     # Run the agent in no-LLM mode
     results = agent.run_interaction(
@@ -114,9 +126,15 @@ def test_browser_agent_no_llm(logger):
     logger.info(f"No-LLM test completed with success={results['success']}")
     logger.info(f"Interactions used: {results['interactions_used']}")
     
-    return results
+    # Assert proper functionality instead of returning values
+    assert results['success'] is True
+    assert 'interactions_used' in results
+    assert 'mode' in results
+    assert results['mode'] == 'heuristic'
 
 
+@pytest.mark.skipif(not AGENTS_AVAILABLE, reason="Agent features not available")
+@pytest.mark.skip(reason="Claude API not available in test environment")
 def test_browser_agent_with_tools(logger):
     """Test the browser agent with tool access control."""
     logger.info("=== Testing Tool Access Control ===")
@@ -181,7 +199,7 @@ def test_batch_processing(logger):
         logger.info(f"Using profile: {profile.name}")
     except ValueError as e:
         logger.error(f"Error getting profile: {str(e)}")
-        return None
+        assert False, f"Failed to get profile: {str(e)}"
     
     # Generate some test posts
     test_posts = [
@@ -196,9 +214,16 @@ def test_batch_processing(logger):
     for post, feedback in batch_results.items():
         logger.info(f"Post feedback: {feedback[:50]}...")
     
-    return batch_results
+    # Assert proper batch processing instead of returning values
+    assert isinstance(batch_results, dict)
+    assert len(batch_results) == len(test_posts)
+    for post in test_posts:
+        assert post in batch_results
+        assert isinstance(batch_results[post], str)
 
 
+@pytest.mark.skipif(not AGENTS_AVAILABLE, reason="Agent features not available")
+@pytest.mark.skip(reason="Claude API not available in test environment")
 def test_interaction_limits(logger):
     """Test browser interaction limits."""
     logger.info("=== Testing Interaction Limits ===")

@@ -22,9 +22,20 @@ RESET := \033[0m
 .PHONY: help
 help:
 	@echo "$(BOLD)Corgi Recommender Service Development Tasks$(RESET)"
+	@echo ""
+	@echo "$(BOLD)🚀 Automated Development Workflow:$(RESET)"
+	@echo "$(CYAN)make dev$(RESET)             - Start automated development workflow"
+	@echo "$(CYAN)make dev-status$(RESET)      - Show development service status"
+	@echo "$(CYAN)make dev-stop$(RESET)        - Stop all development services"
+	@echo "$(CYAN)make dev-health$(RESET)      - Run health check"
+	@echo "$(CYAN)make dev-browser$(RESET)     - Run browser check"
+	@echo ""
+	@echo "$(BOLD)📦 Core Services:$(RESET)"
 	@echo "$(CYAN)make run$(RESET)             - Start the Flask API server"
 	@echo "$(CYAN)make gui$(RESET)             - Run the setup GUI for demos"
 	@echo "$(CYAN)make reset-db$(RESET)        - Reset the database (drop and recreate schema)"
+	@echo ""
+	@echo "$(BOLD)🧪 Testing & Validation:$(RESET)"
 	@echo "$(CYAN)make validate$(RESET)        - Run full validation suite"
 	@echo "$(CYAN)make dry-validate$(RESET)    - Run validation in dry-run mode"
 	@echo "$(CYAN)make check$(RESET)           - Run quick health check"
@@ -32,6 +43,8 @@ help:
 	@echo "$(CYAN)make check-docs$(RESET)      - Validate documentation files"
 	@echo "$(CYAN)make final-test$(RESET)      - Run final sanity test suite"
 	@echo "$(CYAN)make nightly-check$(RESET)   - Run nightly validation checks"
+	@echo ""
+	@echo "$(BOLD)🛠️  Utilities:$(RESET)"
 	@echo "$(CYAN)make install$(RESET)         - Install dependencies"
 	@echo "$(CYAN)make clean$(RESET)           - Clean up temporary files"
 	@echo "$(CYAN)make env-check$(RESET)       - Verify environment variables"
@@ -290,3 +303,66 @@ proxy-test:
 	fi
 	
 	@echo "$(GREEN)Proxy test complete.$(RESET)"
+
+# =============================================================================
+# 🚀 AUTOMATED DEVELOPMENT WORKFLOW
+# =============================================================================
+
+# Start automated development workflow
+.PHONY: dev
+dev:
+	@echo "$(BOLD)🚀 Starting Automated Development Workflow$(RESET)"
+	@echo "$(YELLOW)This will start both backend and frontend with automatic monitoring$(RESET)"
+	./dev-monitor start
+
+# Show development service status
+.PHONY: dev-status
+dev-status:
+	@echo "$(YELLOW)Checking development service status...$(RESET)"
+	./dev-monitor status
+
+# Stop all development services
+.PHONY: dev-stop
+dev-stop:
+	@echo "$(YELLOW)Stopping all development services...$(RESET)"
+	./dev-monitor stop
+
+# Run health check only
+.PHONY: dev-health
+dev-health:
+	@echo "$(YELLOW)Running automated health check...$(RESET)"
+	./dev-monitor health --verbose
+
+# Run browser check only  
+.PHONY: dev-browser
+dev-browser:
+	@echo "$(YELLOW)Running automated browser check...$(RESET)"
+	./dev-monitor browser --verbose
+
+# Run intelligent browser agent test
+.PHONY: dev-test
+dev-test:
+	@echo "$(YELLOW)🤖 Running intelligent browser tests...$(RESET)"
+	python3 scripts/development/browser_agent.py
+
+# Run browser agent with visible browser
+.PHONY: dev-test-headed
+dev-test-headed:
+	@echo "$(YELLOW)🤖 Running browser tests with visible browser...$(RESET)"
+	python3 scripts/development/browser_agent.py --headed
+
+# Run continuous browser testing
+.PHONY: dev-test-continuous
+dev-test-continuous:
+	@echo "$(YELLOW)🤖 Starting continuous browser testing...$(RESET)"
+	python3 scripts/development/browser_agent.py --continuous --interval 30
+
+# Install development workflow dependencies
+.PHONY: dev-install
+dev-install:
+	@echo "$(YELLOW)Installing development workflow dependencies...$(RESET)"
+	pip install aiohttp selenium playwright
+	@echo "$(GREEN)Installing Playwright browsers...$(RESET)"
+	playwright install chromium
+	@echo "$(GREEN)Development dependencies installed.$(RESET)"
+	@echo "$(CYAN)✅ Playwright is now ready for intelligent browser testing!$(RESET)"

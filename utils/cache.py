@@ -76,7 +76,7 @@ def get_redis_client() -> Optional[redis.Redis]:
             logger.error(f"Redis connection failed: {e}")
             _redis_client_instance = None
             redis_client = None # Ensure it's None on failure too
-            CACHE_ERROR_TOTAL.labels(operation='connect').inc()
+            CACHE_ERROR_TOTAL.labels(cache_type='general', error_type='connect').inc()
     
     return _redis_client_instance
 
@@ -97,7 +97,7 @@ def clear_cache() -> bool:
         return True
     except redis.RedisError as e:
         logger.error(f"Error clearing cache: {e}")
-        CACHE_ERROR_TOTAL.labels(operation='clear').inc()
+        CACHE_ERROR_TOTAL.labels(cache_type='general', error_type='clear').inc()
         return False
 
 def clear_cache_by_pattern(pattern: str) -> bool:
@@ -124,7 +124,7 @@ def clear_cache_by_pattern(pattern: str) -> bool:
         return True
     except redis.RedisError as e:
         logger.error(f"Error clearing cache by pattern: {e}")
-        CACHE_ERROR_TOTAL.labels(operation='clear_pattern').inc()
+        CACHE_ERROR_TOTAL.labels(cache_type='general', error_type='clear_pattern').inc()
         return False
 
 def cache_key(prefix: str, identifier: str) -> str:
@@ -189,7 +189,7 @@ def cache_get(key: str, cache_type: str = 'general', endpoint: str = 'unknown') 
     except (redis.RedisError, json.JSONDecodeError) as e:
         execution_time = time.time() - start_time
         track_cache_operation_time('get', cache_type, execution_time)
-        CACHE_ERROR_TOTAL.labels(operation='get', cache_type=cache_type).inc()
+        CACHE_ERROR_TOTAL.labels(cache_type=cache_type, error_type='get').inc()
         logger.error(f"Error retrieving from cache: {e}")
         return None
 
@@ -233,7 +233,7 @@ def cache_set(key: str, value: Any, ttl: int = None, cache_type: str = 'general'
     except (redis.RedisError, TypeError) as e:
         execution_time = time.time() - start_time
         track_cache_operation_time('set', cache_type, execution_time)
-        CACHE_ERROR_TOTAL.labels(operation='set', cache_type=cache_type).inc()
+        CACHE_ERROR_TOTAL.labels(cache_type=cache_type, error_type='set').inc()
         logger.error(f"Error setting cache: {e}")
         return False
 
@@ -255,7 +255,7 @@ def cache_delete(key: str) -> bool:
     try:
         result = client.delete(key)
         execution_time = time.time() - start_time
-        CACHE_OPERATION_SECONDS.labels(operation='delete').observe(execution_time)
+        CACHE_OPERATION_SECONDS.labels(operation='delete', cache_type='general').observe(execution_time)
         
         if result:
             logger.debug(f"Successfully deleted cache key: {key}")
@@ -265,8 +265,8 @@ def cache_delete(key: str) -> bool:
             return False
     except redis.RedisError as e:
         execution_time = time.time() - start_time
-        CACHE_OPERATION_SECONDS.labels(operation='delete').observe(execution_time)
-        CACHE_ERROR_TOTAL.labels(operation='delete').inc()
+        CACHE_OPERATION_SECONDS.labels(operation='delete', cache_type='general').observe(execution_time)
+        CACHE_ERROR_TOTAL.labels(cache_type='general', error_type='delete').inc()
         logger.error(f"Error deleting from cache: {e}")
         return False
 
@@ -294,8 +294,8 @@ def invalidate_pattern(pattern: str) -> bool:
             return True
         return True
     except redis.RedisError as e:
-        logger.error(f"Error invalidating pattern {pattern}: {e}")
-        CACHE_ERROR_TOTAL.labels(operation='invalidate_patterns').inc()
+        logger.error(f"Error invalidating cache patterns: {e}")
+        CACHE_ERROR_TOTAL.labels(cache_type='general', error_type='invalidate_patterns').inc()
         return False
 
 # ----- Recommendation Caching Functions -----
@@ -713,7 +713,7 @@ def cache_user_opt_out_status(user_acct: str, opt_out_status: 'OptOutStatus') ->
         return success
     except Exception as e:
         logger.error(f"Error caching opt-out status for {user_acct}: {e}")
-        CACHE_ERROR_TOTAL.labels(operation='set_optout').inc()
+        CACHE_ERROR_TOTAL.labels(cache_type='general', error_type='set_optout').inc()
         return False
 
 def get_cached_user_opt_out_status(user_acct: str) -> Optional['OptOutStatus']:
@@ -750,7 +750,7 @@ def get_cached_user_opt_out_status(user_acct: str) -> Optional['OptOutStatus']:
         return opt_out_status
     except Exception as e:
         logger.error(f"Error retrieving cached opt-out status for {user_acct}: {e}")
-        CACHE_ERROR_TOTAL.labels(operation='get_optout').inc()
+        CACHE_ERROR_TOTAL.labels(cache_type='general', error_type='get_optout').inc()
         return None
 
 def invalidate_user_opt_out_status(user_acct: str) -> bool:
@@ -772,7 +772,7 @@ def invalidate_user_opt_out_status(user_acct: str) -> bool:
         return success
     except Exception as e:
         logger.error(f"Error invalidating opt-out status for {user_acct}: {e}")
-        CACHE_ERROR_TOTAL.labels(operation='delete_optout').inc()
+        CACHE_ERROR_TOTAL.labels(cache_type='general', error_type='delete_optout').inc()
         return False
 
 def clear_all_opt_out_cache() -> bool:
@@ -789,7 +789,7 @@ def clear_all_opt_out_cache() -> bool:
         return success
     except Exception as e:
         logger.error(f"Error clearing opt-out cache: {e}")
-        CACHE_ERROR_TOTAL.labels(operation='clear_optout').inc()
+        CACHE_ERROR_TOTAL.labels(cache_type='general', error_type='clear_optout').inc()
         return False
 
 # ----- Crawler-Specific Caching Functions -----

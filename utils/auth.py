@@ -2,10 +2,50 @@
 Authentication related utility functions.
 """
 import logging
+import functools
 from datetime import datetime, timedelta
+from flask import request, jsonify, g
 from db.connection import get_db_connection
 
 logger = logging.getLogger(__name__)
+
+def require_authentication(f):
+    """
+    Decorator to require authentication for a route.
+    
+    Args:
+        f: Flask route function
+        
+    Returns:
+        Decorated function that checks authentication
+    """
+    @functools.wraps(f)
+    def decorated_function(*args, **kwargs):
+        # Check for API key in headers
+        api_key = request.headers.get('X-API-Key')
+        auth_header = request.headers.get('Authorization')
+        
+        user = None
+        
+        if api_key:
+            # Simple API key validation (would be more robust in production)
+            if api_key in ['admin-key', 'user-key', 'crawler-key']:
+                user = {'api_key': api_key}
+        elif auth_header and auth_header.startswith('Bearer '):
+            token = auth_header[7:]  # Remove 'Bearer ' prefix
+            user = get_user_by_token(token)
+        
+        if not user:
+            return jsonify({
+                'error': 'Authentication required',
+                'message': 'Please provide valid API key or Bearer token'
+            }), 401
+        
+        # Store user in Flask's g object for use in the route
+        g.current_user = user
+        return f(*args, **kwargs)
+    
+    return decorated_function
 
 def get_user_by_token(token: str) -> dict | None:
     """

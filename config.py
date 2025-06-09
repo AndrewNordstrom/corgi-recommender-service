@@ -129,8 +129,22 @@ REDIS_TTL_INTERACTIONS = int(os.getenv("REDIS_TTL_INTERACTIONS", "600"))  # 10 m
 REDIS_TTL_PRIVACY = int(os.getenv("REDIS_TTL_PRIVACY", "3600"))  # 1 hour
 REDIS_TTL_OPTOUT_STATUS = int(os.getenv("REDIS_TTL_OPTOUT_STATUS", "172800"))  # 48 hours
 
+# Proxy-specific TTL Settings
+PROXY_CACHE_TTL_TIMELINE = int(os.getenv("PROXY_CACHE_TTL_TIMELINE", "120"))  # 2 minutes
+PROXY_CACHE_TTL_PROFILE = int(os.getenv("PROXY_CACHE_TTL_PROFILE", "600"))  # 10 minutes
+PROXY_CACHE_TTL_INSTANCE = int(os.getenv("PROXY_CACHE_TTL_INSTANCE", "3600"))  # 1 hour
+PROXY_CACHE_TTL_STATUS = int(os.getenv("PROXY_CACHE_TTL_STATUS", "1800"))  # 30 minutes
+PROXY_CACHE_TTL_DEFAULT = int(os.getenv("PROXY_CACHE_TTL_DEFAULT", "900"))  # 15 minutes
+
 # Rate limiting storage URL (uses same Redis as cache)
 RATE_LIMITING_STORAGE_URL = os.getenv("RATE_LIMITING_STORAGE_URL", REDIS_URL)
+
+# Rate Limiting Configuration
+RATE_LIMITING_ENABLED = os.getenv("RATE_LIMITING_ENABLED", "True").lower() == "true"
+RATE_LIMIT_DEFAULT = os.getenv("RATE_LIMIT_DEFAULT", "2000 per hour")  # Increased from 100/min to 2000/hour
+RATE_LIMIT_AUTH = os.getenv("RATE_LIMIT_AUTH", "3000 per hour")  # Increased from 200/min to 3000/hour for authenticated users
+RATE_LIMIT_ANONYMOUS = os.getenv("RATE_LIMIT_ANONYMOUS", "1000 per hour")  # Increased from 50/min to 1000/hour for anonymous users
+RATE_LIMIT_HEALTH = os.getenv("RATE_LIMIT_HEALTH", "500 per hour")  # Increased from 10/min to 500/hour
 
 # Recommendation Algorithm Settings
 ALGORITHM_CONFIG = {
