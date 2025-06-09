@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🐕 Corgi Rich Content Demo</title>
+    <style>
+        body { 
+            font-family: system-ui, sans-serif; 
+            max-width: 800px; 
+            margin: 40px auto; 
+            padding: 20px;
+            background: #f8f9fa;
+        }
+        .content-type {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            margin: 20px 0;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .type-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #e9ecef;
+        }
+        .type-icon {
+            font-size: 24px;
+        }
+        .type-name {
+            font-size: 18px;
+            font-weight: bold;
+            color: #495057;
+        }
+        .content-preview {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #007bff;
+            font-family: monospace;
+            white-space: pre-wrap;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        .test-button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            margin: 10px 5px;
+        }
+        .test-button:hover {
+            background: #0056b3;
+        }
+        .status {
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        .success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        .demo-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🐕 Corgi Rich Content Types Demo</h1>
+    
+    <div class="status success">
+        <h3>✅ Enhanced Content Generation Active</h3>
+        <p>Our demo endpoint now generates 8 different content types that ELK can display natively!</p>
+    </div>
+
+    <div class="demo-grid">
+        <div class="content-type">
+            <div class="type-header">
+                <span class="type-icon">📝</span>
+                <span class="type-name">Text Posts</span>
+            </div>
+            <p>Simple AI-powered text recommendations with rich metadata.</p>
+            <button class="test-button" onclick="fetchExample('text')">View Example</button>
+            <div id="text-preview" class="content-preview" style="display: none;"></div>
+        </div>
+
+        <div class="content-type">
+            <div class="type-header">
+                <span class="type-icon">📸</span>
+                <span class="type-name">Media Posts</span>
+            </div>
+            <p>Posts with 1-4 image attachments, complete with metadata and preview URLs.</p>
+            <button class="test-button" onclick="fetchExample('media')">View Example</button>
+            <div id="media-preview" class="content-preview" style="display: none;"></div>
+        </div>
+
+        <div class="content-type">
+            <div class="type-header">
+                <span class="type-icon">🔗</span>
+                <span class="type-name">Link Preview Posts</span>
+            </div>
+            <p>Posts with rich link cards showing titles, descriptions, and preview images.</p>
+            <button class="test-button" onclick="fetchExample('link')">View Example</button>
+            <div id="link-preview" class="content-preview" style="display: none;"></div>
+        </div>
+
+        <div class="content-type">
+            <div class="type-header">
+                <span class="type-icon">🔄</span>
+                <span class="type-name">Reblogs/Boosts</span>
+            </div>
+            <p>Shared content with nested original posts, just like Mastodon retweets.</p>
+            <button class="test-button" onclick="fetchExample('reblog')">View Example</button>
+            <div id="reblog-preview" class="content-preview" style="display: none;"></div>
+        </div>
+
+        <div class="content-type">
+            <div class="type-header">
+                <span class="type-icon">📊</span>
+                <span class="type-name">Poll Posts</span>
+            </div>
+            <p>Interactive polls with voting options and realistic vote counts.</p>
+            <button class="test-button" onclick="fetchExample('poll')">View Example</button>
+            <div id="poll-preview" class="content-preview" style="display: none;"></div>
+        </div>
+
+        <div class="content-type">
+            <div class="type-header">
+                <span class="type-icon">💬</span>
+                <span class="type-name">Reply Posts</span>
+            </div>
+            <p>Conversational replies with mentions and thread context.</p>
+            <button class="test-button" onclick="fetchExample('reply')">View Example</button>
+            <div id="reply-preview" class="content-preview" style="display: none;"></div>
+        </div>
+
+        <div class="content-type">
+            <div class="type-header">
+                <span class="type-icon">🏷️</span>
+                <span class="type-name">Hashtag Posts</span>
+            </div>
+            <p>Posts with trending hashtags and clickable tag links.</p>
+            <button class="test-button" onclick="fetchExample('hashtag')">View Example</button>
+            <div id="hashtag-preview" class="content-preview" style="display: none;"></div>
+        </div>
+
+        <div class="content-type">
+            <div class="type-header">
+                <span class="type-icon">🌍</span>
+                <span class="type-name">Multilingual Posts</span>
+            </div>
+            <p>Content in Spanish, French, German, and Japanese with proper language tags.</p>
+            <button class="test-button" onclick="fetchExample('multilang')">View Example</button>
+            <div id="multilang-preview" class="content-preview" style="display: none;"></div>
+        </div>
+    </div>
+
+    <div class="content-type">
+        <div class="type-header">
+            <span class="type-icon">🚀</span>
+            <span class="type-name">Test All Types</span>
+        </div>
+        <p>Fetch a timeline sample to see all content types in action:</p>
+        <button class="test-button" onclick="fetchTimeline()">Fetch Mixed Timeline</button>
+        <button class="test-button" onclick="openElk()">Open ELK /corgi Page</button>
+        <div id="timeline-preview" class="content-preview" style="display: none;"></div>
+    </div>
+
+    <script>
+        async function fetchExample(type) {
+            const preview = document.getElementById(type + '-preview');
+            preview.style.display = 'block';
+            preview.textContent = 'Loading...';
+            
+            try {
+                const response = await fetch('/timeline?user_id=demo_user&limit=20');
+                const posts = await response.json();
+                
+                let example = null;
+                
+                for (const post of posts) {
+                    if (type === 'text' && !post.reblog && !post.media_attachments?.length && !post.card && !post.poll && !post.in_reply_to_id && !post.tags?.length && post.language === 'en') {
+                        example = post;
+                        break;
+                    } else if (type === 'media' && post.media_attachments?.length > 0) {
+                        example = post;
+                        break;
+                    } else if (type === 'link' && post.card) {
+                        example = post;
+                        break;
+                    } else if (type === 'reblog' && post.reblog) {
+                        example = post;
+                        break;
+                    } else if (type === 'poll' && post.poll) {
+                        example = post;
+                        break;
+                    } else if (type === 'reply' && post.in_reply_to_id) {
+                        example = post;
+                        break;
+                    } else if (type === 'hashtag' && post.tags?.length > 0) {
+                        example = post;
+                        break;
+                    } else if (type === 'multilang' && post.language !== 'en') {
+                        example = post;
+                        break;
+                    }
+                }
+                
+                if (example) {
+                    preview.textContent = JSON.stringify(example, null, 2);
+                } else {
+                    preview.textContent = `No ${type} example found in current batch. Try fetching again!`;
+                }
+            } catch (error) {
+                preview.textContent = 'Error: ' + error.message;
+            }
+        }
+        
+        async function fetchTimeline() {
+            const preview = document.getElementById('timeline-preview');
+            preview.style.display = 'block';
+            preview.textContent = 'Loading timeline...';
+            
+            try {
+                const response = await fetch('/timeline?user_id=demo_user&limit=10');
+                const posts = await response.json();
+                
+                let summary = 'Content Types Found:\n\n';
+                
+                posts.forEach((post, index) => {
+                    let type = 'Text';
+                    if (post.reblog) type = '🔄 Reblog';
+                    else if (post.media_attachments?.length) type = '📸 Media';
+                    else if (post.card) type = '🔗 Link';
+                    else if (post.poll) type = '📊 Poll';
+                    else if (post.in_reply_to_id) type = '💬 Reply';
+                    else if (post.tags?.length) type = '🏷️ Hashtag';
+                    else if (post.language !== 'en') type = `🌍 ${post.language.toUpperCase()}`;
+                    else type = '📝 Text';
+                    
+                    summary += `${index + 1}. ${type} - @${post.account.username} (${post.language || 'en'})\n`;
+                });
+                
+                summary += '\n' + JSON.stringify(posts, null, 2);
+                preview.textContent = summary;
+            } catch (error) {
+                preview.textContent = 'Error: ' + error.message;
+            }
+        }
+        
+        function openElk() {
+            window.open('http://localhost:5314/corgi', '_blank');
+        }
+    </script>
+</body>
+</html> 

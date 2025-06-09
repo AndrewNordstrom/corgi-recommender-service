@@ -366,16 +366,31 @@ def calculate_ranking_score(
         + weights["recency"] * recency_score
     )
 
-    # Determine the primary reason for recommendation
-    reason = "Recommended for you"
-    max_factor = max(
-        (author_score * weights["author_preference"], "From an author you might like"),
-        (engagement_score * weights["content_engagement"], "Popular with other users"),
-        (recency_score * weights["recency"], "Recently posted"),
-    )
-
-    # Use the factor with the highest contribution as the reason
-    _, reason = max_factor
+    # Generate user-friendly recommendation reason based on dominant factor
+    weighted_scores = [
+        (author_score * weights["author_preference"], "Based on posts you've liked"),
+        (engagement_score * weights["content_engagement"], "Popular in your network"), 
+        (recency_score * weights["recency"], "Trending in topics you follow")
+    ]
+    
+    # Find the highest contributing factor
+    max_weighted_score, primary_reason = max(weighted_scores)
+    
+    # Add contextual modifiers based on multiple factors
+    reason = primary_reason
+    
+    # If engagement is particularly high, emphasize popularity
+    if engagement_score > 0.7:
+        if "Popular" not in reason:
+            reason = "Popular in your network"
+    
+    # If it's very recent and has good engagement, emphasize trending
+    if recency_score > 0.8 and engagement_score > 0.5:
+        reason = "Trending in topics you follow"
+    
+    # If user has strong author preference, emphasize that
+    if author_score > 0.6:
+        reason = "Based on posts you've liked"
 
     return overall_score, reason
 

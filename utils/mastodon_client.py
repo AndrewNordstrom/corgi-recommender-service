@@ -38,6 +38,23 @@ class MastodonPost:
     language: Optional[str] = None
     tags: List[str] = None
     url: str = ""
+    # Rich content fields
+    media_attachments: List[Dict[str, Any]] = None
+    card: Optional[Dict[str, Any]] = None
+    poll: Optional[Dict[str, Any]] = None
+    mentions: List[Dict[str, Any]] = None
+    emojis: List[Dict[str, Any]] = None
+    visibility: str = "public"
+    in_reply_to_id: Optional[str] = None
+    in_reply_to_account_id: Optional[str] = None
+    # Author details
+    author_acct: Optional[str] = None
+    author_display_name: Optional[str] = None
+    author_avatar: Optional[str] = None
+    author_note: Optional[str] = None
+    author_followers_count: int = 0
+    author_following_count: int = 0
+    author_statuses_count: int = 0
 
 @dataclass
 class MastodonProfile:
@@ -523,6 +540,13 @@ class MastodonAPIClient:
             # Get account info
             account = post_data.get('account', {})
             
+            # Extract rich content
+            media_attachments = post_data.get('media_attachments', [])
+            card = post_data.get('card', None)
+            poll = post_data.get('poll', None)
+            mentions = post_data.get('mentions', [])
+            emojis = post_data.get('emojis', [])
+            
             post = MastodonPost(
                 id=post_data.get('id', ''),
                 content=post_data.get('content', ''),
@@ -534,7 +558,24 @@ class MastodonAPIClient:
                 replies_count=int(post_data.get('replies_count', 0)),
                 language=post_data.get('language'),
                 tags=tags,
-                url=post_data.get('url', '')
+                url=post_data.get('url', ''),
+                # Rich content fields
+                media_attachments=media_attachments,
+                card=card,
+                poll=poll,
+                mentions=mentions,
+                emojis=emojis,
+                visibility=post_data.get('visibility', 'public'),
+                in_reply_to_id=post_data.get('in_reply_to_id'),
+                in_reply_to_account_id=post_data.get('in_reply_to_account_id'),
+                # Author details
+                author_acct=account.get('acct', ''),
+                author_display_name=account.get('display_name', ''),
+                author_avatar=account.get('avatar', ''),
+                author_note=account.get('note', ''),
+                author_followers_count=int(account.get('followers_count', 0)),
+                author_following_count=int(account.get('following_count', 0)),
+                author_statuses_count=int(account.get('statuses_count', 0))
             )
             
             return post

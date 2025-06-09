@@ -900,7 +900,7 @@ def get_recommendations_timeline():
     """
     Get a clean timeline of personalized recommendations for the authenticated user.
     
-    This endpoint returns only recommendations without blending with other timelines,
+    This endpoint returns real crawled content from the database instead of fake data,
     designed for a dedicated "Corgi Recommendations" tab in the ELK frontend.
     
     Query parameters:
@@ -943,173 +943,177 @@ def get_recommendations_timeline():
     try:
         with get_db_connection() as conn:
             with get_cursor(conn) as cur:
-                if USE_IN_MEMORY_DB:
-                    # SQLite in-memory version
-                    placeholder = "?"
+                # Query real crawled posts instead of fake data
+                query = """
+                    SELECT 
+                        cp.post_id, cp.content, cp.author_username, cp.author_id,
+                        cp.created_at, cp.source_instance, cp.favourites_count,
+                        cp.reblogs_count, cp.replies_count, cp.tags, cp.language,
+                        cp.trending_score, cp.media_attachments, cp.card, cp.poll,
+                        cp.mentions, cp.emojis, cp.url, cp.visibility,
+                        cp.in_reply_to_id, cp.in_reply_to_account_id,
+                        cp.author_acct, cp.author_display_name, cp.author_avatar,
+                        cp.author_note, cp.author_followers_count, cp.author_following_count,
+                        cp.author_statuses_count
+                    FROM crawled_posts cp
+                    WHERE cp.lifecycle_stage = 'fresh' OR cp.lifecycle_stage = 'relevant'
+                """
+                
+                params = []
+                
+                # Add pagination filters
+                if max_id:
+                    query += " AND cp.post_id < %s"
+                    params.append(max_id)
+                
+                if since_id:
+                    query += " AND cp.post_id > %s"
+                    params.append(since_id)
+                
+                # Order by discovery timestamp (most recent first) and trending score
+                query += " ORDER BY cp.discovery_timestamp DESC, cp.trending_score DESC LIMIT %s"
+                params.append(limit)
+                
+                cur.execute(query, params)
+                rows = cur.fetchall()
+                
+                recommendations = []
+                for row in rows:
+                    (post_id, content, author_username, author_id, created_at, 
+                     source_instance, favourites_count, reblogs_count, replies_count, 
+                     tags, language, trending_score, media_attachments, card, poll,
+                     mentions, emojis, url, visibility, in_reply_to_id, in_reply_to_account_id,
+                     author_acct, author_display_name, author_avatar, author_note,
+                     author_followers_count, author_following_count, author_statuses_count) = row
                     
-                    # Build query with pagination
-                    query = """
-                        SELECT r.post_id, r.score, r.reason, p.content, p.author_id, 
-                               p.created_at, p.metadata
-                        FROM recommendations r
-                        JOIN posts p ON r.post_id = p.post_id
-                        WHERE r.user_id = ?
-                    """
+                    # Parse tags if available (handle both string and dict types)
+                    try:
+                        if isinstance(tags, str):
+                            parsed_tags = json.loads(tags) if tags else []
+                        elif isinstance(tags, (list, dict)):
+                            parsed_tags = tags if isinstance(tags, list) else []
+                        else:
+                            parsed_tags = []
+                    except:
+                        parsed_tags = []
                     
-                    params = [user_alias]
+                    # Convert tags to Mastodon format
+                    mastodon_tags = []
+                    for tag in parsed_tags:
+                        if isinstance(tag, str):
+                            mastodon_tags.append({
+                                "name": tag.lower(),
+                                "url": f"https://{source_instance}/tags/{tag.lower()}"
+                            })
                     
-                    # Add pagination filters
-                    if max_id:
-                        query += " AND p.post_id < ?"
-                        params.append(max_id)
-                    
-                    if since_id:
-                        query += " AND p.post_id > ?"
-                        params.append(since_id)
-                    
-                    query += " ORDER BY r.score DESC, p.created_at DESC LIMIT ?"
-                    params.append(limit)
-                    
-                    cur.execute(query, params)
-                    rows = cur.fetchall()
-                    
-                    recommendations = []
-                    for row in rows:
-                        post_id, score, reason, content, author_id, created_at, metadata_str = row
-                        
-                        # Parse metadata if available
-                        try:
-                            metadata = json.loads(metadata_str) if metadata_str else {}
-                        except:
-                            metadata = {}
-                        
-                        author_name = metadata.get("author_name", f"User_{author_id}")
-                        
-                        # Create Mastodon-compatible Status object
-                        status = {
-                            "id": post_id,
-                            "created_at": created_at,
-                            "content": content,
-                            "account": {
-                                "id": author_id,
-                                "username": author_name,
-                                "acct": author_name,
-                                "display_name": author_name,
-                                "url": f"https://example.com/@{author_name}",
-                                "avatar": f"https://example.com/avatars/{author_id}.png",
-                                "avatar_static": f"https://example.com/avatars/{author_id}.png",
-                                "followers_count": metadata.get("followers_count", 100),
-                                "following_count": metadata.get("following_count", 50),
-                                "statuses_count": metadata.get("statuses_count", 200),
-                                "bot": False,
-                                "locked": False,
-                            },
-                            "language": "en",
-                            "favourites_count": metadata.get("favourites_count", 0),
-                            "reblogs_count": metadata.get("reblogs_count", 0),
-                            "replies_count": metadata.get("replies_count", 0),
-                            "url": f"https://example.com/@{author_name}/{post_id}",
-                            "uri": f"https://example.com/@{author_name}/{post_id}",
-                            "reblogged": False,
-                            "favourited": False,
-                            "bookmarked": False,
-                            "sensitive": False,
-                            "spoiler_text": "",
-                            "visibility": "public",
-                            "media_attachments": [],
-                            "mentions": [],
-                            "tags": [],
+                    # Create proper Mastodon-compatible Status object using real data
+                    status = {
+                        "id": str(post_id),
+                        "created_at": created_at.isoformat() if created_at else datetime.now().isoformat(),
+                        "content": content or "",
+                        "account": {
+                            "id": str(author_id) if author_id else author_username,
+                            "username": author_username or "unknown",
+                            # Use actual author_acct from database or construct it
+                            "acct": author_acct or (f"{author_username}@{source_instance}" if author_username and source_instance else f"{author_username}@unknown.social"),
+                            "display_name": author_display_name or author_username or "Unknown User",
+                            "url": f"https://{source_instance}/@{author_username}" if source_instance and author_username else f"https://example.com/@{author_username}",
+                            "avatar": author_avatar or (f"https://{source_instance}/system/accounts/avatars/default.png" if source_instance else "https://example.com/avatars/default.png"),
+                            "avatar_static": author_avatar or (f"https://{source_instance}/system/accounts/avatars/default.png" if source_instance else "https://example.com/avatars/default.png"),
+                            "header": "",
+                            "header_static": "",
+                            "note": author_note or "",
+                            "followers_count": author_followers_count or 0,
+                            "following_count": author_following_count or 0,
+                            "statuses_count": author_statuses_count or 0,
+                            "bot": False,
+                            "locked": False,
                             "emojis": [],
-                            "card": None,
-                            "poll": None,
-                            # Corgi-specific fields
-                            "is_recommendation": True,
-                            "recommendation_score": float(score),
-                            "recommendation_reason": reason,
-                            "is_real_mastodon_post": False,
-                            "is_synthetic": True,
+                            "fields": []
+                        },
+                        "language": language or "en",
+                        "favourites_count": favourites_count or 0,
+                        "reblogs_count": reblogs_count or 0,
+                        "replies_count": replies_count or 0,
+                        "url": f"https://{source_instance}/@{author_username}/{post_id}" if source_instance and author_username else f"https://example.com/@unknown/{post_id}",
+                        "uri": f"https://{source_instance}/users/{author_username}/statuses/{post_id}" if source_instance and author_username else f"https://example.com/users/unknown/statuses/{post_id}",
+                        "reblogged": False,
+                        "favourited": False,
+                        "bookmarked": False,
+                        "sensitive": False,
+                        "spoiler_text": "",
+                        "visibility": visibility or "public",
+                        "media_attachments": media_attachments if isinstance(media_attachments, list) else (json.loads(media_attachments) if media_attachments else []),
+                        "mentions": mentions if isinstance(mentions, list) else (json.loads(mentions) if mentions else []),
+                        "tags": mastodon_tags,
+                        "emojis": emojis if isinstance(emojis, list) else (json.loads(emojis) if emojis else []),
+                        "card": card if isinstance(card, dict) else (json.loads(card) if card else None),
+                        "poll": poll if isinstance(poll, dict) else (json.loads(poll) if poll else None),
+                        "reblog": None,
+                        "in_reply_to_id": in_reply_to_id,
+                        "in_reply_to_account_id": in_reply_to_account_id,
+                        "application": {
+                            "name": "Corgi AI Recommender",
+                            "website": "https://example.com/corgi"
+                        },
+                        "edited_at": None,
+                        "filtered": [],
+                        # Corgi-specific fields
+                        "is_recommendation": True,
+                        "recommendation_score": float(trending_score) if trending_score else 1.0,
+                        "recommendation_reason": "Based on posts you've liked",  # Will be updated by ranking system
+                        "is_real_mastodon_post": True,
+                        "is_synthetic": False,
+                        "source_instance": source_instance
+                    }
+                    
+                    recommendations.append(status)
+                
+                # Generate personalized recommendation reasons using ranking algorithm
+                try:
+                    from core.ranking_algorithm import get_user_interactions, calculate_ranking_score
+                    
+                    # Get user interactions for personalized scoring
+                    user_interactions = get_user_interactions(conn, user_alias, days_limit=30)
+                    
+                    # Calculate personalized scores and reasons for each post
+                    for recommendation in recommendations:
+                        post_dict = {
+                            "author_id": recommendation["account"]["id"],
+                            "created_at": recommendation["created_at"],
+                            "interaction_counts": {
+                                "favorites": recommendation["favourites_count"],
+                                "reblogs": recommendation["reblogs_count"],
+                                "replies": recommendation["replies_count"]
+                            }
                         }
                         
-                        recommendations.append(status)
+                        # Get personalized score and reason
+                        score, reason = calculate_ranking_score(post_dict, user_interactions)
+                        recommendation["recommendation_score"] = float(score)
+                        recommendation["recommendation_reason"] = reason
                         
-                else:
-                    # PostgreSQL version - get actual recommendations
-                    placeholder = "%s"
-                    
-                    query = """
-                        SELECT r.post_id, r.score, r.reason, pm.mastodon_post
-                        FROM recommendations r
-                        LEFT JOIN post_metadata pm ON r.post_id = pm.post_id
-                        WHERE r.user_id = %s
-                    """
-                    
-                    params = [user_alias]
-                    
-                    # Add pagination filters
-                    if max_id:
-                        query += " AND r.post_id < %s"
-                        params.append(max_id)
-                    
-                    if since_id:
-                        query += " AND r.post_id > %s"
-                        params.append(since_id)
-                    
-                    query += " ORDER BY r.score DESC, r.created_at DESC LIMIT %s"
-                    params.append(limit)
-                    
-                    cur.execute(query, params)
-                    rows = cur.fetchall()
-                    
-                    recommendations = []
-                    for post_id, score, reason, mastodon_json in rows:
-                        try:
-                            if mastodon_json:
-                                # Use existing Mastodon post data
-                                if isinstance(mastodon_json, str):
-                                    status = json.loads(mastodon_json)
-                                else:
-                                    status = mastodon_json
-                            else:
-                                # Create basic status if no Mastodon data
-                                status = {
-                                    "id": post_id,
-                                    "created_at": datetime.now().isoformat(),
-                                    "content": f"Recommended post {post_id}",
-                                    "account": {
-                                        "id": "unknown",
-                                        "username": "unknown_user",
-                                        "display_name": "Unknown User",
-                                        "url": "https://example.com/@unknown_user",
-                                    },
-                                    "language": "en",
-                                    "favourites_count": 0,
-                                    "reblogs_count": 0,
-                                    "replies_count": 0,
-                                }
-                            
-                            # Ensure required fields exist
-                            if "id" not in status:
-                                status["id"] = post_id
-                            
-                            # Add Corgi-specific fields
-                            status["is_recommendation"] = True
-                            status["recommendation_score"] = float(score)
-                            status["recommendation_reason"] = reason
-                            status["is_real_mastodon_post"] = bool(mastodon_json)
-                            status["is_synthetic"] = not bool(mastodon_json)
-                            
-                            recommendations.append(status)
-                            
-                        except Exception as e:
-                            logger.error(f"Error processing recommendation {post_id}: {e}")
-                            continue
+                except Exception as e:
+                    logger.warning(f"Could not generate personalized reasons: {e}")
+                    # Keep default reasons if ranking fails
+                
+                # Rehydrate all posts with fresh interaction counts (bulk operation)
+                try:
+                    from utils.rehydration_service import rehydrate_posts
+                    recommendations = rehydrate_posts(recommendations)
+                    logger.info(f"Rehydrated {len(recommendations)} posts for user {user_alias}")
+                except Exception as e:
+                    logger.warning(f"Could not rehydrate posts: {e}")
+                    # Mark all posts as stale but continue
+                    for rec in recommendations:
+                        rec["is_fresh"] = False
                 
                 logger.info(
-                    f"TIMELINE-{request_id} | Retrieved {len(recommendations)} recommendations for user {user_alias}"
+                    f"TIMELINE-{request_id} | Retrieved {len(recommendations)} real crawled posts for user {user_alias}"
                 )
                 
                 if not recommendations:
-                    logger.info(f"TIMELINE-{request_id} | No recommendations found for user {user_alias}")
+                    logger.info(f"TIMELINE-{request_id} | No crawled posts found for user {user_alias}")
                     return jsonify([]), 200
                 
                 return jsonify(recommendations), 200

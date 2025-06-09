@@ -202,8 +202,10 @@ def create_app():
 
     # Register API documentation routes
     from routes.docs import register_docs_routes
+    from routes.feedback import feedback_bp
 
     register_docs_routes(app)
+    app.register_blueprint(feedback_bp)
 
     # Register setup GUI blueprint - only if enabled (disabled in production by default)
     if os.getenv("ENABLE_SETUP_GUI", "false").lower() == "true":

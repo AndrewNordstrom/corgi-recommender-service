@@ -648,22 +648,44 @@ def store_crawled_post(cursor, post: MastodonPost, instance: str, session_id: st
             logger.debug(f"Post {post.id} already exists, skipping")
             return False
         
-        # Insert new post
+        # Insert new post with rich content
         cursor.execute("""
             INSERT INTO crawled_posts (
                 post_id, content, language, created_at, author_id, author_username,
                 source_instance, favourites_count, reblogs_count, replies_count,
                 trending_score, engagement_velocity, crawl_session_id,
-                tags, lifecycle_stage, discovery_timestamp
+                tags, lifecycle_stage, discovery_timestamp,
+                media_attachments, card, poll, mentions, emojis, url, visibility,
+                in_reply_to_id, in_reply_to_account_id,
+                author_acct, author_display_name, author_avatar, author_note,
+                author_followers_count, author_following_count, author_statuses_count
             ) VALUES (
-                %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
+                %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
             )
         """, (
             post.id, post.content, detected_language, post.created_at,
             post.author_id, post.author_username, instance,
             post.favourites_count, post.reblogs_count, post.replies_count,
             trending_score, engagement_velocity, session_id,
-            json.dumps(post.tags or []), 'fresh', datetime.now(timezone.utc)
+            json.dumps(post.tags or []), 'fresh', datetime.now(timezone.utc),
+            # Rich content fields
+            json.dumps(post.media_attachments or []),
+            json.dumps(post.card) if post.card else None,
+            json.dumps(post.poll) if post.poll else None,
+            json.dumps(post.mentions or []),
+            json.dumps(post.emojis or []),
+            post.url,
+            post.visibility,
+            post.in_reply_to_id,
+            post.in_reply_to_account_id,
+            # Author details - FIXED: Use actual data from MastodonPost
+            post.author_acct or f"{post.author_username}@{instance}",
+            post.author_display_name or post.author_username,
+            post.author_avatar,
+            post.author_note,
+            post.author_followers_count or 0,
+            post.author_following_count or 0,
+            post.author_statuses_count or 0
         ))
         
         return True
