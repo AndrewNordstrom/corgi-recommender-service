@@ -240,17 +240,30 @@ class HealthMonitor:
                     output = self.format_results(results)
                     print(output)
                     
-                    # Save to file for debugging
-                    with open('logs/latest_health_check.json', 'w') as f:
-                        json.dump([{
-                            'service': r.service,
-                            'endpoint': r.endpoint,
-                            'status': r.status,
-                            'response_time': r.response_time,
-                            'status_code': r.status_code,
-                            'error': r.error,
-                            'timestamp': r.timestamp.isoformat()
-                        } for r in results], f, indent=2)
+                    # Save to file for debugging using an atomic write pattern
+                    temp_file_path = 'logs/latest_health_check.json.tmp'
+                    final_file_path = 'logs/latest_health_check.json'
+                    try:
+                        with open(temp_file_path, 'w') as f:
+                            json.dump({
+                                'summary': {
+                                    'total_checks': len(results),
+                                    'failed_checks': len([r for r in results if r.status_code != 200 and r.status_code is not None]),
+                                    'timestamp': datetime.now().isoformat()
+                                },
+                                'checks': [{
+                                    'service': r.service,
+                                    'endpoint': r.endpoint,
+                                    'status': r.status,
+                                    'response_time': r.response_time,
+                                    'status_code': r.status_code,
+                                    'error': r.error,
+                                    'timestamp': r.timestamp.isoformat()
+                                } for r in results]
+                            }, f, indent=2)
+                        os.rename(temp_file_path, final_file_path)
+                    except Exception as e:
+                        self.logger.error(f"Failed to write health check file: {e}")
                 
                 await asyncio.sleep(self.check_interval)
                 
@@ -284,13 +297,36 @@ def main():
     
     if args.once:
         # Run once and exit
-        results = asyncio.run(monitor.check_all_endpoints())
-        output = monitor.format_results(results)
-        print(output)
-        
-        # Exit with error code if any checks failed
-        if any(r.status_code != 200 for r in results if r.status_code is not None):
-            sys.exit(1)
+        async def run_once():
+            results = await monitor.check_all_endpoints()
+            output = monitor.format_results(results)
+            print(output)
+
+            # Save to file as well
+            with open('logs/latest_health_check.json', 'w') as f:
+                json.dump({
+                    'summary': {
+                        'total_checks': len(results),
+                        'failed_checks': len([r for r in results if r.status_code != 200 and r.status_code is not None]),
+                        'timestamp': datetime.now().isoformat()
+                    },
+                    'checks': [{
+                        'service': r.service,
+                        'endpoint': r.endpoint,
+                        'status': r.status,
+                        'response_time': r.response_time,
+                        'status_code': r.status_code,
+                        'error': r.error,
+                        'timestamp': r.timestamp.isoformat()
+                    } for r in results]
+                }, f, indent=2)
+
+            # Exit with error code if any checks failed
+            has_issues = any(r.status_code != 200 for r in results if r.status_code is not None)
+            if has_issues:
+                sys.exit(1)
+
+        asyncio.run(run_once())
     else:
         # Run continuous monitoring
         asyncio.run(monitor.run_continuous_monitoring())

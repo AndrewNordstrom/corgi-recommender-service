@@ -1,22 +1,89 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { BarChart3, PieChart, TrendingUp, Server, RefreshCw } from "lucide-react"
+import { BarChart3, PieChart, TrendingUp, Server, RefreshCw, AlertCircle } from "lucide-react"
 
 export default function MetricsPage() {
   const [activeTab, setActiveTab] = useState("dashboard")
   const [isRefreshing, setIsRefreshing] = useState(false)
+  const [grafanaAvailable, setGrafanaAvailable] = useState(false)
+  const [checkingGrafana, setCheckingGrafana] = useState(true)
 
   const handleRefresh = () => {
     setIsRefreshing(true)
+    checkGrafanaAvailability()
     setTimeout(() => setIsRefreshing(false), 1000)
   }
 
-  // Grafana dashboard URL (would come from env in production)
-  const grafanaUrl = process.env.NEXT_PUBLIC_GRAFANA_URL || "http://localhost:3000"
+  // Use Grafana on port 3001 to avoid conflict with Next.js frontend on 3000
+  const grafanaUrl = process.env.NEXT_PUBLIC_GRAFANA_URL || "http://localhost:3001"
   const dashboardUid = "a56b21d6-feb5-47c1-adf2-9e0e65219334"
   const grafanaDashboardUrl = `${grafanaUrl}/d/${dashboardUid}/corgi-recommender-dashboard?orgId=1&refresh=5s&kiosk`
+
+  const checkGrafanaAvailability = async () => {
+    try {
+      // Try to fetch from Grafana API to check if it's available
+      const response = await fetch(`${grafanaUrl}/api/health`, { 
+        method: 'GET',
+        mode: 'no-cors' // Allow CORS for this check
+      })
+      setGrafanaAvailable(true)
+    } catch (error) {
+      console.warn('Grafana not available:', error)
+      setGrafanaAvailable(false)
+    } finally {
+      setCheckingGrafana(false)
+    }
+  }
+
+  useEffect(() => {
+    checkGrafanaAvailability()
+  }, [])
+
+  const renderGrafanaContent = (iframeSrc: string, title: string) => {
+    if (checkingGrafana) {
+      return (
+        <div className="flex items-center justify-center h-[400px] bg-neutral-50 dark:bg-neutral-800 rounded-lg">
+          <RefreshCw className="h-8 w-8 animate-spin text-primary mr-3" />
+          <span className="text-lg">Checking Grafana availability...</span>
+        </div>
+      )
+    }
+
+    if (!grafanaAvailable) {
+      return (
+        <div className="flex flex-col items-center justify-center h-[400px] bg-neutral-50 dark:bg-neutral-800 rounded-lg">
+          <AlertCircle className="h-12 w-12 text-amber-500 mb-4" />
+          <h3 className="text-xl font-semibold mb-2">Grafana Dashboard Not Available</h3>
+          <p className="text-neutral-600 dark:text-neutral-400 text-center max-w-md mb-4">
+            The Grafana monitoring dashboard is not currently running. To enable metrics visualization:
+          </p>
+          <div className="bg-neutral-100 dark:bg-neutral-700 p-4 rounded-lg font-mono text-sm">
+            <p className="mb-2">1. Start the monitoring stack:</p>
+            <code className="text-primary">docker-compose -f docker-compose-monitoring.yml up -d</code>
+            <p className="mt-2 mb-2">2. Or access Grafana directly at:</p>
+            <code className="text-primary">{grafanaUrl}</code>
+          </div>
+          <button
+            onClick={checkGrafanaAvailability}
+            className="mt-4 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
+          >
+            Check Again
+          </button>
+        </div>
+      )
+    }
+
+    return (
+      <iframe 
+        src={iframeSrc}
+        className="w-full h-[800px] border-0"
+        title={title}
+        onError={() => setGrafanaAvailable(false)}
+      />
+    )
+  }
 
   return (
     <div className="container mx-auto">
@@ -97,31 +164,19 @@ export default function MetricsPage() {
         
         <TabsContent value="dashboard" className="mt-0">
           <div className="card overflow-hidden p-0">
-            <iframe 
-              src={grafanaDashboardUrl}
-              className="w-full h-[800px] border-0"
-              title="Grafana Dashboard"
-            />
+            {renderGrafanaContent(grafanaDashboardUrl, "Grafana Dashboard")}
           </div>
         </TabsContent>
         
         <TabsContent value="recommendations" className="mt-0">
           <div className="card overflow-hidden p-0">
-            <iframe 
-              src={`${grafanaDashboardUrl}&viewPanel=4`}
-              className="w-full h-[800px] border-0"
-              title="Recommendation Metrics"
-            />
+            {renderGrafanaContent(`${grafanaDashboardUrl}&viewPanel=4`, "Recommendation Metrics")}
           </div>
         </TabsContent>
         
         <TabsContent value="system" className="mt-0">
           <div className="card overflow-hidden p-0">
-            <iframe 
-              src={`${grafanaDashboardUrl}&viewPanel=6`}
-              className="w-full h-[800px] border-0"
-              title="System Metrics"
-            />
+            {renderGrafanaContent(`${grafanaDashboardUrl}&viewPanel=6`, "System Metrics")}
           </div>
         </TabsContent>
       </Tabs>

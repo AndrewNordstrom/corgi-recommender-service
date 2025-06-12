@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { 
   Key, 
@@ -11,9 +11,19 @@ import {
   RefreshCw,
   Plus,
   Trash,
-  ExternalLink
+  ExternalLink,
+  Brain,
+  Beaker,
+  TrendingUp,
+  BookOpen,
+  GitCompare
 } from "lucide-react"
 import { motion } from "framer-motion"
+import ModelRegistry from "@/components/dashboard/ModelRegistry"
+import PerformanceMonitoring from "@/components/dashboard/PerformanceMonitoring"
+import ABTestingExperiments from "@/components/dashboard/ABTestingExperiments"
+import ModelComparison from "@/components/dashboard/ModelComparison"
+import OnboardingTour from "@/components/dashboard/OnboardingTour"
 
 // Mock API keys for demo
 const initialApiKeys = [
@@ -38,6 +48,15 @@ export default function DashboardPage() {
   const [activeTab, setActiveTab] = useState("keys")
   const [copied, setCopied] = useState<string | null>(null)
   const [newKeyName, setNewKeyName] = useState("")
+  const [showOnboarding, setShowOnboarding] = useState(false)
+
+  // Check if user has completed onboarding
+  useEffect(() => {
+    const hasCompletedOnboarding = localStorage.getItem('dashboard-onboarding-completed')
+    if (!hasCompletedOnboarding) {
+      setShowOnboarding(true)
+    }
+  }, [])
   
   const handleCopyKey = (keyId: string, keyValue: string) => {
     navigator.clipboard.writeText(keyValue)
@@ -53,7 +72,7 @@ export default function DashboardPage() {
       name: newKeyName,
       key: `ck_${Math.random().toString(36).substring(2, 15)}${Math.random().toString(36).substring(2, 15)}`,
       created: new Date().toISOString(),
-      lastUsed: null
+      lastUsed: "Never"
     }
     
     setApiKeys([...apiKeys, newKey])
@@ -66,12 +85,35 @@ export default function DashboardPage() {
   
   return (
     <div className="container mx-auto">
-      <div className="mb-8">
-        <h1 className="text-4xl font-bold mb-4">Dashboard</h1>
-        <p className="text-lg text-neutral-700 dark:text-neutral-300">
-          Manage your API keys and account settings.
-        </p>
+      <div className="mb-8" id="dashboard-header">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-4xl font-bold mb-4">ML Research Dashboard</h1>
+            <p className="text-lg text-neutral-700 dark:text-neutral-300">
+              Comprehensive model management for recommendation systems research.
+            </p>
+          </div>
+          <div className="flex items-center space-x-3">
+            <button
+              onClick={() => setShowOnboarding(true)}
+              className="btn-secondary flex items-center text-sm"
+            >
+              <BookOpen className="mr-2 h-4 w-4" />
+              Take Tour
+            </button>
+          </div>
+        </div>
       </div>
+
+      {/* Onboarding Tour */}
+      <OnboardingTour
+        isOpen={showOnboarding}
+        onClose={() => setShowOnboarding(false)}
+        onComplete={() => {
+          setShowOnboarding(false)
+          setActiveTab("models") // Start with models after onboarding
+        }}
+      />
       
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         <div className="lg:col-span-1">
@@ -133,6 +175,58 @@ export default function DashboardPage() {
               >
                 <BarChart className="mr-3 h-5 w-5" />
                 Usage Stats
+              </button>
+              
+              <button
+                id="models-tab"
+                onClick={() => setActiveTab("models")}
+                className={`w-full flex items-center px-3 py-2 text-sm rounded-md ${
+                  activeTab === "models" 
+                    ? "bg-primary/10 text-primary font-medium" 
+                    : "text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800"
+                }`}
+              >
+                <Brain className="mr-3 h-5 w-5" />
+                Model Registry
+              </button>
+              
+              <button
+                id="experiments-tab"
+                onClick={() => setActiveTab("experiments")}
+                className={`w-full flex items-center px-3 py-2 text-sm rounded-md ${
+                  activeTab === "experiments" 
+                    ? "bg-primary/10 text-primary font-medium" 
+                    : "text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800"
+                }`}
+              >
+                <Beaker className="mr-3 h-5 w-5" />
+                A/B Testing
+              </button>
+              
+              <button
+                id="performance-tab"
+                onClick={() => setActiveTab("performance")}
+                className={`w-full flex items-center px-3 py-2 text-sm rounded-md ${
+                  activeTab === "performance" 
+                    ? "bg-primary/10 text-primary font-medium" 
+                    : "text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800"
+                }`}
+              >
+                <TrendingUp className="mr-3 h-5 w-5" />
+                Performance
+              </button>
+              
+              <button
+                id="comparison-tab"
+                onClick={() => setActiveTab("comparison")}
+                className={`w-full flex items-center px-3 py-2 text-sm rounded-md ${
+                  activeTab === "comparison" 
+                    ? "bg-primary/10 text-primary font-medium" 
+                    : "text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800"
+                }`}
+              >
+                <GitCompare className="mr-3 h-5 w-5" />
+                Model Comparison
               </button>
             </nav>
           </div>
@@ -210,11 +304,9 @@ export default function DashboardPage() {
                     
                     <div className="flex mt-3 text-sm text-neutral-500">
                       <span>Created: {new Date(key.created).toLocaleDateString()}</span>
-                      {key.lastUsed && (
-                        <span className="ml-4">
-                          Last used: {new Date(key.lastUsed).toLocaleDateString()}
-                        </span>
-                      )}
+                      <span className="ml-4">
+                        Last used: {key.lastUsed === "Never" ? "Never" : new Date(key.lastUsed).toLocaleDateString()}
+                      </span>
                     </div>
                   </motion.div>
                 ))}
@@ -402,6 +494,22 @@ export default function DashboardPage() {
                 </div>
               </div>
             </div>
+          )}
+          
+          {activeTab === "models" && (
+            <ModelRegistry onTabChange={setActiveTab} />
+          )}
+          
+          {activeTab === "experiments" && (
+            <ABTestingExperiments onTabChange={setActiveTab} />
+          )}
+          
+          {activeTab === "performance" && (
+            <PerformanceMonitoring />
+          )}
+          
+          {activeTab === "comparison" && (
+            <ModelComparison />
           )}
         </div>
       </div>

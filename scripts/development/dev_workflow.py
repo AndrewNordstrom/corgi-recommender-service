@@ -18,6 +18,7 @@ from typing import List, Dict, Optional
 import argparse
 import logging
 from dataclasses import dataclass
+from dotenv import load_dotenv
 
 # Add parent directory to path for imports
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
@@ -32,24 +33,25 @@ class ServiceStatus:
     last_check: Optional[datetime] = None
 
 class DevWorkflowManager:
-    def __init__(self, 
+    def __init__(self,
                  backend_port: int = 5000,
                  frontend_port: int = 3000,
                  verbose: bool = False):
-        self.backend_port = backend_port
-        self.frontend_port = frontend_port
+        load_dotenv()
+        self.backend_port = int(os.environ.get('CORGI_API_HOST_PORT', backend_port))
+        self.frontend_port = int(os.environ.get('FRONTEND_PORT', frontend_port))
         self.verbose = verbose
-        
+
         # Service tracking
         self.services = {
-            'backend': ServiceStatus('Backend API', 'stopped', port=backend_port, url=f'http://localhost:{backend_port}'),
-            'frontend': ServiceStatus('Frontend', 'stopped', port=frontend_port, url=f'http://localhost:{frontend_port}'),
+            'backend': ServiceStatus('Backend API', 'stopped', port=self.backend_port, url=f'http://localhost:{self.backend_port}'),
+            'frontend': ServiceStatus('Frontend', 'stopped', port=self.frontend_port, url=f'http://localhost:{self.frontend_port}'),
             'health_monitor': ServiceStatus('Health Monitor', 'stopped'),
             'browser_monitor': ServiceStatus('Browser Monitor', 'stopped')
         }
-        
+
         self.processes = {}
-        
+
         # Setup logging
         log_level = logging.INFO if verbose else logging.WARNING
         logging.basicConfig(
@@ -58,10 +60,10 @@ class DevWorkflowManager:
             handlers=[logging.StreamHandler(sys.stdout)]
         )
         self.logger = logging.getLogger(__name__)
-        
+
         # Create logs directory
         os.makedirs('logs', exist_ok=True)
-        
+
         # Handle cleanup on exit
         signal.signal(signal.SIGINT, self._signal_handler)
         signal.signal(signal.SIGTERM, self._signal_handler)
@@ -87,85 +89,65 @@ class DevWorkflowManager:
             self.logger.info(f"Backend already running on port {self.backend_port}")
             self.services['backend'].status = 'running'
             return True
-        
+
         try:
             # Start Flask backend
             env = os.environ.copy()
             env['PORT'] = str(self.backend_port)
             env['HOST'] = 'localhost'
-            
+
+            # Ensure all necessary DB vars are present for the subprocess
+            for key in ['POSTGRES_USER', 'POSTGRES_PASSWORD', 'POSTGRES_DB', 'CORGI_API_HOST_PORT', 'USER_HASH_SALT']:
+                if key in os.environ:
+                    env[key] = os.environ[key]
+
+            backend_log_file = open('logs/backend.log', 'w')
             process = subprocess.Popen(
                 [sys.executable, 'app.py'],
                 env=env,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
+                stdout=backend_log_file,
+                stderr=subprocess.STDOUT,
                 cwd=os.getcwd()
             )
-            
+
             self.processes['backend'] = process
             self.services['backend'].status = 'starting'
             self.services['backend'].pid = process.pid
-            
+
             # Give it a moment to start
             time.sleep(3)
-            
+
             if process.poll() is None and self.is_port_in_use(self.backend_port):
                 self.services['backend'].status = 'running'
                 self.logger.info(f"✅ Backend started on port {self.backend_port} (PID: {process.pid})")
                 return True
             else:
                 self.services['backend'].status = 'failed'
-                self.logger.error("❌ Backend failed to start")
+                self.logger.error("❌ Backend failed to start. Check logs/backend.log")
                 return False
-                
+
         except Exception as e:
             self.services['backend'].status = 'failed'
             self.logger.error(f"❌ Failed to start backend: {e}")
             return False
 
     def start_frontend(self) -> bool:
-        """Start the frontend service"""
+        """Start the frontend service (ELK)"""
         if self.is_port_in_use(self.frontend_port):
             self.logger.info(f"Frontend already running on port {self.frontend_port}")
             self.services['frontend'].status = 'running'
             return True
-        
-        try:
-            # Check if we're in the frontend directory or need to change
-            frontend_dir = 'frontend' if os.path.exists('frontend') else '.'
-            
-            # Start Next.js frontend
-            process = subprocess.Popen(
-                ['npm', 'run', 'dev'],
-                cwd=frontend_dir,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                env=dict(os.environ, PORT=str(self.frontend_port))
-            )
-            
-            self.processes['frontend'] = process
-            self.services['frontend'].status = 'starting'
-            self.services['frontend'].pid = process.pid
-            
-            # Give it time to start (Next.js takes longer)
-            for _ in range(15):  # Wait up to 15 seconds
-                time.sleep(1)
-                if self.is_port_in_use(self.frontend_port):
-                    break
-            
-            if process.poll() is None and self.is_port_in_use(self.frontend_port):
-                self.services['frontend'].status = 'running'
-                self.logger.info(f"✅ Frontend started on port {self.frontend_port} (PID: {process.pid})")
-                return True
-            else:
-                self.services['frontend'].status = 'failed'
-                self.logger.error("❌ Frontend failed to start") 
-                return False
-                
-        except Exception as e:
-            self.services['frontend'].status = 'failed'
-            self.logger.error(f"❌ Failed to start frontend: {e}")
-            return False
+        # For this project, the ELK frontend is managed by Docker Compose
+        # We will just update its status based on port availability
+        self.logger.info("Frontend is managed by Docker. Checking port...")
+        if self.is_port_in_use(self.frontend_port):
+             self.services['frontend'].status = 'running'
+             return True
+        else:
+             self.services['frontend'].status = 'stopped'
+             self.logger.warning("ELK frontend not detected on port 3000. Please start it separately.")
+             return False
+
 
     def start_health_monitor(self) -> bool:
         """Start the health monitoring service"""
@@ -176,17 +158,17 @@ class DevWorkflowManager:
                 '--frontend-url', f'http://localhost:{self.frontend_port}',
                 '--interval', '10'
             ] + (['--verbose'] if self.verbose else []),
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL
             )
-            
+
             self.processes['health_monitor'] = process
             self.services['health_monitor'].status = 'running'
             self.services['health_monitor'].pid = process.pid
-            
+
             self.logger.info(f"✅ Health monitor started (PID: {process.pid})")
             return True
-            
+
         except Exception as e:
             self.services['health_monitor'].status = 'failed'
             self.logger.error(f"❌ Failed to start health monitor: {e}")
@@ -201,17 +183,17 @@ class DevWorkflowManager:
                 '--interval', '30',
                 '--headless'
             ] + (['--verbose'] if self.verbose else []),
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL
             )
-            
+
             self.processes['browser_monitor'] = process
             self.services['browser_monitor'].status = 'running'
             self.services['browser_monitor'].pid = process.pid
-            
+
             self.logger.info(f"✅ Browser monitor started (PID: {process.pid})")
             return True
-            
+
         except Exception as e:
             self.services['browser_monitor'].status = 'failed'
             self.logger.error(f"❌ Failed to start browser monitor: {e}")
@@ -222,14 +204,15 @@ class DevWorkflowManager:
         if service_name in self.processes:
             process = self.processes[service_name]
             try:
-                process.terminate()
+                os.kill(process.pid, signal.SIGTERM)
                 process.wait(timeout=5)
-            except subprocess.TimeoutExpired:
-                process.kill()
-            except:
+            except (subprocess.TimeoutExpired, ProcessLookupError):
+                if process.poll() is None:
+                    os.kill(process.pid, signal.SIGKILL)
+            except Exception:
                 pass
-            
-            del self.processes[service_name]
+
+            self.processes.pop(service_name, None)
             self.services[service_name].status = 'stopped'
             self.services[service_name].pid = None
 
@@ -237,145 +220,117 @@ class DevWorkflowManager:
         """Stop all running services"""
         for service_name in list(self.processes.keys()):
             self.stop_service(service_name)
+        print("✅ All services stopped.")
 
-    def get_service_status(self) -> Dict:
-        """Get current status of all services"""
-        status = {}
-        for name, service in self.services.items():
-            # Update status for running processes
-            if service.pid and name in self.processes:
-                process = self.processes[name]
-                if process.poll() is not None:
-                    # Process has died
-                    service.status = 'failed'
-                    service.pid = None
-                    del self.processes[name]
-            
-            status[name] = {
-                'name': service.name,
-                'status': service.status,
-                'pid': service.pid,
-                'port': service.port,
-                'url': service.url
-            }
-        
-        return status
+    def clear_console(self):
+        os.system('cls' if os.name == 'nt' else 'clear')
 
-    def display_status(self):
-        """Display current status of all services"""
-        status = self.get_service_status()
-        
-        print("\n" + "=" * 80)
-        print(f"Development Workflow Status - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-        print("=" * 80)
-        
-        for service_name, info in status.items():
-            status_emoji = {
-                'running': '✅',
-                'starting': '🟡',
-                'stopped': '⚫',
-                'failed': '❌'
-            }.get(info['status'], '❓')
-            
-            print(f"{status_emoji} {info['name']:<20} {info['status']:<10}", end="")
-            
-            if info['pid']:
-                print(f" PID: {info['pid']:<8}", end="")
-            if info['port']:
-                print(f" Port: {info['port']:<6}", end="")
-            if info['url']:
-                print(f" URL: {info['url']}", end="")
-            
-            print()
-        
+    def get_header(self):
+        return "="*80 + f"\nDevelopment Workflow Status - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n" + "="*80
+
+    def get_footer(self):
+        return "="*80 + f"\n💡 Monitoring active - press Ctrl+C to stop\n" + \
+               f"📁 Logs: logs/health_monitor.log, logs/browser_monitor.log, logs/backend.log\n" + \
+               f"🌐 Backend: http://localhost:{self.backend_port} | 🎨 Frontend: http://localhost:{self.frontend_port}\n" + "="*80
+
+    def display_status_snapshot(self):
+        """Display a snapshot of the current development workflow status."""
+        for service in self.services.values():
+            status_color = "\033[92m" if service.status == 'running' else "\033[93m" if 'starting' in service.status else "\033[91m"
+            status_emoji = '✅' if service.status == 'running' else '⏳' if 'starting' in service.status else '❌'
+            pid_info = f"PID: {service.pid:<5}" if service.pid else ""
+            print(f"{status_color}{status_emoji} {service.name:<18} {service.status:<10} {pid_info}\033[0m")
+
         print("\n📊 Quick Status:")
-        if status['backend']['status'] == 'running' and status['frontend']['status'] == 'running':
-            print("✅ Both services are running - ready for development!")
-        elif status['backend']['status'] == 'running':
-            print("⚠️  Backend only - frontend may need attention")
-        elif status['frontend']['status'] == 'running':
-            print("⚠️  Frontend only - backend may need attention")
-        else:
-            print("❌ Services need to be started")
+
+        health_status_line = "⚪ Health checks pending..."
+        if os.path.exists('logs/latest_health_check.json'):
+            try:
+                with open('logs/latest_health_check.json', 'r') as f:
+                    health_data = json.load(f)
+                
+                # Handle both dict and list formats for robustness
+                checks = []
+                if isinstance(health_data, dict):
+                    checks = health_data.get('checks', [])
+                elif isinstance(health_data, list):
+                    checks = health_data
+
+                health_issues = [
+                    check for check in checks
+                    if check.get('status_code', 200) != 200 or check.get('status') != 'ok'
+                ]
+                if health_issues:
+                    health_status_line = f"🚨 {len(health_issues)} health issues detected - check logs/latest_health_check.json"
+                else:
+                    health_status_line = "✅ All health checks passed"
+            except (json.JSONDecodeError, FileNotFoundError):
+                health_status_line = "❌ Failed to read health check data"
+
+        browser_status_line = "⚪ Browser checks pending..."
+        if os.path.exists('logs/latest_browser_check.json'):
+            try:
+                with open('logs/latest_browser_check.json', 'r') as f:
+                    browser_data = json.load(f)
+                browser_issues = [page for page in browser_data if page.get('status') != 'ok']
+                if browser_issues:
+                    browser_status_line = f"🚨 {len(browser_issues)} browser issues detected - check logs/latest_browser_check.json"
+                else:
+                    browser_status_line = "✅ All browser checks passed"
+            except (json.JSONDecodeError, FileNotFoundError):
+                browser_status_line = "❌ Failed to read browser check data"
+
+        print(health_status_line)
+        print(browser_status_line)
+
 
     async def run_full_workflow(self):
-        """Run the complete development workflow"""
-        print("🚀 Starting Corgi Recommender Development Workflow")
+        """Run the full development workflow"""
+        print("🚀 Starting full development workflow...")
         print("This will automatically monitor your services and alert you to issues")
-        
-        # Start core services
+
         print("\n📦 Starting core services...")
-        backend_ok = self.start_backend()
-        frontend_ok = self.start_frontend()
-        
-        if not backend_ok and not frontend_ok:
-            print("❌ Failed to start any services. Check your setup.")
-            return
-        
-        # Wait a bit for services to stabilize
-        print("⏳ Waiting for services to stabilize...")
+        self.start_backend()
+        self.start_frontend()
+
+        print("\n⏳ Waiting for services to stabilize...")
         await asyncio.sleep(5)
-        
-        # Start monitoring services
+
         print("\n🔍 Starting monitoring services...")
         self.start_health_monitor()
         self.start_browser_monitor()
-        
-        # Main monitoring loop
+
+        await asyncio.sleep(2)
+
         try:
             while True:
-                self.display_status()
-                
-                # Check if monitoring services are capturing issues
-                if os.path.exists('logs/latest_health_check.json'):
-                    with open('logs/latest_health_check.json', 'r') as f:
-                        health_data = json.load(f)
-                        issues = [r for r in health_data if r.get('status_code') != 200]
-                        if issues:
-                            print(f"\n🚨 {len(issues)} health issues detected - check logs/latest_health_check.json")
-                
-                if os.path.exists('logs/latest_browser_check.json'):
-                    with open('logs/latest_browser_check.json', 'r') as f:
-                        browser_data = json.load(f)
-                        issues = [r for r in browser_data if r['console_errors'] or r['network_errors']]
-                        if issues:
-                            print(f"🚨 {len(issues)} browser issues detected - check logs/latest_browser_check.json")
-                
-                print(f"\n💡 Monitoring active - press Ctrl+C to stop")
-                print(f"📁 Logs: logs/health_monitor.log, logs/browser_monitor.log")
-                print(f"🌐 Backend: http://localhost:{self.backend_port}")
-                print(f"🎨 Frontend: http://localhost:{self.frontend_port}")
-                
-                await asyncio.sleep(15)  # Update every 15 seconds
-                
-        except KeyboardInterrupt:
-            print("\n🛑 Stopping development workflow...")
+                self.clear_console()
+                print(self.get_header())
+                self.display_status_snapshot()
+                print(self.get_footer())
+                await asyncio.sleep(15)
+
+        except asyncio.CancelledError:
+            print("\nWorkflow cancelled. Stopping services...")
         finally:
             self.stop_all_services()
 
 def main():
     parser = argparse.ArgumentParser(description="Automated Development Workflow Manager")
-    parser.add_argument("--backend-port", type=int, default=5000, help="Backend port")
-    parser.add_argument("--frontend-port", type=int, default=3000, help="Frontend port")
-    parser.add_argument("--verbose", "-v", action="store_true", help="Verbose output")
-    parser.add_argument("--status", action="store_true", help="Show status and exit")
+    parser.add_argument("--status", action="store_true", help="Show status and exit (Not implemented)")
     parser.add_argument("--stop", action="store_true", help="Stop all services")
-    
+
     args = parser.parse_args()
-    
-    manager = DevWorkflowManager(
-        backend_port=args.backend_port,
-        frontend_port=args.frontend_port,
-        verbose=args.verbose
-    )
-    
-    if args.status:
-        manager.display_status()
-    elif args.stop:
+
+    manager = DevWorkflowManager()
+
+    if args.stop:
         manager.stop_all_services()
-        print("✅ All services stopped")
     else:
-        asyncio.run(manager.run_full_workflow())
+        try:
+            asyncio.run(manager.run_full_workflow())
+        except KeyboardInterrupt:
+            print("\n🛑 Shutting down...")
 
 if __name__ == "__main__":
     main() 

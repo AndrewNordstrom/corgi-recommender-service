@@ -1,6 +1,10 @@
 # Corgi Recommender Service Makefile
 # Automates development workflow for the Corgi recommendation engine
 
+# Load environment variables from .env file if it exists
+-include .env
+export
+
 # Default environment variables
 export POSTGRES_DB ?= corgi_recommender
 export POSTGRES_USER ?= your_username
@@ -356,6 +360,14 @@ dev-test-headed:
 dev-test-continuous:
 	@echo "$(YELLOW)🤖 Starting continuous browser testing...$(RESET)"
 	python3 scripts/development/browser_agent.py --continuous --interval 30
+
+# Robust server startup with automatic cleanup
+.PHONY: dev-start-robust
+dev-start-robust:
+	@echo "[RULE] Ensuring clean port before starting API server..."
+	./manage_server_port.sh stop api
+	@echo "[RULE] Starting API server..."
+	./manage_server_port.sh start api
 
 # Install development workflow dependencies
 .PHONY: dev-install

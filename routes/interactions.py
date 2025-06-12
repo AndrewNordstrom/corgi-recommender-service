@@ -56,7 +56,9 @@ def log_interaction():
         "user_id": "user_real",  // Real user ID (will be pseudonymized if user_alias not provided)
         "post_id": "12345",
         "action_type": "favorite|bookmark|reblog|reply|view|more_like_this|less_like_this",
-        "context": {}  // Optional additional context
+        "context": {},  // Optional additional context
+        "model_variant_id": 5,  // Optional ID of the model variant that generated this recommendation
+        "recommendation_id": "rec_abc123"  // Optional ID of the specific recommendation
     }
 
     Returns:
@@ -105,6 +107,8 @@ def log_interaction():
     # Support both action_type and interaction_type field names
     action_type = data.get("action_type") or data.get("interaction_type")
     context = data.get("context", {})
+    model_variant_id = data.get("model_variant_id")
+    recommendation_id = data.get("recommendation_id")
 
     # Normalize action types for consistency BEFORE validation - support load test values
     ACTION_TYPE_MAPPING = {
@@ -338,15 +342,17 @@ def log_interaction():
                     cur.execute(
                         f"""
                         INSERT INTO interactions 
-                        (user_alias, post_id, action_type, context)
-                        VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder})
+                        (user_alias, post_id, action_type, context, model_variant_id, recommendation_id)
+                        VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder})
                         ON CONFLICT (user_alias, post_id, action_type) 
                         DO UPDATE SET 
                             context = EXCLUDED.context,
+                            model_variant_id = EXCLUDED.model_variant_id,
+                            recommendation_id = EXCLUDED.recommendation_id,
                             created_at = CURRENT_TIMESTAMP
                         RETURNING id
                     """,
-                        (user_alias, post_id, action_type, json.dumps(context)),
+                        (user_alias, post_id, action_type, json.dumps(context), model_variant_id, recommendation_id),
                     )
 
                     result = cur.fetchone()

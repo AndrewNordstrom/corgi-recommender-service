@@ -75,7 +75,19 @@ def get_posts():
                             "account": {
                                 "id": row[2] or "unknown",
                                 "username": f"user_{row[2] or 'unknown'}",
-                                "display_name": f"User {row[2] or 'Unknown'}"
+                                "display_name": f"User {row[2] or 'Unknown'}",
+                                "avatar": f"https://api.dicebear.com/7.x/avataaars/svg?seed=user_{row[2] or 'unknown'}",
+                                "avatar_static": f"https://api.dicebear.com/7.x/avataaars/svg?seed=user_{row[2] or 'unknown'}",
+                                "acct": f"user_{row[2] or 'unknown'}",
+                                "url": f"https://example.com/@user_{row[2] or 'unknown'}",
+                                "header": f"https://picsum.photos/700/200?random={hash(str(row[2] or 'unknown')) % 1000}",
+                                "header_static": f"https://picsum.photos/700/200?random={hash(str(row[2] or 'unknown')) % 1000}",
+                                "followers_count": 0,
+                                "following_count": 0,
+                                "statuses_count": 1,
+                                "note": "",
+                                "locked": False,
+                                "bot": False
                             },
                             "created_at": row[3] or "2024-01-01T00:00:00Z",
                             "favourites_count": 0,
@@ -104,10 +116,30 @@ def get_posts():
 
                         # Fall back to legacy format with adjusted field names for Mastodon compatibility
                         interaction_counts = row[5] if len(row) > 5 and row[5] else {}
+                        author_id = row[1] if len(row) > 1 else "unknown"
+                        author_name = row[2] if len(row) > 2 else f"user_{author_id}"
+                        
                         post_data = {
                             "id": row[0],
                             "created_at": row[4].isoformat() if row[4] else None,
                             "content": row[3],
+                            "account": {
+                                "id": author_id,
+                                "username": author_name,
+                                "display_name": author_name,
+                                "acct": author_name,
+                                "avatar": f"https://api.dicebear.com/7.x/avataaars/svg?seed={author_name}",
+                                "avatar_static": f"https://api.dicebear.com/7.x/avataaars/svg?seed={author_name}",
+                                "url": f"https://example.com/@{author_name}",
+                                "header": f"https://picsum.photos/700/200?random={hash(author_name) % 1000}",
+                                "header_static": f"https://picsum.photos/700/200?random={hash(author_name) % 1000}",
+                                "followers_count": 0,
+                                "following_count": 0,
+                                "statuses_count": 1,
+                                "note": "",
+                                "locked": False,
+                                "bot": False
+                            },
                             "favourites_count": interaction_counts.get("favorites", 0),
                             "reblogs_count": interaction_counts.get("reblogs", 0),
                             "replies_count": interaction_counts.get("replies", 0),
@@ -509,7 +541,19 @@ def get_trending_posts():
                             "account": {
                                 "id": row[2] or "unknown",
                                 "username": f"user_{row[2] or 'unknown'}",
-                                "display_name": f"User {row[2] or 'Unknown'}"
+                                "display_name": f"User {row[2] or 'Unknown'}",
+                                "avatar": f"https://api.dicebear.com/7.x/avataaars/svg?seed=user_{row[2] or 'unknown'}",
+                                "avatar_static": f"https://api.dicebear.com/7.x/avataaars/svg?seed=user_{row[2] or 'unknown'}",
+                                "acct": f"user_{row[2] or 'unknown'}",
+                                "url": f"https://example.com/@user_{row[2] or 'unknown'}",
+                                "header": f"https://picsum.photos/700/200?random={hash(str(row[2] or 'unknown')) % 1000}",
+                                "header_static": f"https://picsum.photos/700/200?random={hash(str(row[2] or 'unknown')) % 1000}",
+                                "followers_count": 0,
+                                "following_count": 0,
+                                "statuses_count": 1,
+                                "note": "",
+                                "locked": False,
+                                "bot": False
                             },
                             "created_at": row[3] or "2024-01-01T00:00:00Z",
                             "favourites_count": 0,
@@ -629,7 +673,19 @@ def get_recommended_posts():
                             "account": {
                                 "id": row[2] or "unknown",
                                 "username": f"user_{row[2] or 'unknown'}",
-                                "display_name": f"User {row[2] or 'Unknown'}"
+                                "display_name": f"User {row[2] or 'Unknown'}",
+                                "avatar": f"https://api.dicebear.com/7.x/avataaars/svg?seed=user_{row[2] or 'unknown'}",
+                                "avatar_static": f"https://api.dicebear.com/7.x/avataaars/svg?seed=user_{row[2] or 'unknown'}",
+                                "acct": f"user_{row[2] or 'unknown'}",
+                                "url": f"https://example.com/@user_{row[2] or 'unknown'}",
+                                "header": f"https://picsum.photos/700/200?random={hash(str(row[2] or 'unknown')) % 1000}",
+                                "header_static": f"https://picsum.photos/700/200?random={hash(str(row[2] or 'unknown')) % 1000}",
+                                "followers_count": 0,
+                                "following_count": 0,
+                                "statuses_count": 1,
+                                "note": "",
+                                "locked": False,
+                                "bot": False
                             },
                             "created_at": row[3] or "2024-01-01T00:00:00Z",
                             "favourites_count": 0,

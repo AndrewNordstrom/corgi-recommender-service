@@ -173,16 +173,59 @@ def seed_test_data(conn):
         """
         )
 
-        # Add some test posts
-        cursor.execute(
-            """
-            INSERT INTO posts (post_id, content, author_id, created_at, metadata) 
-            VALUES 
-            ('post1', 'Look at my cute corgi!', 'user1', datetime('now', '-1 day'), '{"tags": ["corgi", "cute"]}'),
-            ('post2', 'Corgis are the best dogs', 'user2', datetime('now', '-2 day'), '{"tags": ["corgi", "opinion"]}'),
-            ('post3', 'My corgi loves the beach', 'user1', datetime('now'), '{"tags": ["corgi", "beach"]}')
-        """
-        )
+        # Load real Mastodon posts from JSON file for testing
+        import json
+        import os
+        
+        real_posts_file = os.path.join(os.path.dirname(__file__), '..', 'static', 'real_mastodon_posts.json')
+        if os.path.exists(real_posts_file):
+            with open(real_posts_file, 'r') as f:
+                mastodon_posts = json.load(f)
+            
+            # Insert real Mastodon posts for testing
+            for i, post in enumerate(mastodon_posts[:15]):  # Take first 15 posts for more variety
+                # Remove "real_" prefix from ID so ELK can interact with actual Mastodon posts
+                original_id = post.get('id', f'mastodon_post_{i}')
+                post_id = original_id.replace('real_', '') if original_id.startswith('real_') else original_id
+                content = post.get('content', 'No content')
+                author_id = post.get('account', {}).get('id', f'author_{i}')
+                author_name = post.get('account', {}).get('username', f'user_{i}')
+                created_at = post.get('created_at', 'now')
+                
+                # Create metadata with real Mastodon data (use static counts for seeding)
+                metadata = {
+                    "author_name": author_name,
+                    "url": post.get('url', ''),
+                    "favourites_count": post.get('favourites_count', 0),
+                    "reblogs_count": post.get('reblogs_count', 0),
+                    "replies_count": post.get('replies_count', 0),
+                    "is_real_mastodon_post": True,
+                    "source_instance": post.get('source_instance', 'mastodon.social')
+                }
+                
+                # Convert created_at to proper SQLite format
+                if created_at == 'now':
+                    created_at_sqlite = "datetime('now')"
+                else:
+                    # Convert ISO format to SQLite datetime
+                    try:
+                        from datetime import datetime
+                        if isinstance(created_at, str):
+                            dt = datetime.fromisoformat(created_at.replace('Z', '+00:00'))
+                            created_at_sqlite = dt.strftime('%Y-%m-%d %H:%M:%S')
+                        else:
+                            created_at_sqlite = "datetime('now')"
+                    except:
+                        created_at_sqlite = "datetime('now')"
+                
+                cursor.execute(
+                    """
+                    INSERT INTO posts (post_id, content, author_id, created_at, metadata) 
+                    VALUES (?, ?, ?, ?, ?)
+                    """,
+                    (post_id, content, author_id, created_at_sqlite, json.dumps(metadata))
+                )
+# Removed fallback posts - using only real Mastodon data now
 
         # Add some interactions
         cursor.execute(

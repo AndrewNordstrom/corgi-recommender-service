@@ -19,7 +19,7 @@ MAX_PORT_SCAN=10  # Maximum number of ports to scan when finding free port
 
 # Default service configurations
 DEFAULT_SERVICES="
-api:CORGI_PORT:5002:python3 app.py
+api:CORGI_API_HOST_PORT:5002:python3 app.py
 proxy:CORGI_PROXY_PORT:5003:python3 special_proxy.py
 frontend:FRONTEND_PORT:3000:cd frontend && npm run dev
 elk:ELK_PORT:5314:docker-compose up elk
@@ -254,7 +254,7 @@ start_service() {
                         # Update command with new port if needed
                         case "$name" in
                             api)
-                                command="CORGI_PORT=$port python3 app.py"
+                                command="CORGI_API_HOST_PORT=$port python3 app.py"
                                 ;;
                             proxy)
                                 command="CORGI_PROXY_PORT=$port python3 special_proxy.py"

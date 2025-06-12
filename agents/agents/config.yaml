@@ -1,0 +1,114 @@
+api_rate_limit: 100
+content:
+  content_quality_checks: true
+  enabled: true
+  execution_interval: 300
+  freshness_threshold_days: 30
+  image_optimization: true
+  link_validation: true
+  priority: medium
+  retry_attempts: 3
+  retry_delay: 5
+  seo_optimization: true
+  timeout: 60
+dashboard_port: 5001
+data_retention_days: 90
+database_path: agents/agent_data.db
+deployment:
+  auto_scaling: true
+  backup_enabled: true
+  backup_retention_days: 30
+  enabled: true
+  execution_interval: 300
+  health_check_urls:
+  - http://localhost:3000/health
+  - http://localhost:9999/health
+  priority: medium
+  retry_attempts: 3
+  retry_delay: 5
+  timeout: 60
+email_notifications: false
+log_file: agents/agent_system.log
+log_level: INFO
+ml_model:
+  auto_retrain: false
+  drift_threshold: 0.2
+  enabled: true
+  execution_interval: 300
+  model_variants:
+  - collaborative_filtering
+  - content_based
+  - hybrid_ensemble
+  - neural_collaborative
+  - multi_armed_bandit
+  - graph_neural_network
+  performance_threshold: 0.8
+  priority: medium
+  retry_attempts: 3
+  retry_delay: 5
+  timeout: 60
+notification_webhook: null
+performance:
+  cache_hit_rate_target: 90.0
+  cpu_threshold: 70.0
+  disk_threshold: 90.0
+  enabled: true
+  execution_interval: 300
+  memory_threshold: 80.0
+  optimization_aggressive: false
+  priority: medium
+  response_time_target: 1.0
+  retry_attempts: 3
+  retry_delay: 5
+  timeout: 60
+security:
+  dependency_check: true
+  enabled: true
+  execution_interval: 300
+  ports_to_scan:
+  - 3000
+  - 5000
+  - 9999
+  - 5001
+  priority: medium
+  retry_attempts: 3
+  retry_delay: 5
+  security_headers:
+  - X-Content-Type-Options
+  - X-Frame-Options
+  - X-XSS-Protection
+  - Strict-Transport-Security
+  - Content-Security-Policy
+  ssl_check: true
+  timeout: 60
+  vulnerability_scan_interval: 1800
+user_experience:
+  accessibility_checks: true
+  core_web_vitals:
+    cumulative_layout_shift: 0.1
+    first_input_delay: 100
+    largest_contentful_paint: 2.5
+  enabled: true
+  execution_interval: 300
+  mobile_optimization: true
+  priority: medium
+  retry_attempts: 3
+  retry_delay: 5
+  timeout: 60
+website_health:
+  availability_threshold: 0.99
+  check_redirects: true
+  check_ssl: true
+  enabled: true
+  endpoints:
+  - http://localhost:3000
+  - http://localhost:3000/dashboard
+  - http://localhost:9999/health
+  - http://localhost:9999/api/v1/health
+  error_rate_threshold: 0.05
+  execution_interval: 300
+  priority: medium
+  response_time_threshold: 2.0
+  retry_attempts: 3
+  retry_delay: 5
+  timeout: 60

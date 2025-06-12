@@ -25,6 +25,57 @@ from utils.privacy import generate_user_alias
 logger = logging.getLogger(__name__)
 
 
+def load_model_configuration(model_id: int) -> Optional[Dict]:
+    """
+    Load model configuration from the ab_variants table.
+    
+    Args:
+        model_id: ID of the variant/model to load
+        
+    Returns:
+        Dictionary with 'name' and 'config' keys, or None if not found
+    """
+    try:
+        with get_db_connection() as conn:
+            with get_cursor(conn) as cur:
+                if USE_IN_MEMORY_DB:
+                    # For SQLite, we'll create a simple fallback
+                    logger.warning("Model configuration loading not fully supported in SQLite mode")
+                    return None
+                else:
+                    # PostgreSQL version
+                    cur.execute("""
+                        SELECT name, algorithm_config 
+                        FROM ab_variants 
+                        WHERE id = %s
+                    """, (model_id,))
+                    
+                    row = cur.fetchone()
+                    if row:
+                        name, config_json = row
+                        # Parse the JSON configuration
+                        if config_json:
+                            try:
+                                config = json.loads(config_json) if isinstance(config_json, str) else config_json
+                                return {
+                                    'name': name,
+                                    'config': config
+                                }
+                            except json.JSONDecodeError as e:
+                                logger.error(f"Invalid JSON in algorithm_config for model {model_id}: {e}")
+                                return None
+                        else:
+                            logger.warning(f"Model {model_id} has no algorithm_config")
+                            return None
+                    else:
+                        logger.warning(f"Model {model_id} not found in ab_variants table")
+                        return None
+                        
+    except Exception as e:
+        logger.error(f"Error loading model configuration for model {model_id}: {e}")
+        return None
+
+
 def get_user_interactions(conn, user_id: str, days_limit: int = 30) -> List[Dict]:
     """
     Retrieve a user's interactions from the database.
@@ -341,73 +392,128 @@ def get_recency_score(post: Dict) -> float:
 
 
 def calculate_ranking_score(
-    post: Dict, user_interactions: List[Dict]
+    post: Dict, user_interactions: List[Dict], algorithm_config: Optional[Dict] = None
 ) -> Tuple[float, str]:
     """
-    Calculate the overall ranking score for a post.
+    Calculate the overall ranking score for a post using specified algorithm configuration.
 
     Args:
         post: Post record to rank
         user_interactions: User's past interactions
+        algorithm_config: Algorithm configuration to use. If None, uses default ALGORITHM_CONFIG.
 
     Returns:
-        Tuple of (score, reason) where score is between 0 and 1
+        Tuple of (score, reason_detail) where score is between 0 and 1 and reason_detail is specific
     """
+    # Use provided config or fall back to default
+    if algorithm_config is None:
+        algorithm_config = ALGORITHM_CONFIG
+    
     # Calculate individual feature scores
     author_score = get_author_preference_score(user_interactions, post["author_id"])
     engagement_score = get_content_engagement_score(post)
     recency_score = get_recency_score(post)
 
-    # Combine scores using weights
-    weights = ALGORITHM_CONFIG["weights"]
+    # Combine scores using weights from algorithm config
+    weights = algorithm_config["weights"]
     overall_score = (
         weights["author_preference"] * author_score
         + weights["content_engagement"] * engagement_score
         + weights["recency"] * recency_score
     )
 
-    # Generate user-friendly recommendation reason based on dominant factor
+    # Generate specific recommendation reason based on discovery data and scoring
+    reason_detail = generate_specific_recommendation_reason_from_ranking(
+        post, user_interactions, author_score, engagement_score, recency_score, weights
+    )
+
+    return overall_score, reason_detail
+
+
+def generate_specific_recommendation_reason_from_ranking(post: Dict, user_interactions: List[Dict], 
+                                                      author_score: float, engagement_score: float, 
+                                                      recency_score: float, weights: Dict) -> str:
+    """
+    Generate specific recommendation reason based on ranking factors and discovery metadata.
+    
+    Args:
+        post: Post record with metadata
+        user_interactions: User's interaction history
+        author_score: Calculated author preference score
+        engagement_score: Content engagement score
+        recency_score: Recency score
+        weights: Algorithm weights
+        
+    Returns:
+        Specific reason string for the recommendation
+    """
+    # Check if we have specific discovery reason data
+    reason_type = post.get('recommendation_reason_type')
+    reason_detail = post.get('recommendation_reason_detail')
+    
+    # Priority 1: Use discovery-specific reasons if available
+    if reason_type == 'hashtag_trending' and reason_detail:
+        return f"Trending in {reason_detail}"
+    
+    elif reason_type == 'author_network' and reason_detail:
+        return f"Popular among followers of {reason_detail}"
+    
+    elif reason_type == 'federated_trending' and reason_detail:
+        return f"Trending on {reason_detail}"
+    
+    elif reason_type == 'local_trending' and reason_detail:
+        return f"Popular on {reason_detail}"
+    
+    # Priority 2: Use user interaction patterns for personalized reasons
+    if author_score > 0.6:
+        # Find specific author interaction
+        author_interactions = [i for i in user_interactions if i['post_author_id'] == post['author_id']]
+        if author_interactions:
+            return f"Because you liked a post by this author"
+        
+    # Priority 3: Use weighted scoring to determine dominant factor
     weighted_scores = [
-        (author_score * weights["author_preference"], "Based on posts you've liked"),
-        (engagement_score * weights["content_engagement"], "Popular in your network"), 
-        (recency_score * weights["recency"], "Trending in topics you follow")
+        (author_score * weights["author_preference"], "author_preference"),
+        (engagement_score * weights["content_engagement"], "engagement"), 
+        (recency_score * weights["recency"], "trending")
     ]
     
-    # Find the highest contributing factor
-    max_weighted_score, primary_reason = max(weighted_scores)
+    max_weighted_score, dominant_factor = max(weighted_scores, key=lambda x: x[0])
     
-    # Add contextual modifiers based on multiple factors
-    reason = primary_reason
+    # Generate contextual reasons based on dominant factor
+    if dominant_factor == "engagement" and engagement_score > 0.7:
+        return "Popular in your network"
+    elif dominant_factor == "trending" and recency_score > 0.8:
+        return "Trending in topics you follow"
+    elif dominant_factor == "author_preference":
+        return "Based on posts you've liked"
     
-    # If engagement is particularly high, emphasize popularity
-    if engagement_score > 0.7:
-        if "Popular" not in reason:
-            reason = "Popular in your network"
+    # Fallback to generic reason with some specificity
+    if post.get('tags') and len(post['tags']) > 0:
+        # Use the first tag for some specificity
+        first_tag = post['tags'][0] if isinstance(post['tags'], list) else post['tags']
+        return f"Trending in topics you follow"
     
-    # If it's very recent and has good engagement, emphasize trending
-    if recency_score > 0.8 and engagement_score > 0.5:
-        reason = "Trending in topics you follow"
-    
-    # If user has strong author preference, emphasize that
-    if author_score > 0.6:
-        reason = "Based on posts you've liked"
-
-    return overall_score, reason
+    return "Recommended for you"
 
 
-def generate_rankings_for_user(user_id: str) -> List[Dict]:
+def generate_rankings_for_user(user_id: str, model_id: Optional[int] = None) -> List[Dict]:
     """
-    Generate post rankings for a specific user.
+    Generate post rankings for a specific user using a specific model configuration.
 
     This function orchestrates the entire ranking process:
-    1. Fetch user's past interactions
-    2. Get candidate posts
-    3. Calculate scores for each post
-    4. Store rankings in the database
-    5. Return ranked posts
+    1. Load model configuration (if model_id provided)
+    2. Fetch user's past interactions
+    3. Get candidate posts
+    4. Calculate scores for each post using model parameters
+    5. Store rankings in the database
+    6. Return ranked posts
 
     Args:
         user_id: User ID to generate rankings for
+        model_id: Optional variant ID to use for algorithm configuration.
+                 If provided, loads parameters from ab_variants table.
+                 If None, uses default ALGORITHM_CONFIG.
 
     Returns:
         List of ranked posts with scores and reasons
@@ -415,6 +521,21 @@ def generate_rankings_for_user(user_id: str) -> List[Dict]:
     try:
         # Get pseudonymized user ID for privacy
         user_alias = generate_user_alias(user_id)
+
+        # Step 0: Load model configuration if model_id is provided
+        algorithm_config = ALGORITHM_CONFIG.copy()  # Start with defaults
+        model_name = "default"
+        
+        if model_id is not None:
+            model_config = load_model_configuration(model_id)
+            if model_config:
+                algorithm_config = model_config['config']
+                model_name = model_config['name']
+                logger.info(f"Using model '{model_name}' (ID: {model_id}) for user {user_alias}")
+            else:
+                logger.warning(f"Model ID {model_id} not found, falling back to default configuration")
+        else:
+            logger.info(f"Using default algorithm configuration for user {user_alias}")
 
         with get_db_connection() as conn:
             # Step 1: Get user's interaction history
@@ -431,10 +552,10 @@ def generate_rankings_for_user(user_id: str) -> List[Dict]:
             # Step 2: Get candidate posts (excluding ones user has seen)
             candidate_posts = get_candidate_posts(
                 conn,
-                limit=ALGORITHM_CONFIG["max_candidates"],
+                limit=algorithm_config["max_candidates"],
                 days_limit=14,
                 exclude_post_ids=seen_post_ids,
-                include_synthetic=ALGORITHM_CONFIG["include_synthetic"],
+                include_synthetic=algorithm_config["include_synthetic"],
             )
             logger.debug(f"Found {len(candidate_posts)} candidate posts")
 
@@ -448,10 +569,11 @@ def generate_rankings_for_user(user_id: str) -> List[Dict]:
             # Step 3: Calculate ranking scores for each post
             ranked_posts = []
             for post in candidate_posts:
-                score, reason = calculate_ranking_score(post, user_interactions)
+                score, reason = calculate_ranking_score(post, user_interactions, algorithm_config)
 
-                # Include only posts with reasonable scores
-                if score > 0.1:
+                # Include only posts with reasonable scores (configurable threshold)
+                from config import MIN_RANKING_SCORE
+                if score > MIN_RANKING_SCORE:
                     post["ranking_score"] = score
                     post["recommendation_reason"] = reason
                     ranked_posts.append(post)

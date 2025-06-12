@@ -20,7 +20,7 @@ import json
 import logging
 import requests
 from datetime import datetime, timezone, timedelta
-from typing import Dict, List, Optional, Any
+from typing import Dict, List, Optional, Any, Tuple
 from dataclasses import asdict
 
 # Import from project
@@ -698,7 +698,7 @@ def store_crawled_post_enhanced(cursor, post: MastodonPost, instance: str, sessi
                                detected_language: str, engagement_velocity: float, trending_score: float,
                                discovery_source: str, source_detail: str = None) -> bool:
     """
-    Enhanced post storage with multi-source discovery metadata.
+    Enhanced post storage with multi-source discovery metadata and specific recommendation reasons.
     
     Args:
         cursor: Database cursor
@@ -709,7 +709,7 @@ def store_crawled_post_enhanced(cursor, post: MastodonPost, instance: str, sessi
         engagement_velocity: Calculated engagement velocity
         trending_score: Calculated trending score
         discovery_source: Type of discovery source (timeline, hashtag, etc.)
-        source_detail: Additional source information
+        source_detail: Additional source information (e.g., specific hashtag)
         
     Returns:
         True if stored successfully, False if skipped (duplicate)
@@ -733,15 +733,21 @@ def store_crawled_post_enhanced(cursor, post: MastodonPost, instance: str, sessi
             }
         }
         
-        # Insert new post with enhanced tracking
+        # Generate specific recommendation reason based on discovery source
+        reason_type, reason_detail = generate_specific_recommendation_reason(
+            discovery_source, source_detail, post, instance
+        )
+        
+        # Insert new post with enhanced tracking and specific reasons
         cursor.execute("""
             INSERT INTO crawled_posts (
                 post_id, content, language, created_at, author_id, author_username,
                 source_instance, favourites_count, reblogs_count, replies_count,
                 trending_score, engagement_velocity, crawl_session_id,
-                tags, lifecycle_stage, discovery_timestamp, discovery_metadata
+                tags, lifecycle_stage, discovery_timestamp, discovery_metadata,
+                recommendation_reason_type, recommendation_reason_detail
             ) VALUES (
-                %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
+                %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
             )
         """, (
             post.id, post.content, detected_language, post.created_at,
@@ -749,18 +755,49 @@ def store_crawled_post_enhanced(cursor, post: MastodonPost, instance: str, sessi
             post.favourites_count, post.reblogs_count, post.replies_count,
             trending_score, engagement_velocity, session_id,
             json.dumps(post.tags or []), 'fresh', datetime.now(timezone.utc),
-            json.dumps(enhanced_metadata)
+            json.dumps(enhanced_metadata), reason_type, reason_detail
         ))
         
         return True
         
     except Exception as e:
-        logger.error(f"Failed to store enhanced post {post.id}: {e}")
-        # Fallback to standard storage
-        return store_crawled_post(
-            cursor, post, instance, session_id, detected_language, 
-            engagement_velocity, trending_score
-        )
+        logger.error(f"Failed to store post {post.id}: {e}")
+        return False
+
+def generate_specific_recommendation_reason(discovery_source: str, source_detail: str, 
+                                          post: MastodonPost, instance: str) -> Tuple[str, str]:
+    """
+    Generate specific recommendation reason based on how content was discovered.
+    
+    Args:
+        discovery_source: The discovery method used (hashtag_stream, follow_relationships, etc.)
+        source_detail: Specific detail about the source (hashtag name, author handle, etc.)
+        post: The MastodonPost object
+        instance: Source instance
+        
+    Returns:
+        Tuple of (reason_type, reason_detail) for specific recommendation reasons
+    """
+    if discovery_source == DiscoverySource.HASHTAG_STREAM and source_detail:
+        # Specific hashtag trending
+        return ("hashtag_trending", source_detail)
+    
+    elif discovery_source == DiscoverySource.FOLLOW_RELATIONSHIPS:
+        # Popular among followers of a specific author
+        author_handle = f"@{post.author_username}@{instance}"
+        return ("author_network", author_handle)
+    
+    elif discovery_source == DiscoverySource.FEDERATED_TIMELINE:
+        # Trending across the fediverse
+        return ("federated_trending", instance)
+    
+    elif discovery_source == DiscoverySource.LOCAL_TIMELINE:
+        # Popular on specific instance
+        return ("local_trending", instance)
+    
+    else:
+        # Fallback to general trending
+        return ("general_trending", None)
 
 def calculate_trending_score(post: MastodonPost, engagement_velocity: float) -> float:
     """

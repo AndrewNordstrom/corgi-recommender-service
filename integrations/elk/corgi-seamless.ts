@@ -7,6 +7,40 @@
 
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 
+// Helper function to get current user ID from ELK
+function getCurrentUserId(): string {
+  // Try to get current user from ELK's stores
+  if (typeof window !== 'undefined') {
+    // Access ELK's current user store
+    const currentUser = (window as any)?.$elk?.store?.currentUser
+    if (currentUser?.account?.id) {
+      return currentUser.account.id
+    }
+    
+    // Fallback: try to get from localStorage or sessionStorage
+    const elkUser = localStorage.getItem('elk-current-user') || sessionStorage.getItem('elk-current-user')
+    if (elkUser) {
+      try {
+        const user = JSON.parse(elkUser)
+        if (user?.account?.id) return user.account.id
+      } catch (e) {
+        console.warn('Failed to parse stored user data:', e)
+      }
+    }
+    
+    // Fallback: try to extract from current URL or location
+    const currentUrl = window.location.href
+    const userMatch = currentUrl.match(/\/@([^\/]+)/) || currentUrl.match(/users\/([^\/]+)/)
+    if (userMatch?.[1]) {
+      return userMatch[1]
+    }
+  }
+  
+  // Final fallback - but this should be avoided in production
+  console.warn('Could not determine current user ID, falling back to anonymous')
+  return 'anonymous'
+}
+
 export interface CorgiRecommendation {
   id: string
   account: {
@@ -113,12 +147,14 @@ export function useCorgiSeamless() {
     }
   }
 
-  async function fetchRecommendations(count = 20, userId = 'demo_user'): Promise<CorgiRecommendation[]> {
+  async function fetchRecommendations(count = 20, userId?: string): Promise<CorgiRecommendation[]> {
+    // Use provided userId or get current user
+    const actualUserId = userId || getCurrentUserId()
     isLoading.value = true
     error.value = null
 
     try {
-      const response = await fetch(`${config.value.apiUrl}/api/v1/recommendations?limit=${count}&user_id=${userId}`)
+      const response = await fetch(`${config.value.apiUrl}/api/v1/recommendations?limit=${count}&user_id=${actualUserId}`)
       
       if (!response.ok) {
         throw new Error(`Failed to fetch recommendations: HTTP ${response.status}`)
@@ -150,9 +186,9 @@ export function useCorgiSeamless() {
     try {
       const searchParams = new URLSearchParams()
       
-      // Add default user_id if not provided
+      // Add default user_id if not provided - use current authenticated user
       if (!params.user_id) {
-        params.user_id = 'demo_user'
+        params.user_id = getCurrentUserId()
       }
       
       Object.entries(params).forEach(([key, value]) => {
@@ -194,10 +230,14 @@ export function useCorgiSeamless() {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
+          user_id: details.user_id || getCurrentUserId(),
           post_id: postId,
-          action,
+          action_type: action,
           timestamp: new Date().toISOString(),
-          ...details
+          context: {
+            source: 'elk_corgi_integration',
+            ...details
+          }
         })
       })
     } catch (err) {

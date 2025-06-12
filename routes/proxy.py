@@ -349,6 +349,7 @@ def get_authenticated_user(req):
     Returns:
         str: Internal user ID for the authenticated user or None
     """
+    logger.info(f"HEADERS: {req.headers}")
     # Try to get from the Authorization header
     auth_header = req.headers.get("Authorization")
     if auth_header and auth_header.startswith("Bearer "):
@@ -733,8 +734,21 @@ def get_home_timeline():
                 # Extract the response content
                 timeline_data = proxied_response.json()
 
-                # Return as timeline field for validator compatibility
-                return jsonify({"timeline": timeline_data})
+                # Ensure all posts have required ELK interaction fields
+                for post in timeline_data:
+                    if 'favourited' not in post:
+                        post['favourited'] = False
+                    if 'reblogged' not in post:
+                        post['reblogged'] = False
+                    if 'bookmarked' not in post:
+                        post['bookmarked'] = False
+                    if 'muted' not in post:
+                        post['muted'] = False
+                    if 'pinned' not in post:
+                        post['pinned'] = False
+
+                # Return direct array for ELK compatibility (not wrapped in timeline object)
+                return jsonify(timeline_data)
             except Exception as e:
                 proxy_logger.error(
                     f"ERROR-{request_id} | Failed to parse timeline: {e}"
@@ -750,17 +764,17 @@ def get_home_timeline():
             proxy_logger.info(
                 f"AUTH-{request_id} | Unauthorized response from upstream, returning empty timeline"
             )
-            return jsonify({"timeline": []})
+            return jsonify([])
         else:
             # For other errors, return empty array
             proxy_logger.info(
                 f"ERR-{request_id} | Error {proxied_response.status_code} from upstream, returning empty timeline"
             )
-            return jsonify({"timeline": []})
+            return jsonify([])
     except Exception as e:
         proxy_logger.error(f"ERROR-{request_id} | Timeline proxy failed: {e}")
         # Return empty array on error
-        return jsonify({"timeline": []})
+        return jsonify([])
 
 
 @proxy_bp.route("/timelines/home/augmented", methods=["GET"])

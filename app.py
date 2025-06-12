@@ -40,6 +40,7 @@ from routes.oauth import oauth_bp
 from routes.setup_gui import setup_gui_bp  # Import setup GUI blueprint
 from routes.timeline import timeline_bp  # Import new timeline blueprint with injection
 from routes.users import users_bp
+from routes.model_registry import register_model_registry_routes  # Import model registry routes
 
 # Import configuration
 from config import API_PREFIX, HOST, PORT
@@ -128,6 +129,15 @@ def create_app():
         logger.error(f"Failed to initialize database on startup: {e}")
         # Continue without failing - the service might be able to start without DB initially
 
+    # Initialize model registry on startup
+    try:
+        from core.recommender_factory import get_factory
+        factory = get_factory()
+        logger.info("Model registry factory initialized successfully")
+    except Exception as e:
+        logger.error(f"Failed to initialize model registry: {e}")
+        # Continue without failing - service can work with basic functionality
+
     # Request ID and CSRF middleware
     @app.before_request
     def before_request():
@@ -206,6 +216,9 @@ def create_app():
 
     register_docs_routes(app)
     app.register_blueprint(feedback_bp)
+    
+    # Register model registry routes
+    register_model_registry_routes(app)
 
     # Register setup GUI blueprint - only if enabled (disabled in production by default)
     if os.getenv("ENABLE_SETUP_GUI", "false").lower() == "true":

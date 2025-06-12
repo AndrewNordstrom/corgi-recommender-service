@@ -1,0 +1,36 @@
+content:
+  enabled: true
+  freshness_threshold_days: 30
+  seo_optimization: true
+dashboard_port: 5001
+data_retention_days: 90
+deployment:
+  auto_scaling: true
+  backup_enabled: true
+  enabled: true
+log_level: INFO
+ml_model:
+  auto_retrain: false
+  enabled: true
+  performance_threshold: 0.8
+performance:
+  cpu_threshold: 70.0
+  enabled: true
+  memory_threshold: 80.0
+  optimization_aggressive: false
+security:
+  dependency_check: true
+  enabled: true
+  ssl_check: true
+  vulnerability_scan_interval: 1800
+user_experience:
+  accessibility_checks: true
+  enabled: true
+  mobile_optimization: true
+website_health:
+  enabled: true
+  endpoints:
+  - http://localhost:3000
+  - http://localhost:9999/health
+  execution_interval: 300
+  response_time_threshold: 2.0

@@ -75,6 +75,7 @@ class BrowserMonitor:
         # Pages to check
         self.pages_to_check = [
             '/',
+            '/corgi',
             '/dashboard',
             '/explore',
             '/metrics',
@@ -179,13 +180,17 @@ class BrowserMonitor:
                 status = "🔴 ERROR PAGE"
             
             # Take screenshot if there are issues
-            if status != "✅ HEALTHY" or console_errors or network_errors:
-                timestamp_str = datetime.now().strftime("%Y%m%d_%H%M%S")
-                screenshot_path = f"logs/screenshots/{page_path.replace('/', '_') or 'home'}_{timestamp_str}.png"
+            if status != 'ok' or console_errors or network_errors:
                 try:
-                    self.driver.save_screenshot(screenshot_path)
-                except:
-                    screenshot_path = None
+                    # Sanitize page name for filename
+                    page_name_sanitized = page_path.strip('/').replace('/', '_') or 'home'
+                    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                    path = f"logs/screenshots/{page_name_sanitized}_{timestamp}.png"
+                    self.driver.save_screenshot(path)
+                    screenshot_path = path
+                except Exception as e:
+                    status = 'error'
+                    console_errors.append(f"Screenshot failed: {e}")
             
             # Update status based on errors found
             if console_errors and status == "✅ HEALTHY":
@@ -337,6 +342,18 @@ def main():
         output = monitor.format_results(results)
         print(output)
         
+        # Save to file for debugging
+        with open('logs/latest_browser_check.json', 'w') as f:
+            json.dump([{
+                'page': r.page,
+                'status': r.status,
+                'load_time': r.load_time,
+                'console_errors': r.console_errors,
+                'network_errors': r.network_errors,
+                'timestamp': r.timestamp.isoformat(),
+                'screenshot_path': r.screenshot_path
+            } for r in results], f, indent=2)
+            
         # Exit with error code if any checks failed
         has_issues = any(
             result.status != "✅ HEALTHY" or result.console_errors or result.network_errors

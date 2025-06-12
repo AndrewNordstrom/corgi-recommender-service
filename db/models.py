@@ -147,6 +147,8 @@ class RecommendationLog(Base):
     post_id = Column(String(64), ForeignKey("post_metadata.post_id"), nullable=False, index=True)
     recommended_at = Column(DateTime, default=datetime.datetime.utcnow, index=True)
     reason = Column(String(255))
+    reason_type = Column(String(50))  # New field for specific reason type
+    reason_detail = Column(Text)  # New field for specific reason detail
     model_version = Column(String(50))
     
     # Relationships

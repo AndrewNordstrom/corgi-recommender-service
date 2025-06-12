@@ -160,6 +160,10 @@ ALGORITHM_CONFIG = {
     == "true",
 }
 
+# Ranking algorithm thresholds
+MIN_RANKING_SCORE = float(os.getenv('MIN_RANKING_SCORE', '0.01'))  # Lowered from 0.1 for better demo experience
+DEMO_MIN_POSTS = int(os.getenv('DEMO_MIN_POSTS', '10'))  # Minimum posts to return in demo mode
+
 # Health Check Settings
 HEALTH_CHECK_TIMEOUT = int(os.getenv("HEALTH_CHECK_TIMEOUT", "5"))
 
