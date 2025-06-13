@@ -23,6 +23,7 @@ import {
   ArrowDown,
   Minus
 } from "lucide-react"
+import ExperimentCreationModal from "./ExperimentCreationModal"
 
 interface Experiment {
   id: string
@@ -65,7 +66,7 @@ export default function ABTestingExperiments({ onTabChange }: ABTestingExperimen
   const [models, setModels] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedExperiment, setSelectedExperiment] = useState<Experiment | null>(null)
-  const [showCreateForm, setShowCreateForm] = useState(false)
+  const [showModal, setShowModal] = useState(false)
   const [newExperiment, setNewExperiment] = useState({
     name: "",
     description: "",
@@ -82,7 +83,11 @@ export default function ABTestingExperiments({ onTabChange }: ABTestingExperimen
 
   const fetchExperiments = async () => {
     try {
-      const response = await fetch('/api/v1/experiments')
+      const response = await fetch('/api/v1/analytics/experiments', {
+        headers: {
+          'X-API-Key': 'admin-key'
+        }
+      })
       const data = await response.json()
       setExperiments(data.experiments || [])
     } catch (error) {
@@ -99,51 +104,6 @@ export default function ABTestingExperiments({ onTabChange }: ABTestingExperimen
       setModels(data.models || [])
     } catch (error) {
       console.error('Failed to fetch models:', error)
-    }
-  }
-
-  const createExperiment = async () => {
-    try {
-      const response = await fetch('/api/v1/experiments', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(newExperiment)
-      })
-      
-      if (response.ok) {
-        await fetchExperiments()
-        setShowCreateForm(false)
-        setNewExperiment({
-          name: "",
-          description: "",
-          control_model: "",
-          treatment_models: [{ model: "", traffic_percent: 50 }],
-          total_traffic: 100,
-          duration_days: 7
-        })
-      }
-    } catch (error) {
-      console.error('Failed to create experiment:', error)
-    }
-  }
-
-  const updateExperimentStatus = async (id: string, status: string) => {
-    try {
-      const response = await fetch(`/api/v1/experiments/${id}/status`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ status })
-      })
-      
-      if (response.ok) {
-        await fetchExperiments()
-      }
-    } catch (error) {
-      console.error('Failed to update experiment status:', error)
     }
   }
 
@@ -200,6 +160,22 @@ export default function ABTestingExperiments({ onTabChange }: ABTestingExperimen
     setNewExperiment({ ...newExperiment, treatment_models: updated })
   }
 
+  const updateStatus = async (id: string, action: 'start' | 'stop') => {
+    try {
+      const resp = await fetch(`/api/v1/analytics/experiments/${id}/${action}`, {
+        method: 'POST',
+        headers: {
+          'X-API-Key': 'admin-key'
+        }
+      })
+      if (resp.ok) {
+        await fetchExperiments()
+      }
+    } catch (e) {
+      console.error('Failed to update experiment status', e)
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -217,19 +193,68 @@ export default function ABTestingExperiments({ onTabChange }: ABTestingExperimen
             Design and monitor controlled experiments to optimize your recommendation models
           </p>
         </div>
-        <button className="btn-primary flex items-center">
+        <button
+          className="btn-primary flex items-center"
+          onClick={() => setShowModal(true)}
+        >
           <Plus className="mr-2 h-4 w-4" />
           Create Experiment
         </button>
       </div>
 
-      <div className="text-center py-12 border-2 border-dashed border-neutral-200 dark:border-neutral-700 rounded-lg">
-        <Beaker className="h-12 w-12 mx-auto text-neutral-400" />
-        <h3 className="mt-4 text-lg font-medium">A/B Testing Platform</h3>
-        <p className="mt-2 text-neutral-500">
-          Create sophisticated A/B tests to compare model performance and optimize your recommendation engine.
-        </p>
-      </div>
+      {showModal && (
+        <ExperimentCreationModal
+          isOpen={showModal}
+          onClose={() => setShowModal(false)}
+          onCreated={fetchExperiments}
+        />
+      )}
+
+      {/* Experiments Table */}
+      {experiments.length === 0 ? (
+        <div className="text-center py-12 border-2 border-dashed border-neutral-200 dark:border-neutral-700 rounded-lg">
+          <Beaker className="h-12 w-12 mx-auto text-neutral-400" />
+          <h3 className="mt-4 text-lg font-medium">A/B Testing Platform</h3>
+          <p className="mt-2 text-neutral-500">
+            Create sophisticated A/B tests to compare model performance and optimize your recommendation engine.
+          </p>
+        </div>
+      ) : (
+        <div className="overflow-x-auto border rounded-lg">
+          <table className="min-w-full divide-y divide-neutral-200 dark:divide-neutral-700 text-sm">
+            <thead className="bg-neutral-50 dark:bg-neutral-800">
+              <tr>
+                <th className="px-4 py-2 text-left">Name</th>
+                <th className="px-4 py-2 text-left">Created</th>
+                <th className="px-4 py-2 text-left">Status</th>
+                <th className="px-4 py-2">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-neutral-200 dark:divide-neutral-700">
+              {experiments.map((exp) => (
+                <tr key={exp.id}>
+                  <td className="px-4 py-2 font-medium">{exp.name}</td>
+                  <td className="px-4 py-2">{new Date(exp.created_at).toLocaleDateString()}</td>
+                  <td className="px-4 py-2">
+                    <span className={`${getStatusColor(exp.status)} px-2 py-1 rounded text-xs inline-flex items-center space-x-1`}>
+                      {getStatusIcon(exp.status)}
+                      <span className="capitalize">{exp.status.toLowerCase()}</span>
+                    </span>
+                  </td>
+                  <td className="px-4 py-2 text-center">
+                    {exp.status === 'DRAFT' && (
+                      <button className="btn-primary btn-sm" onClick={() => updateStatus(exp.id, 'start')}>Start</button>
+                    )}
+                    {exp.status === 'RUNNING' && (
+                      <button className="btn-secondary btn-sm" onClick={() => updateStatus(exp.id, 'stop')}>Stop</button>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   )
 } 

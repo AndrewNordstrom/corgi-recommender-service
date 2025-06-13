@@ -11,9 +11,10 @@ from datetime import datetime, timedelta
 import json
 from typing import Optional
 
-from db.connection import get_db_connection, get_cursor
+from db.connection import get_db_connection, get_cursor, USE_IN_MEMORY_DB
 from utils.logging_decorator import log_route
 from utils.privacy import generate_user_alias
+from utils.rbac import require_role, get_user_from_request, require_permission
 
 # Set up logging
 logger = logging.getLogger(__name__)
@@ -856,3 +857,247 @@ def determine_best_variant(summary_data, variant_info):
     except Exception as e:
         logger.error(f"Error determining best variant: {e}")
         return None
+
+
+# ---------------------------------------------------------------------------
+# A/B Experiment Creation Endpoint (admin-only)
+# ---------------------------------------------------------------------------
+
+
+@analytics_bp.route("/experiments", methods=["POST"])
+@require_role("admin")  # Only admins/owners can create experiments
+@log_route
+def create_ab_experiment():
+    """Create a new A/B test experiment (status = DRAFT).
+
+    Expected JSON body:
+    {
+        "name": "Recency vs. Engagement Model Test",
+        "description": "string",
+        "variants": [
+            {"model_variant_id": 1, "traffic_allocation": 0.5},
+            {"model_variant_id": 2, "traffic_allocation": 0.5}
+        ]
+    }
+    """
+    try:
+        data = request.get_json(silent=True) or {}
+
+        name = data.get("name")
+        description = data.get("description", "")
+        variants = data.get("variants", [])
+
+        # --- Basic validation ------------------------------------------------
+        if not name or not isinstance(name, str):
+            return jsonify({"error": "'name' is required and must be a string"}), 400
+
+        if not variants or not isinstance(variants, list):
+            return jsonify({"error": "'variants' must be a non-empty list"}), 400
+
+        total_alloc = 0.0
+        for idx, v in enumerate(variants):
+            if not isinstance(v, dict):
+                return jsonify({"error": f"Variant at index {idx} must be an object"}), 400
+
+            if "model_variant_id" not in v or "traffic_allocation" not in v:
+                return jsonify({"error": "Each variant requires 'model_variant_id' and 'traffic_allocation'"}), 400
+
+            try:
+                v["model_variant_id"] = int(v["model_variant_id"])
+                v["traffic_allocation"] = float(v["traffic_allocation"])
+            except (ValueError, TypeError):
+                return jsonify({"error": f"Invalid types for variant at index {idx}"}), 400
+
+            if v["traffic_allocation"] <= 0:
+                return jsonify({"error": "traffic_allocation must be > 0"}), 400
+
+            total_alloc += v["traffic_allocation"]
+
+        if abs(total_alloc - 1.0) > 1e-6:
+            return jsonify({"error": "Sum of traffic_allocation values must equal 1.0"}), 400
+
+        # --- DB insert wrapped in transaction --------------------------------
+        placeholder = "%s" if not USE_IN_MEMORY_DB else "?"
+
+        insert_exp_sql = (
+            f"INSERT INTO ab_experiments (name, description, status) VALUES ({placeholder}, {placeholder}, {placeholder})"
+            + (" RETURNING id" if not USE_IN_MEMORY_DB else "")
+        )
+
+        insert_var_sql = (
+            f"INSERT INTO ab_experiment_variants (experiment_id, model_variant_id, traffic_allocation) VALUES ({placeholder}, {placeholder}, {placeholder})"
+        )
+
+        with get_db_connection() as conn:
+            with get_cursor(conn) as cur:
+                # Ensure experiment table exists (esp. for SQLite tests)
+                try:
+                    cur.execute(
+                        """
+                        CREATE TABLE IF NOT EXISTS ab_experiments (
+                            id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            name TEXT NOT NULL,
+                            description TEXT,
+                            status TEXT DEFAULT 'DRAFT',
+                            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                        )
+                        """
+                    )
+                    cur.execute(
+                        """
+                        CREATE TABLE IF NOT EXISTS ab_experiment_variants (
+                            id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            experiment_id INTEGER NOT NULL,
+                            model_variant_id INTEGER NOT NULL,
+                            traffic_allocation REAL NOT NULL,
+                            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                        )
+                        """
+                    )
+                except Exception:
+                    # Ignore errors if tables already exist (PostgreSQL path)
+                    pass
+
+                # Insert experiment
+                cur.execute(insert_exp_sql, (name, description, "DRAFT"))
+
+                experiment_id = (
+                    cur.fetchone()[0] if not USE_IN_MEMORY_DB else cur.lastrowid
+                )
+
+                # Insert variants
+                for v in variants:
+                    cur.execute(insert_var_sql, (experiment_id, v["model_variant_id"], v["traffic_allocation"]))
+
+                conn.commit()
+
+        return (
+            jsonify(
+                {
+                    "id": experiment_id,
+                    "name": name,
+                    "description": description,
+                    "status": "DRAFT",
+                    "variants": variants,
+                }
+            ),
+            201,
+        )
+
+    except Exception as e:
+        logger.error(f"Error creating A/B experiment: {e}")
+        return jsonify({"error": "Internal server error"}), 500
+
+
+# ---------------------------------------------------------------------------
+# Experiment Management Endpoints
+# ---------------------------------------------------------------------------
+
+
+# Helper to convert experiment row to dict (works for PG and SQLite)
+def _experiment_row_to_dict(row, cursor):
+    """Convert DB row to dict. If cursor provided, use its description; else assume standard column order."""
+    if cursor is not None:
+        columns = [col[0] for col in cursor.description]
+    else:
+        columns = ["id", "name", "description", "status", "created_at"]
+    return {columns[i]: row[i] for i in range(len(columns))}
+
+
+@analytics_bp.route("/experiments", methods=["GET"])
+@require_permission("view_analytics")
+@log_route
+def list_ab_experiments():
+    """Return all A/B experiments ordered by creation date desc."""
+    try:
+        with get_db_connection() as conn:
+            with get_cursor(conn) as cur:
+                cur.execute(
+                    "SELECT id, name, description, status, created_at FROM ab_experiments ORDER BY created_at DESC"
+                )
+                rows = cur.fetchall()
+                experiments = [_experiment_row_to_dict(r, cur) for r in rows]
+
+        return jsonify({"experiments": experiments}), 200
+    except Exception as e:
+        logger.error(f"Error listing experiments: {e}")
+        return jsonify({"error": "Internal server error"}), 500
+
+
+def _update_experiment_status(experiment_id: int, target_status: str, allowed_current: tuple):
+    """Internal helper to change experiment status with validation."""
+    placeholder = "%s" if not USE_IN_MEMORY_DB else "?"
+
+    with get_db_connection() as conn:
+        with get_cursor(conn) as cur:
+            # Ensure tables exist (SQLite dev)
+            cur.execute(
+                """CREATE TABLE IF NOT EXISTS ab_experiments (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        name TEXT,
+                        description TEXT,
+                        status TEXT,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)"""
+            )
+
+            # If starting, ensure no other running exp
+            if target_status == "RUNNING":
+                cur.execute(
+                    "SELECT id FROM ab_experiments WHERE status = 'RUNNING' AND id <> " + placeholder,
+                    (experiment_id,),
+                )
+                if cur.fetchone():
+                    return None, 409, "Another experiment is already running."
+
+            # Check current status
+            cur.execute(
+                "SELECT status FROM ab_experiments WHERE id = " + placeholder,
+                (experiment_id,),
+            )
+            row = cur.fetchone()
+            if not row:
+                return None, 404, "Experiment not found."
+
+            current_status = row[0]
+            if current_status not in allowed_current:
+                return None, 400, f"Cannot change status from {current_status} to {target_status}."
+
+            # Update
+            cur.execute(
+                "UPDATE ab_experiments SET status = " + placeholder + " WHERE id = " + placeholder,
+                (target_status, experiment_id),
+            )
+            conn.commit()
+
+            # Return updated row
+            cur.execute(
+                "SELECT id, name, description, status, created_at FROM ab_experiments WHERE id = "
+                + placeholder,
+                (experiment_id,),
+            )
+            updated = cur.fetchone()
+            return updated, 200, None
+
+
+@analytics_bp.route("/experiments/<int:experiment_id>/start", methods=["POST"])
+@require_role("admin")
+@log_route
+def start_ab_experiment(experiment_id):
+    row, code, err = _update_experiment_status(
+        experiment_id, "RUNNING", allowed_current=("DRAFT",)
+    )
+    if err:
+        return jsonify({"error": err}), code
+    return jsonify(_experiment_row_to_dict(row, None)), 200
+
+
+@analytics_bp.route("/experiments/<int:experiment_id>/stop", methods=["POST"])
+@require_role("admin")
+@log_route
+def stop_ab_experiment(experiment_id):
+    row, code, err = _update_experiment_status(
+        experiment_id, "COMPLETED", allowed_current=("RUNNING",)
+    )
+    if err:
+        return jsonify({"error": err}), code
+    return jsonify(_experiment_row_to_dict(row, None)), 200

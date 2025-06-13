@@ -196,7 +196,7 @@ def log_interaction():
                 cur.execute(
                     f"""
                     SELECT id FROM interactions
-                    WHERE user_id = ? AND post_id = ? AND interaction_type = ?
+                    WHERE user_alias = ? AND post_id = ? AND action_type = ?
                 """,
                     (user_alias, post_id, action_type),
                 )
@@ -213,7 +213,7 @@ def log_interaction():
                 cur.execute(
                     f"""
                     DELETE FROM interactions 
-                    WHERE user_id = ? AND post_id = ? AND interaction_type = ?
+                    WHERE user_alias = ? AND post_id = ? AND action_type = ?
                 """,
                     (user_alias, post_id, conflicting_action),
                 )
@@ -223,7 +223,7 @@ def log_interaction():
                     cur.execute(
                         f"""
                         INSERT INTO interactions 
-                        (user_id, post_id, interaction_type)
+                        (user_alias, post_id, action_type)
                         VALUES (?, ?, ?)
                     """,
                         (user_alias, post_id, action_type),
@@ -234,7 +234,7 @@ def log_interaction():
                         f"""
                         UPDATE interactions
                         SET created_at = datetime('now')
-                        WHERE user_id = ? AND post_id = ? AND interaction_type = ?
+                        WHERE user_alias = ? AND post_id = ? AND action_type = ?
                     """,
                         (user_alias, post_id, action_type),
                     )
@@ -342,17 +342,15 @@ def log_interaction():
                     cur.execute(
                         f"""
                         INSERT INTO interactions 
-                        (user_alias, post_id, action_type, context, model_variant_id, recommendation_id)
-                        VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder})
+                        (user_alias, post_id, action_type, context)
+                        VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder})
                         ON CONFLICT (user_alias, post_id, action_type) 
                         DO UPDATE SET 
                             context = EXCLUDED.context,
-                            model_variant_id = EXCLUDED.model_variant_id,
-                            recommendation_id = EXCLUDED.recommendation_id,
                             created_at = CURRENT_TIMESTAMP
                         RETURNING id
                     """,
-                        (user_alias, post_id, action_type, json.dumps(context), model_variant_id, recommendation_id),
+                        (user_alias, post_id, action_type, json.dumps(context)),
                     )
 
                     result = cur.fetchone()

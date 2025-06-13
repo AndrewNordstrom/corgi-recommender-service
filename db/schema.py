@@ -89,6 +89,17 @@ CREATE TABLE IF NOT EXISTS user_identities (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Table: ab_user_assignments
+-- Tracks which variant each user is assigned to for an experiment
+CREATE TABLE IF NOT EXISTS ab_user_assignments (
+    id SERIAL PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    experiment_id INTEGER NOT NULL,
+    variant_id INTEGER NOT NULL,
+    assigned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT unique_user_experiment UNIQUE (user_id, experiment_id)
+);
 """
 
 # Create indexes for optimized queries
@@ -261,6 +272,16 @@ CREATE TABLE IF NOT EXISTS user_identities (
     token_scope TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Table: ab_user_assignments
+CREATE TABLE IF NOT EXISTS ab_user_assignments (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id TEXT NOT NULL,
+    experiment_id INTEGER NOT NULL,
+    variant_id INTEGER NOT NULL,
+    assigned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(user_id, experiment_id)
 );
 """
 

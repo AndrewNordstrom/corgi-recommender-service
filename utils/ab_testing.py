@@ -13,7 +13,7 @@ import json
 import logging
 from datetime import datetime, timezone
 from typing import Dict, List, Optional, Tuple, Any
-from db.connection import get_db_connection, get_cursor
+from db.connection import get_db_connection, get_cursor, USE_IN_MEMORY_DB
 import utils.metrics as metrics
 from utils.ab_performance import performance_tracker
 from utils.performance_gates import (
@@ -471,4 +471,96 @@ class ABTestingMiddleware:
 
 # Global instances for use throughout the application
 ab_testing_engine = ABTestingEngine()
-ab_testing_middleware = ABTestingMiddleware() 
+ab_testing_middleware = ABTestingMiddleware()
+
+# ---------------------------------------------------------------------------
+# Convenience wrapper for routes – returns variant_id or None
+# ---------------------------------------------------------------------------
+
+def assign_user_to_variant(user_id: str):
+    """Assign user to variant for the currently RUNNING experiment.
+
+    Returns variant_id (int) or None if no experiment running.
+    """
+    try:
+        with get_db_connection() as conn:
+            with get_cursor(conn) as cur:
+                # Ensure assignments table exists (for SQLite dev)
+                cur.execute(
+                    """CREATE TABLE IF NOT EXISTS ab_user_assignments (
+                            id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            user_id TEXT NOT NULL,
+                            experiment_id INTEGER NOT NULL,
+                            variant_id INTEGER NOT NULL,
+                            assigned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                            UNIQUE(user_id, experiment_id)
+                        )"""
+                )
+
+                # Find running experiment
+                cur.execute(
+                    "SELECT id FROM ab_experiments WHERE status='RUNNING' ORDER BY created_at DESC LIMIT 1"
+                )
+                row = cur.fetchone()
+                if not row:
+                    return None  # No active experiment
+
+                experiment_id = row[0]
+
+                # Check assignment exists
+                cur.execute(
+                    "SELECT variant_id FROM ab_user_assignments WHERE user_id = %s AND experiment_id = %s"
+                    if not USE_IN_MEMORY_DB else
+                    "SELECT variant_id FROM ab_user_assignments WHERE user_id = ? AND experiment_id = ?",
+                    (user_id, experiment_id),
+                )
+                assign_row = cur.fetchone()
+                if assign_row:
+                    return assign_row[0]
+
+                # Get variants and allocations
+                cur.execute(
+                    "SELECT id, traffic_allocation FROM ab_experiment_variants WHERE experiment_id = %s ORDER BY id"
+                    if not USE_IN_MEMORY_DB else
+                    "SELECT id, traffic_allocation FROM ab_experiment_variants WHERE experiment_id = ? ORDER BY id",
+                    (experiment_id,),
+                )
+                variants = cur.fetchall()
+                if not variants:
+                    return None
+
+                import hashlib
+                h = int(hashlib.md5(user_id.encode()).hexdigest()[:8], 16) / 0xFFFFFFFF
+                cumulative = 0.0
+                chosen_variant = variants[0][0]
+                for vid, alloc in variants:
+                    cumulative += float(alloc)
+                    if h < cumulative:
+                        chosen_variant = vid
+                        break
+
+                # Insert assignment
+                placeholder = "%s" if not USE_IN_MEMORY_DB else "?"
+                cur.execute(
+                    f"INSERT OR IGNORE INTO ab_user_assignments (user_id, experiment_id, variant_id) VALUES ({placeholder}, {placeholder}, {placeholder})",
+                    (user_id, experiment_id, chosen_variant),
+                )
+                conn.commit()
+
+                # Log event via ABTestingEngine tracker
+                try:
+                    engine = ABTestingEngine()
+                    engine.track_experiment_event(
+                        experiment_id=experiment_id,
+                        variant_id=chosen_variant,
+                        user_id=user_id,
+                        event_type="user_assignment",
+                    )
+                except Exception:
+                    pass
+
+                return chosen_variant
+
+    except Exception as e:
+        logging.getLogger(__name__).error(f"assign_user_to_variant error: {e}")
+        return None 

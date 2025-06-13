@@ -20,7 +20,8 @@ from urllib.parse import urlparse
 
 from db.connection import get_db_connection, get_cursor, USE_IN_MEMORY_DB
 from core.ranking_algorithm import generate_rankings_for_user
-from utils.privacy import generate_user_alias
+from utils.privacy import generate_user_alias, get_user_privacy_level
+from utils.user_signals import get_weighted_post_selection
 from utils.logging_decorator import log_route
 from routes.analytics import get_active_model_variant
 from utils.timeline_injector import inject_into_timeline
@@ -47,7 +48,7 @@ from routes.proxy import (
 )
 from utils.rehydration_service import rehydrate_posts
 from utils.recommendation_engine import load_cold_start_posts
-from db.connection import get_db_connection, get_cursor, USE_IN_MEMORY_DB
+from utils.ab_testing import assign_user_to_variant
 
 # Set up logging
 logger = logging.getLogger(__name__)
@@ -478,21 +479,29 @@ def ensure_elk_compatibility(post_data, user_id=None):
         post_data['account'] = {}
     
     # Only set defaults if the fields don't already exist (preserve existing account data)
-    if not post_data['account'].get('id'):
+    # Use 'username' in post_data['account'] to check if key exists, not just if it's truthy
+    logger.info(f"ELK-COMPAT | Before defaults - username: {post_data['account'].get('username')}, display_name: {post_data['account'].get('display_name')}")
+    
+    if 'id' not in post_data['account'] or post_data['account']['id'] is None:
         post_data['account']['id'] = '0'
-    if not post_data['account'].get('username'):
+    if 'username' not in post_data['account'] or post_data['account']['username'] is None:
+        logger.info(f"ELK-COMPAT | Setting username to anonymous (was: {post_data['account'].get('username')})")
         post_data['account']['username'] = 'anonymous'
-    if not post_data['account'].get('acct'):
+    if 'acct' not in post_data['account'] or post_data['account']['acct'] is None:
+        logger.info(f"ELK-COMPAT | Setting acct to anonymous (was: {post_data['account'].get('acct')})")
         post_data['account']['acct'] = 'anonymous'
-    if not post_data['account'].get('display_name'):
+    if 'display_name' not in post_data['account'] or post_data['account']['display_name'] is None:
+        logger.info(f"ELK-COMPAT | Setting display_name to Anonymous (was: {post_data['account'].get('display_name')})")
         post_data['account']['display_name'] = 'Anonymous'
-    if not post_data['account'].get('avatar'):
+        
+    logger.info(f"ELK-COMPAT | After defaults - username: {post_data['account'].get('username')}, display_name: {post_data['account'].get('display_name')}")
+    if 'avatar' not in post_data['account'] or post_data['account']['avatar'] is None:
         post_data['account']['avatar'] = '/assets/favicon/corgi-512x512.png'
-    if not post_data['account'].get('avatar_static'):
+    if 'avatar_static' not in post_data['account'] or post_data['account']['avatar_static'] is None:
         post_data['account']['avatar_static'] = '/assets/favicon/corgi-512x512.png'
-    if not post_data['account'].get('header'):
+    if 'header' not in post_data['account'] or post_data['account']['header'] is None:
         post_data['account']['header'] = '/assets/favicon/corgi-512x512.png'
-    if not post_data['account'].get('header_static'):
+    if 'header_static' not in post_data['account'] or post_data['account']['header_static'] is None:
         post_data['account']['header_static'] = '/assets/favicon/corgi-512x512.png'
 
     # --- Rich Content Generation ---
@@ -528,6 +537,32 @@ def ensure_elk_compatibility(post_data, user_id=None):
     # Add Corgi-specific metadata
     post_data['_corgi_recommendation'] = True
     post_data.setdefault('reblog', None) # Ensure reblog is present
+    
+    # -----------------------------------------
+    # Bridge Corgi-specific metadata → frontend
+    # -----------------------------------------
+    # Older UI integrations expect generic keys
+    # like `recommendation_reason` and
+    # `recommendation_score`.  Map the existing
+    # `_corgi_*` fields if the generic ones are
+    # not already present so that legacy scripts
+    # (e.g. elk-corgi-native.user.js) continue to
+    # render the little "reason" badge and score
+    # percentage.
+    if '_corgi_recommendation_reason' in post_data and 'recommendation_reason' not in post_data:
+        post_data['recommendation_reason'] = post_data['_corgi_recommendation_reason']
+
+    # Surface numeric score if available
+    if '_corgi_score' in post_data and 'recommendation_score' not in post_data:
+        post_data['recommendation_score'] = post_data['_corgi_score']
+        # Provide a human-friendly percent (0-100)
+        try:
+            post_data['recommendation_percent'] = round(float(post_data['_corgi_score']) * 100)
+        except (ValueError, TypeError):
+            pass
+
+    # Explicit flag for convenience in DOM sniffers
+    post_data.setdefault('is_recommendation', True)
     
     return post_data
 
@@ -666,7 +701,8 @@ def build_simple_posts_from_rows(rows, fetch_real_time=True):
             "_corgi_external": True,
             "_corgi_cached": True,
             "_corgi_source_instance": source_instance,
-            "_corgi_real_time_fetched": real_time_data is not None
+            "_corgi_real_time_fetched": real_time_data is not None,
+            "_corgi_recommendation_reason": f"High engagement post from {source_instance} with {final_favourites + final_reblogs} interactions"
         }
         
         # Ensure ELK compatibility (no user_id available in this context)
@@ -704,6 +740,9 @@ def generate_rankings():
     # Get pseudonymized user ID for privacy
     user_alias = generate_user_alias(user_id)
 
+    # A/B testing: assign user to variant (returns model/variant ID or None)
+    variant_model_id = assign_user_to_variant(user_id)
+
     # Check if we need to generate new rankings
     force_refresh = data.get("force_refresh", False)
 
@@ -737,72 +776,15 @@ def generate_rankings():
     # Generate new rankings
     try:
         if USE_IN_MEMORY_DB:
-            # Simplified in-memory version for demo/testing
-            with get_db_connection() as conn:
-                with get_cursor(conn) as cur:
-                    # Get all posts from our test DB
-                    cur.execute("SELECT post_id FROM posts")
-                    post_ids = [row[0] for row in cur.fetchall()]
+            # -----------------------------------------------------------
+            # SQLite Path – Use core ranking algorithm respecting variant
+            # -----------------------------------------------------------
+            ranked_posts = generate_rankings_for_user(
+                user_id, model_id=variant_model_id if variant_model_id else None
+            )
 
-                    # Create a simple recommendation for each post
-                    recommendations = []
-                    for i, post_id in enumerate(post_ids):
-                        recommendations.append(
-                            {
-                                "post_id": post_id,
-                                "user_id": user_alias,
-                                "score": 0.9 - (0.1 * i),  # Simple descending scores
-                                "reason": "Recommended based on content similarity",
-                            }
-                        )
-
-                    # Clear existing recommendations
-                    cur.execute(
-                        "DELETE FROM recommendations WHERE user_id = ?", (user_alias,)
-                    )
-
-                    # Insert new recommendations
-                    for rec in recommendations:
-                        cur.execute(
-                            """
-                            INSERT INTO recommendations (user_id, post_id, score, reason)
-                            VALUES (?, ?, ?, ?)
-                        """,
-                            (
-                                rec["user_id"],
-                                rec["post_id"],
-                                rec["score"],
-                                rec["reason"],
-                            ),
-                        )
-
-                    conn.commit()
-
-                    logger.info(
-                        f"Generated {len(recommendations)} test rankings for user {user_alias}"
-                    )
-                    return (
-                        jsonify(
-                            {
-                                "message": "Test rankings generated successfully",
-                                "count": len(recommendations),
-                            }
-                        ),
-                        201,
-                    )
-        else:
-            # Original version for PostgreSQL
-            # Check if user has an active model variant
-            active_variant_id = get_active_model_variant(user_alias)
-            if active_variant_id:
-                logger.info(f"Using active model variant {active_variant_id} for user {user_alias}")
-                ranked_posts = generate_rankings_for_user(user_id, model_id=active_variant_id)
-            else:
-                logger.info(f"Using default model configuration for user {user_alias}")
-                ranked_posts = generate_rankings_for_user(user_id)
-            
             logger.info(
-                f"Generated {len(ranked_posts)} ranked posts for user {user_alias}"
+                f"Generated {len(ranked_posts)} rankings for user {user_alias} (SQLite)"
             )
 
             return (
@@ -810,6 +792,39 @@ def generate_rankings():
                     {
                         "message": "Rankings generated successfully",
                         "count": len(ranked_posts),
+                        "variant_model_id": variant_model_id,
+                    }
+                ),
+                201,
+            )
+        else:
+            # -----------------------------------------------------------
+            # PostgreSQL Path – A/B variant aware
+            # -----------------------------------------------------------
+            active_variant_id = variant_model_id or get_active_model_variant(user_alias)
+            if active_variant_id:
+                logger.info(
+                    f"Using model variant {active_variant_id} for user {user_alias}"
+                )
+                ranked_posts = generate_rankings_for_user(
+                    user_id, model_id=active_variant_id
+                )
+            else:
+                logger.info(
+                    f"Using default model configuration for user {user_alias}"
+                )
+                ranked_posts = generate_rankings_for_user(user_id)
+
+            logger.info(
+                f"Generated {len(ranked_posts)} ranked posts for user {user_alias} (PostgreSQL)"
+            )
+
+            return (
+                jsonify(
+                    {
+                        "message": "Rankings generated successfully",
+                        "count": len(ranked_posts),
+                        "variant_model_id": active_variant_id,
                     }
                 ),
                 201,
@@ -846,6 +861,9 @@ def get_recommended_timeline():
 
     # Get pseudonymized user ID for privacy
     user_alias = generate_user_alias(user_id)
+
+    # A/B testing: assign user to variant (returns model/variant ID or None)
+    variant_model_id = assign_user_to_variant(user_id)
 
     with get_db_connection() as conn:
         with get_cursor(conn) as cur:
@@ -1126,6 +1144,9 @@ def get_recommendations():
 
     # Get pseudonymized user ID for privacy
     user_alias = generate_user_alias(user_id)
+
+    # A/B testing: assign user to variant (returns model/variant ID or None)
+    variant_model_id = assign_user_to_variant(user_id)
 
     # Different implementations for SQLite and PostgreSQL
     if USE_IN_MEMORY_DB:
@@ -1689,6 +1710,10 @@ def get_recommendations_timeline():
                             "favourites_count": metadata_dict.get('favourites_count', 0),
                             "reblogs_count": metadata_dict.get('reblogs_count', 0),
                             "replies_count": metadata_dict.get('replies_count', 0),
+                            # Corgi-specific enhancements for frontend badges
+                            "is_recommendation": True,
+                            "recommendation_reason": metadata_dict.get('recommendation_reason') or "Based on your interests",
+                            "recommendation_score": metadata_dict.get('recommendation_score'),
                         }
                         recommendations.append(recommendation)
                         
@@ -1737,6 +1762,11 @@ def get_recommendations_timeline():
                     
                     # Convert to Mastodon-compatible format using build_simple_posts_from_rows
                     recommendations = build_simple_posts_from_rows(rows, fetch_real_time=fetch_real_time)
+                    
+                    # Debug logging to see what we're getting
+                    if recommendations:
+                        first_rec = recommendations[0]
+                        logger.info(f"TIMELINE-{request_id} | First recommendation account data: username={first_rec.get('account', {}).get('username')}, display_name={first_rec.get('account', {}).get('display_name')}, acct={first_rec.get('account', {}).get('acct')}")
                 
                 # Remove duplicates based on post ID
                 seen_ids = set()

@@ -26,22 +26,36 @@ COLD_START_DATA_PATH = os.path.join(
 )
 
 
-def load_cold_start_posts() -> List[Dict]:
+def load_cold_start_posts(languages: Optional[List[str]] = None) -> List[Dict]:
     """
     Load cold start posts from the JSON file.
 
+    Args:
+        languages: Optional list of language codes to filter by (e.g., ['en', 'es'])
+
     Returns:
-        List of pre-formatted cold start posts
+        List of pre-formatted cold start posts, optionally filtered by language
     """
     try:
         with open(COLD_START_DATA_PATH, "r") as f:
             cold_start_posts = json.load(f)
-            logger.info(f"Loaded {len(cold_start_posts)} cold start posts")
+            
+        # Filter by language if specified
+        if languages:
+            filtered_posts = []
+            for post in cold_start_posts:
+                post_lang = post.get('language', 'en')  # Default to 'en' if no language specified
+                if post_lang in languages:
+                    filtered_posts.append(post)
+            cold_start_posts = filtered_posts
+            
+        logger.info(f"Loaded {len(cold_start_posts)} cold start posts" + 
+                   (f" (filtered for languages: {', '.join(languages)})" if languages else ""))
 
-            # No need to track metrics here as it will be tracked by the calling functions
-            # This function just loads data; the decision to use it is what we track
+        # No need to track metrics here as it will be tracked by the calling functions
+        # This function just loads data; the decision to use it is what we track
 
-            return cold_start_posts
+        return cold_start_posts
     except Exception as e:
         logger.error(f"Error loading cold start posts: {e}")
         # Track the failure to load cold start posts
@@ -95,7 +109,7 @@ def is_new_user(user_id: str) -> bool:
         return True  # Default to treating as new user on error
 
 
-def get_ranked_recommendations(user_id: str, limit: int = 10) -> List[Dict]:
+def get_ranked_recommendations(user_id: str, limit: int = 10, languages: Optional[List[str]] = None) -> List[Dict]:
     """
     Get personalized ranked recommendations for a user.
 
@@ -106,6 +120,7 @@ def get_ranked_recommendations(user_id: str, limit: int = 10) -> List[Dict]:
     Args:
         user_id: The user ID to get recommendations for
         limit: Maximum number of recommendations to return
+        languages: List of languages to consider for recommendations
 
     Returns:
         List of recommended posts in ranked order, formatted as Mastodon-compatible posts
@@ -113,19 +128,19 @@ def get_ranked_recommendations(user_id: str, limit: int = 10) -> List[Dict]:
     # For anonymous users or when user_id is None, use cold start data
     if not user_id or user_id == "anonymous":
         logger.info(f"Using cold start recommendations for anonymous user")
-        return load_cold_start_posts()
+        return load_cold_start_posts(languages=languages)
 
     # For synthetic or validator users, use cold start data
     if user_id.startswith("corgi_validator_") or user_id.startswith("test_"):
         logger.info(f"Using cold start recommendations for synthetic user {user_id}")
-        return load_cold_start_posts()
+        return load_cold_start_posts(languages=languages)
 
     # Check if user is new or has low activity
     if is_new_user(user_id):
         logger.info(
             f"User {user_id} is new or has low activity, using cold start recommendations"
         )
-        return load_cold_start_posts()
+        return load_cold_start_posts(languages=languages)
 
     # Get pseudonymized user ID for privacy
     try:
@@ -133,13 +148,13 @@ def get_ranked_recommendations(user_id: str, limit: int = 10) -> List[Dict]:
         logger.debug(f"Generated user alias for {user_id}")
     except Exception as e:
         logger.error(f"Error generating user alias: {e}")
-        return load_cold_start_posts()
+        return load_cold_start_posts(languages=languages)
 
     try:
         # Generate rankings for this user
-        logger.info(f"Generating rankings for user {user_id}")
+        logger.info(f"Generating rankings for user {user_id} with languages: {languages}")
         start_time = time.time()
-        ranked_posts = generate_rankings_for_user(user_id)
+        ranked_posts = generate_rankings_for_user(user_id, languages=languages)
         elapsed = time.time() - start_time
         logger.info(f"Rankings generation took {elapsed:.3f} seconds")
 
@@ -147,7 +162,7 @@ def get_ranked_recommendations(user_id: str, limit: int = 10) -> List[Dict]:
             logger.warning(
                 f"No ranked posts generated for user {user_id}, falling back to cold start"
             )
-            return load_cold_start_posts()
+            return load_cold_start_posts(languages=languages)
 
         # Sort by ranking score (descending) and limit to requested number
         ranked_posts.sort(key=lambda x: x.get("ranking_score", 0), reverse=True)
@@ -164,6 +179,7 @@ def get_ranked_recommendations(user_id: str, limit: int = 10) -> List[Dict]:
             try:
                 with get_db_connection() as conn:
                     with conn.cursor() as cur:
+                        # First try post_metadata table
                         cur.execute(
                             """
                             SELECT mastodon_post
@@ -176,6 +192,53 @@ def get_ranked_recommendations(user_id: str, limit: int = 10) -> List[Dict]:
                         result = cur.fetchone()
                         if result and result[0]:
                             mastodon_post = result[0]
+                        else:
+                            # If not found, try crawled_posts table and construct mastodon_post
+                            cur.execute(
+                                """
+                                SELECT post_id, content, author_username, author_acct, author_display_name,
+                                       author_avatar, created_at, favourites_count, reblogs_count, replies_count,
+                                       url, source_instance, language, author_id
+                                FROM crawled_posts
+                                WHERE post_id = %s
+                            """,
+                                (post["post_id"],),
+                            )
+                            
+                            crawled_result = cur.fetchone()
+                            if crawled_result:
+                                (cp_id, cp_content, cp_username, cp_acct, cp_display_name, cp_avatar, 
+                                 cp_created_at, cp_favs, cp_reblogs, cp_replies, cp_url, cp_instance, 
+                                 cp_language, cp_author_id) = crawled_result
+                                
+                                # Construct mastodon_post from crawled_posts data
+                                mastodon_post = {
+                                    "id": cp_id,
+                                    "content": cp_content or "",
+                                    "created_at": cp_created_at.isoformat() if cp_created_at else datetime.now().isoformat(),
+                                    "account": {
+                                        "id": cp_author_id or "unknown",
+                                        "username": cp_username or "unknown",
+                                        "acct": cp_acct or f"{cp_username}@{cp_instance}",
+                                        "display_name": cp_display_name or cp_username or "Unknown User",
+                                        "avatar": cp_avatar or "",
+                                        "url": f"https://{cp_instance}/@{cp_username}" if cp_instance and cp_username else "",
+                                    },
+                                    "favourites_count": cp_favs or 0,
+                                    "reblogs_count": cp_reblogs or 0,
+                                    "replies_count": cp_replies or 0,
+                                    "url": cp_url or "",
+                                    "language": cp_language or "en",
+                                    "media_attachments": [],
+                                    "mentions": [],
+                                    "tags": [],
+                                    "emojis": [],
+                                    "visibility": "public",
+                                    "_corgi_source_instance": cp_instance,
+                                    "_corgi_external": True,
+                                    "_corgi_cached": True,
+                                }
+                                logger.debug(f"Constructed mastodon_post from crawled_posts for {cp_id}")
             except Exception as e:
                 logger.error(
                     f"Error fetching Mastodon post data for {post['post_id']}: {e}"
@@ -274,7 +337,7 @@ def get_ranked_recommendations(user_id: str, limit: int = 10) -> List[Dict]:
         FALLBACK_USAGE_TOTAL.labels(reason="recommendation_error").inc()
 
         # Load and track cold start recommendations
-        cold_start_posts = load_cold_start_posts()
+        cold_start_posts = load_cold_start_posts(languages=languages)
         RECOMMENDATIONS_TOTAL.labels(
             source="cold_start", user_type="returning_user_error_fallback"
         ).inc(len(cold_start_posts))

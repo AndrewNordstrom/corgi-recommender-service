@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         ELK Native AI Recommendations
 // @namespace    http://tampermonkey.net/
-// @version      3.0
+// @version      3.2
 // @description  Native AI-powered recommendations for ELK (Powered by Corgi)
 // @author       ELK Community
 // @match        http://localhost:3004/*
@@ -13,9 +13,9 @@
 (function() {
     'use strict';
     
-    console.log('🤖 ELK AI Recommendations initializing...');
+    console.log('🤖 ELK AI Recommendations initializing... [v3.2 - Language filtering added]');
     
-    const CORGI_API_URL = 'http://localhost:9999';
+    const CORGI_API_URL = localStorage.getItem('corgi_api_url') || window.__CORGI_API_BASE_URL || 'http://localhost:5002';
     
     // Ultra-native ELK integration - uses their exact design system
     const ELK_NATIVE = {
@@ -183,6 +183,8 @@
             article.setAttribute('tabindex', '0');
             article.setAttribute('aria-label', isAI ? 'AI-recommended post' : 'Timeline post');
             
+            article.dataset.postId = post.id || post.post_id || '';
+            
             const emoji = isAI ? '🤖' : '📰';
             const name = isAI ? 'AI Curator' : 'Timeline';
             const handle = isAI ? '@ai.elk' : '@feed';
@@ -213,22 +215,30 @@
                         </div>
                     </div>
                     
-                    <div class="${ELK_NATIVE.postContent}">
-                        ${this.enhanceContent(post.content || post.text || 'AI-curated content')}
-                    </div>
-                    
-                    ${isAI && post.recommendation_reason ? `
-                        <div class="${ELK_NATIVE.aiInsight}">
-                            <div class="flex items-start space-x-2">
-                                <svg class="w-4 h-4 text-primary mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
-                                </svg>
-                                <p class="text-sm text-secondary leading-relaxed">
-                                    ${post.recommendation_reason}
-                                </p>
+                    ${isAI ? `
+                        <div class="mt-3 space-y-3">
+                            ${post.recommendation_reason ? `
+                                <div class="${ELK_NATIVE.aiInsight}">
+                                    <div class="flex items-start space-x-2">
+                                        <svg class="w-4 h-4 text-primary mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
+                                        </svg>
+                                        <p class="text-sm text-secondary leading-relaxed">
+                                            ${post.recommendation_reason}
+                                        </p>
+                                    </div>
+                                </div>
+                            ` : ''}
+                            <div class="flex items-center space-x-2">
+                                ${this.createNativeAction('more', 'More like this', 'hover:bg-yellow-500/10 hover:text-yellow-700')}
+                                ${this.createNativeAction('less', 'Less like this', 'hover:bg-purple-500/10 hover:text-purple-700')}
                             </div>
                         </div>
                     ` : ''}
+
+                    <div class="${ELK_NATIVE.postContent}">
+                        ${this.enhanceContent(post.content || post.text || 'AI-curated content')}
+                    </div>
                     
                     <div class="${ELK_NATIVE.actions}">
                         ${this.createNativeAction('reply', 'Reply', 'hover:bg-blue-500/10 hover:text-blue-600')}
@@ -248,7 +258,9 @@
                 reply: 'M2.25 12.76c0 1.6 1.123 2.994 2.707 3.227 1.068.157 2.148.279 3.238.364.466.037.893.281 1.153.671L12 19.764l2.652-2.742c.26-.39.687-.634 1.153-.671 1.09-.085 2.17-.207 3.238-.364 1.584-.233 2.707-1.627 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z',
                 boost: 'M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15',
                 like: 'M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z',
-                share: 'M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z'
+                share: 'M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z',
+                more: 'M12 5v14m7-7H5',
+                less: 'M5 12h14'
             };
             
             return `
@@ -290,6 +302,26 @@
                     break;
                 case 'share':
                     console.log('📤 AI post share');
+                    break;
+                case 'more':
+                case 'less':
+                    const actionType = action === 'more' ? 'more_like_this' : 'less_like_this';
+                    button.classList.toggle('text-primary');
+                    // Determine post ID from closest article element
+                    const postRoot = button.closest('article');
+                    const postId = postRoot ? postRoot.dataset.postId : null;
+                    try {
+                        fetch(`${CORGI_API_URL}/api/v1/interactions`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                user_id: 'anonymous',
+                                post_id: postId,
+                                action_type: actionType,
+                                context: { source: 'elk_native' }
+                            })
+                        });
+                    } catch (e) {}
                     break;
             }
         }

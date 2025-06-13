@@ -14,6 +14,7 @@ from datetime import datetime
 from urllib.parse import urljoin
 from flask import Blueprint, request, jsonify, Response
 import requests
+from typing import Optional, List, Dict, Union
 
 from utils.logging_decorator import log_route
 from utils.timeline_injector import inject_into_timeline
@@ -24,11 +25,11 @@ from utils.recommendation_engine import (
 )
 from utils.metrics import (
     track_injection,
-    track_fallback,
     track_timeline_post_counts,
     track_injection_processing_time,
     track_recommendation_generation,
     track_recommendation_processing_time,
+    track_fallback,
 )
 from routes.proxy import (
     get_authenticated_user,
@@ -38,6 +39,7 @@ from routes.proxy import (
     should_reenter_cold_start,
     generate_user_alias,
 )
+from db.connection import get_db_connection, get_cursor, USE_IN_MEMORY_DB
 
 # Setup logger
 logger = logging.getLogger(__name__)
@@ -90,7 +92,7 @@ def load_json_file(filepath):
         raise
 
 
-def get_real_mastodon_posts_from_db(limit=20):
+def get_real_mastodon_posts_from_db(limit=20, languages: Optional[List[str]] = None):
     """
     Get real Mastodon posts from the database.
     
@@ -102,19 +104,28 @@ def get_real_mastodon_posts_from_db(limit=20):
         List of real Mastodon posts with enhanced interaction counts and user states
     """
     try:
-        from db.connection import get_db_connection
-        
         with get_db_connection() as conn:
-            with conn.cursor() as cur:
+            with get_cursor(conn) as cur:
                 # Get real Mastodon posts from the database
-                cur.execute("""
+                language_clause = ""
+                params = []
+                if languages:
+                    language_clause = "AND language IN ({})".format(
+                        ",".join(["%s"] * len(languages))
+                    )
+                    params.extend(languages)
+                
+                params.append(limit)
+
+                cur.execute(f"""
                     SELECT id, content, created_at, author_id, author_name, language,
                            favourites_count, reblogs_count, replies_count, url, source_instance
                     FROM posts 
                     WHERE is_real_mastodon_post = 1
+                    {language_clause}
                     ORDER BY created_at DESC
                     LIMIT %s
-                """, (limit,))
+                """, tuple(params))
                 
                 rows = cur.fetchall()
                 
@@ -154,7 +165,218 @@ def get_real_mastodon_posts_from_db(limit=20):
         return []
 
 
-def load_injected_posts_for_user(user_id):
+def get_trending_cold_start_posts(limit: int = 20, languages: Optional[List[str]] = None) -> List[Dict]:
+    """
+    Get trending posts from crawled_posts table for cold start users.
+    
+    This creates a dynamic "trending page" experience by selecting posts based on:
+    - Recent engagement (favorites, reblogs, replies)
+    - Recency (posts from last 7 days preferred)
+    - Diversity (mix of different instances and authors)
+    
+    Args:
+        limit: Maximum number of posts to return
+        languages: Optional list of language codes to filter by
+        
+    Returns:
+        List of trending posts formatted for Mastodon compatibility
+    """
+    try:
+        with get_db_connection() as conn:
+            with get_cursor(conn) as cur:
+                # Calculate trending score based on engagement and recency
+                # Score = (favorites * 1 + reblogs * 2 + replies * 1.5) * recency_factor
+                # Recency factor: 1.0 for last 24h, 0.8 for 2-7 days, 0.5 for older
+                
+                language_clause = ""
+                params = []
+                if languages:
+                    language_clause = "AND language IN ({})".format(
+                        ",".join(["%s"] * len(languages))
+                    )
+                    params.extend(languages)
+                
+                params.append(limit * 3)  # Get more posts to ensure diversity
+                
+                if USE_IN_MEMORY_DB:
+                    # SQLite version with different date syntax
+                    cur.execute(f"""
+                        SELECT 
+                            post_id, content, author_username, author_acct, author_display_name,
+                            author_avatar, created_at, favourites_count, reblogs_count, replies_count,
+                            url, source_instance, language, author_id, tags, media_attachments,
+                            mentions, emojis, visibility, card,
+                            -- Calculate trending score
+                            (
+                                COALESCE(favourites_count, 0) * 1.0 + 
+                                COALESCE(reblogs_count, 0) * 2.0 + 
+                                COALESCE(replies_count, 0) * 1.5
+                            ) * 
+                            CASE 
+                                WHEN created_at > datetime('now', '-1 day') THEN 1.0
+                                WHEN created_at > datetime('now', '-7 days') THEN 0.8
+                                ELSE 0.5
+                            END as trending_score
+                        FROM crawled_posts
+                        WHERE created_at > datetime('now', '-30 days')  -- Only recent posts
+                        AND content IS NOT NULL 
+                        AND LENGTH(content) > 10  -- Ensure substantial content
+                        {language_clause.replace('%s', '?')}
+                        ORDER BY trending_score DESC, created_at DESC
+                        LIMIT ?
+                    """, tuple(params))
+                else:
+                    # PostgreSQL version
+                    cur.execute(f"""
+                        SELECT 
+                            post_id, content, author_username, author_acct, author_display_name,
+                            author_avatar, created_at, favourites_count, reblogs_count, replies_count,
+                            url, source_instance, language, author_id, tags, media_attachments,
+                            mentions, emojis, visibility, card,
+                            -- Calculate trending score
+                            (
+                                COALESCE(favourites_count, 0) * 1.0 + 
+                                COALESCE(reblogs_count, 0) * 2.0 + 
+                                COALESCE(replies_count, 0) * 1.5
+                            ) * 
+                            CASE 
+                                WHEN created_at > NOW() - INTERVAL '1 day' THEN 1.0
+                                WHEN created_at > NOW() - INTERVAL '7 days' THEN 0.8
+                                ELSE 0.5
+                            END as trending_score
+                        FROM crawled_posts
+                        WHERE created_at > NOW() - INTERVAL '30 days'  -- Only recent posts
+                        AND content IS NOT NULL 
+                        AND LENGTH(content) > 10  -- Ensure substantial content
+                        {language_clause}
+                        ORDER BY trending_score DESC, created_at DESC
+                        LIMIT %s
+                    """, tuple(params))
+                
+                rows = cur.fetchall()
+                
+                if not rows:
+                    logger.warning("No trending posts found in crawled_posts, falling back to static cold start")
+                    return load_cold_start_posts(languages=languages)[:limit]
+                
+                # Process and diversify the results
+                trending_posts = []
+                seen_authors = set()
+                seen_instances = set()
+                
+                for row in rows:
+                    if len(trending_posts) >= limit:
+                        break
+                        
+                    (post_id, content, author_username, author_acct, author_display_name,
+                     author_avatar, created_at, favourites_count, reblogs_count, replies_count,
+                     url, source_instance, language, author_id, tags_json, media_json,
+                     mentions_json, emojis_json, visibility, card_json, trending_score) = row
+                    
+                    # Promote diversity - limit posts per author/instance
+                    if author_username in seen_authors and len(seen_authors) < limit // 2:
+                        continue
+                    if source_instance in seen_instances and len(seen_instances) < limit // 3:
+                        continue
+                        
+                    seen_authors.add(author_username)
+                    seen_instances.add(source_instance)
+                    
+                    # Parse JSON fields safely
+                    try:
+                        if isinstance(tags_json, str):
+                            tags = json.loads(tags_json) if tags_json else []
+                        else:
+                            tags = tags_json if tags_json else []
+                    except:
+                        tags = []
+                        
+                    try:
+                        if isinstance(media_json, str):
+                            media_attachments = json.loads(media_json) if media_json else []
+                        else:
+                            media_attachments = media_json if media_json else []
+                    except:
+                        media_attachments = []
+                        
+                    try:
+                        if isinstance(mentions_json, str):
+                            mentions = json.loads(mentions_json) if mentions_json else []
+                        else:
+                            mentions = mentions_json if mentions_json else []
+                    except:
+                        mentions = []
+                        
+                    try:
+                        if isinstance(emojis_json, str):
+                            emojis = json.loads(emojis_json) if emojis_json else []
+                        else:
+                            emojis = emojis_json if emojis_json else []
+                    except:
+                        emojis = []
+                        
+                    try:
+                        if isinstance(card_json, str):
+                            card = json.loads(card_json) if card_json else None
+                        else:
+                            card = card_json if card_json else None
+                    except:
+                        card = None
+                    
+                    # Format as Mastodon-compatible post
+                    post = {
+                        "id": str(post_id),
+                        "created_at": created_at.isoformat() if created_at else datetime.now().isoformat(),
+                        "content": content,
+                        "account": {
+                            "id": author_id or f"user_{author_username}",
+                            "username": author_username,
+                            "acct": author_acct or f"{author_username}@{source_instance}",
+                            "display_name": author_display_name or author_username,
+                            "avatar": author_avatar or "https://via.placeholder.com/48x48",
+                            "url": f"https://{source_instance}/@{author_username}",
+                        },
+                        "favourites_count": favourites_count or 0,
+                        "reblogs_count": reblogs_count or 0,
+                        "replies_count": replies_count or 0,
+                        "language": language or "en",
+                        "url": url or f"https://{source_instance}/@{author_username}/{post_id}",
+                        "tags": tags,
+                        "media_attachments": media_attachments,
+                        "mentions": mentions,
+                        "emojis": emojis,
+                        "card": card,
+                        "visibility": visibility or "public",
+                        "favourited": False,
+                        "reblogged": False,
+                        "bookmarked": False,
+                        # Metadata for tracking
+                        "is_real_mastodon_post": True,
+                        "is_synthetic": False,
+                        "is_cold_start": True,
+                        "is_trending": True,
+                        "injected": True,
+                        "source_instance": source_instance,
+                        "trending_score": float(trending_score) if trending_score else 0.0,
+                        "injection_metadata": {
+                            "source": "trending_cold_start",
+                            "strategy": "engagement_based",
+                            "explanation": f"Trending post from {source_instance} with {favourites_count + reblogs_count + replies_count} interactions"
+                        }
+                    }
+                    
+                    trending_posts.append(post)
+                
+                logger.info(f"Generated {len(trending_posts)} trending cold start posts from {len(seen_instances)} instances")
+                return trending_posts
+                
+    except Exception as e:
+        logger.error(f"Error getting trending cold start posts: {e}")
+        # Fall back to static cold start posts
+        return load_cold_start_posts(languages=languages)[:limit]
+
+
+def load_injected_posts_for_user(user_id, languages: Optional[List[str]] = None):
     """
     Load appropriate injectable posts for a user based on their session state.
 
@@ -167,65 +389,59 @@ def load_injected_posts_for_user(user_id):
     """
     start_time = time.time()
 
-    # For anonymous users or when user_id is None, use real Mastodon posts
+    # For anonymous users or when user_id is None, use trending posts
     if not user_id or user_id == "anonymous":
         try:
-            posts = get_real_mastodon_posts_from_db(limit=20)
-            if not posts:
-                posts = load_cold_start_posts()
-            logger.info(f"Loaded {len(posts)} posts for anonymous user")
+            posts = get_trending_cold_start_posts(limit=20, languages=languages)
+            logger.info(f"Loaded {len(posts)} trending posts for anonymous user")
 
             # Track metrics
-            track_recommendation_generation("cold_start", "anonymous", len(posts))
+            track_recommendation_generation("trending_cold_start", "anonymous", len(posts))
 
-            return posts, "cold_start"
+            return posts, "trending_cold_start"
         except Exception as e:
-            logger.error(f"Error loading cold start posts: {e}")
-            track_fallback("error_loading_cold_start")
+            logger.error(f"Error loading trending cold start posts: {e}")
+            track_fallback("error_loading_trending_cold_start")
             return [], "cold_start"
 
-    # For synthetic or validator users, use real Mastodon posts
+    # For synthetic or validator users, use trending posts
     if user_id.startswith("corgi_validator_") or user_id.startswith("test_"):
         try:
-            posts = get_real_mastodon_posts_from_db(limit=20)
-            if not posts:
-                posts = load_cold_start_posts()
+            posts = get_trending_cold_start_posts(limit=20, languages=languages)
             logger.info(
-                f"Loaded {len(posts)} posts for synthetic user {user_id}"
+                f"Loaded {len(posts)} trending posts for synthetic user {user_id}"
             )
 
             # Track metrics
-            track_recommendation_generation("cold_start", "synthetic", len(posts))
+            track_recommendation_generation("trending_cold_start", "synthetic", len(posts))
 
-            return posts, "cold_start"
+            return posts, "trending_cold_start"
         except Exception as e:
-            logger.error(f"Error loading cold start posts for synthetic user: {e}")
-            track_fallback("error_loading_cold_start")
+            logger.error(f"Error loading trending cold start posts for synthetic user: {e}")
+            track_fallback("error_loading_trending_cold_start")
             return [], "cold_start"
 
-    # Check if user is new or has low activity - but still use real Mastodon posts
+    # Check if user is new or has low activity - use trending posts
     if is_new_user(user_id):
         try:
-            posts = get_real_mastodon_posts_from_db(limit=20)
-            if not posts:
-                posts = load_cold_start_posts()
-            logger.info(f"User {user_id} is new, using real Mastodon posts")
+            posts = get_trending_cold_start_posts(limit=20, languages=languages)
+            logger.info(f"User {user_id} is new, using trending posts")
 
             # Track metrics
-            track_recommendation_generation("cold_start", "new_user", len(posts))
+            track_recommendation_generation("trending_cold_start", "new_user", len(posts))
             track_fallback("new_user")
 
-            return posts, "cold_start"
+            return posts, "trending_cold_start"
         except Exception as e:
-            logger.error(f"Error loading cold start posts for new user: {e}")
-            track_fallback("error_loading_cold_start")
+            logger.error(f"Error loading trending cold start posts for new user: {e}")
+            track_fallback("error_loading_trending_cold_start")
             return [], "cold_start"
 
     # For returning users with sufficient activity, get personalized recommendations
     try:
         # Get recommended posts from the recommendation engine
         recommendation_start_time = time.time()
-        posts = get_ranked_recommendations(user_id, limit=20)
+        posts = get_ranked_recommendations(user_id, limit=20, languages=languages)
         recommendation_time = time.time() - recommendation_start_time
 
         # Track recommendation processing time
@@ -234,19 +450,19 @@ def load_injected_posts_for_user(user_id):
         )
 
         if not posts:
-            # Fall back to cold start if no recommendations
+            # Fall back to trending posts if no recommendations
             logger.warning(
-                f"No recommended posts for user {user_id}, falling back to cold start"
+                f"No recommended posts for user {user_id}, falling back to trending posts"
             )
-            posts = load_cold_start_posts()
+            posts = get_trending_cold_start_posts(limit=20, languages=languages)
 
             # Track metrics
             track_fallback("no_recommendations")
             track_recommendation_generation(
-                "cold_start", "returning_user_fallback", len(posts)
+                "trending_cold_start", "returning_user_fallback", len(posts)
             )
 
-            return posts, "cold_start_fallback"
+            return posts, "trending_cold_start_fallback"
 
         # Track successful personalized recommendations
         track_recommendation_generation(
@@ -259,17 +475,17 @@ def load_injected_posts_for_user(user_id):
         return posts, "personalized"
     except Exception as e:
         logger.error(f"Error loading personalized posts: {e}")
-        # Fall back to cold start data on error
+        # Fall back to trending posts on error
         try:
-            posts = load_cold_start_posts()
+            posts = get_trending_cold_start_posts(limit=20, languages=languages)
 
             # Track metrics
             track_fallback("recommendation_error")
             track_recommendation_generation(
-                "cold_start", "returning_user_error_fallback", len(posts)
+                "trending_cold_start", "returning_user_error_fallback", len(posts)
             )
 
-            return posts, "cold_start_fallback"
+            return posts, "trending_cold_start_fallback"
         except:
             track_fallback("total_failure")
             return [], "error"
@@ -356,6 +572,8 @@ def get_timeline():
     limit = request.args.get("limit", default=20, type=int)
     strategy_name = request.args.get("strategy", default=None)
     inject_posts = request.args.get("inject", "true").lower() == "true"
+    languages_str = request.args.get("languages")
+    languages = languages_str.split(",") if languages_str else []
 
     # Get user ID either from query param or auth header
     user_id = get_authenticated_user(request)
@@ -477,7 +695,7 @@ def get_timeline():
     # If we should inject posts
     if inject_posts:
         # Get posts to inject
-        injectable_posts, source_type = load_injected_posts_for_user(user_id)
+        injectable_posts, source_type = load_injected_posts_for_user(user_id, languages=languages)
 
         if injectable_posts:
             # Get appropriate injection strategy
@@ -860,5 +1078,37 @@ def ensure_elk_compatibility(post_data, user_id=None):
         post_data['reblogsCount'] = post_data.get('reblogs_count', 0)
     if 'repliesCount' not in post_data:
         post_data['repliesCount'] = post_data.get('replies_count', 0)
+    
+    # -----------------------------------------
+    # Bridge Corgi-specific metadata → frontend
+    # -----------------------------------------
+    if 'recommendation_reason' not in post_data:
+        if post_data.get('_corgi_recommendation_reason'):
+            post_data['recommendation_reason'] = post_data['_corgi_recommendation_reason']
+        elif post_data.get('injection_metadata', {}).get('explanation'):
+            post_data['recommendation_reason'] = post_data['injection_metadata']['explanation']
+
+    # Surface score
+    if 'recommendation_score' not in post_data:
+        if post_data.get('_corgi_score') is not None:
+            post_data['recommendation_score'] = post_data['_corgi_score']
+        elif post_data.get('injection_metadata', {}).get('score') is not None:
+            post_data['recommendation_score'] = post_data['injection_metadata']['score']
+    
+    if post_data.get('recommendation_score') is not None and 'recommendation_percent' not in post_data:
+        try:
+            post_data['recommendation_percent'] = round(float(post_data['recommendation_score']) * 100)
+        except (ValueError, TypeError):
+            pass
+    
+    # Explicit recommendation flag so UI/injection can detect
+    if 'is_recommendation' not in post_data:
+        # Consider any post with recommendation_reason or _corgi_recommendation flag as recommendation
+        if post_data.get('_corgi_recommendation') or post_data.get('recommendation_reason'):
+            post_data['is_recommendation'] = True
+
+    # Duplicate reason into _corgi_reason for native ELK setting
+    if 'recommendation_reason' in post_data and '_corgi_reason' not in post_data:
+        post_data['_corgi_reason'] = post_data['recommendation_reason']
     
     return post_data

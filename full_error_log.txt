@@ -1,0 +1,28 @@
+WARNING: USER_HASH_SALT not set. Using an empty salt is not secure for production!
+2025-06-12 16:17:11,204 [INFO] [db.connection] Database connection pool established successfully
+2025-06-12 16:17:11,707 [INFO] [utils.rehydration_service] ✅ Redis connection established for rehydration service
+2025-06-12 16:17:11,806 [WARNING] [utils.celery_app] Could not load beat configuration: No module named 'utils.celery_beat_config'
+2025-06-12 16:17:11,806 [INFO] [routes.recommendations] Async tasks (Celery) are available
+2025-06-12 16:17:11,831 [INFO] [__main__] Configuring CORS with allowed origins: ['http://localhost:3000', 'http://localhost:5314']
+2025-06-12 16:17:11,833 [WARNING] [utils.metrics] Port 9100 is already in use, metrics server may already be running
+2025-06-12 16:17:11,833 [INFO] [utils.metrics] Metrics are still being collected and will be exported on port 9100
+2025-06-12 16:17:11,833 [INFO] [__main__] Prometheus metrics server started on port 9100
+2025-06-12 16:17:11,833 [INFO] [db.schema] Creating database tables...
+2025-06-12 16:17:11,835 [INFO] [db.schema] Creating table indexes...
+2025-06-12 16:17:11,837 [INFO] [db.schema] Database schema created successfully
+2025-06-12 16:17:11,837 [INFO] [db.connection] PostgreSQL database schema initialized successfully
+2025-06-12 16:17:11,837 [INFO] [__main__] Database initialized successfully on startup
+2025-06-12 16:17:11,838 [INFO] [core.model_registry] Model registry database tables initialized
+2025-06-12 16:17:11,840 [INFO] [core.model_registry] Loaded 1 models from database
+2025-06-12 16:17:11,840 [INFO] [core.model_registry] Model registry initialized with base path: models
+2025-06-12 16:17:11,840 [INFO] [core.recommender_factory] Recommender factory initialized
+2025-06-12 16:17:11,840 [INFO] [__main__] Model registry factory initialized successfully
+2025-06-12 16:17:11,849 [INFO] [routes.docs] API documentation registered at /api/v1/docs
+2025-06-12 16:17:11,849 [INFO] [routes.docs] ReDoc documentation registered at /api/v1/docs/redoc
+2025-06-12 16:17:11,851 [INFO] [__main__] Setup GUI disabled - set ENABLE_SETUP_GUI=true to enable
+2025-06-12 16:17:11,853 [INFO] [__main__] Starting Corgi Recommender Service on 0.0.0.0:5002 (debug=False)
+ * Serving Flask app 'app'
+ * Debug mode: off
+Address already in use
+Port 5002 is in use by another program. Either identify and stop that program, or start the server with a different port.
+2025-06-12 16:17:11,855 [INFO] [db.connection] Database connection pool closed

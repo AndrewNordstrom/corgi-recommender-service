@@ -136,6 +136,7 @@ def get_candidate_posts(
     days_limit: int = 7,
     exclude_post_ids: List[str] = None,
     include_synthetic: bool = False,
+    languages: Optional[List[str]] = None,
 ) -> List[Dict]:
     """
     Retrieve candidate posts for ranking.
@@ -148,6 +149,7 @@ def get_candidate_posts(
         include_synthetic: Whether to include synthetic posts (default: False)
                           If False, only returns posts with mastodon_post NOT NULL
                           If True, includes all posts
+        languages: List of languages to filter posts by
 
     Returns:
         List of post records with post_id, author_id, content, etc.
@@ -155,9 +157,17 @@ def get_candidate_posts(
     # First check how many real posts we have available in total (for diagnostics)
     with get_cursor(conn) as cur:
         if USE_IN_MEMORY_DB:
-            # SQLite version
+            # SQLite version - check both posts and crawled_posts tables
             cur.execute("SELECT COUNT(*) FROM posts")
-            total_real_posts = cur.fetchone()[0]
+            posts_count = cur.fetchone()[0]
+            
+            try:
+                cur.execute("SELECT COUNT(*) FROM crawled_posts")
+                crawled_count = cur.fetchone()[0]
+            except:
+                crawled_count = 0
+                
+            total_real_posts = posts_count + crawled_count
             total_synthetic_posts = 0  # SQLite doesn't distinguish synthetic posts
         else:
             # PostgreSQL version
@@ -170,22 +180,50 @@ def get_candidate_posts(
         logger.info(f"Database contains {total_real_posts} real posts and {total_synthetic_posts} synthetic posts")
 
     exclude_clause = ""
+    language_clause = ""
     params = []
     
     if USE_IN_MEMORY_DB:
-        # SQLite version - get from posts table
+        # SQLite version - get from both posts and crawled_posts tables
         if exclude_post_ids and len(exclude_post_ids) > 0:
             placeholders = ", ".join(["?"] * len(exclude_post_ids))
             exclude_clause = f"AND post_id NOT IN ({placeholders})"
-            params = exclude_post_ids + [limit]
-        else:
-            params = [limit]
+            params.extend(exclude_post_ids)
+        
+        if languages:
+            lang_placeholders = ", ".join(["?"] * len(languages))
+            language_clause = f"AND language IN ({lang_placeholders})"
+            params.extend(languages)
             
+        # Finalize params for SQLite (need to duplicate for UNION)
+        params_posts = params.copy()
+        params_crawled = params.copy()
+        params_posts.append(limit // 2)  # Split limit between tables
+        params_crawled.append(limit // 2)
+
         query = f"""
-            SELECT post_id, author_id, content, created_at, metadata
+            SELECT post_id, author_id, content, created_at, metadata, language, 'posts' as source_table
             FROM posts
             WHERE 1=1
             {exclude_clause}
+            {language_clause}
+            ORDER BY created_at DESC
+            LIMIT ?
+        """
+        
+        # Also query crawled_posts table
+        crawled_query = f"""
+            SELECT post_id, author_id, content, created_at, 
+                   json_object('interaction_counts', json_object(
+                       'favorites', favourites_count,
+                       'reblogs', reblogs_count, 
+                       'replies', replies_count
+                   )) as metadata,
+                   language, 'crawled_posts' as source_table
+            FROM crawled_posts
+            WHERE 1=1
+            {exclude_clause}
+            {language_clause}
             ORDER BY created_at DESC
             LIMIT ?
         """
@@ -196,33 +234,66 @@ def get_candidate_posts(
         
         if exclude_post_ids and len(exclude_post_ids) > 0:
             placeholders = ", ".join(["%s"] * len(exclude_post_ids))
-            exclude_clause = f"AND post_id NOT IN ({placeholders})"
-            params = [days_limit] + exclude_post_ids + [limit]
-        else:
-            params = [days_limit, limit]
+            exclude_clause = f"AND pm.post_id NOT IN ({placeholders})"
+            params.extend(exclude_post_ids)
+            
+        if languages:
+            lang_placeholders = ", ".join(["%s"] * len(languages))
+            language_clause = f"AND pm.language IN ({lang_placeholders})"
+            params.extend(languages)
+        
+        # Finalize params for PostgreSQL
+        params.append(limit)
             
         query = f"""
-            SELECT post_id, author_id, author_name, content, created_at, interaction_counts
-            FROM post_metadata
-            WHERE created_at > NOW() - INTERVAL '%s days'
+            SELECT pm.post_id, pm.author_id, pm.author_name, pm.content, 
+                   pm.created_at, pm.interaction_counts, pm.language
+            FROM post_metadata pm
+            WHERE pm.created_at > NOW() - INTERVAL '%s days'
             {exclude_clause}
+            {language_clause}
             {mastodon_clause}
-            ORDER BY created_at DESC
+            ORDER BY pm.created_at DESC
             LIMIT %s
         """
 
     with get_cursor(conn) as cur:
-        logger.debug(f"Executing query: {query}")
-        cur.execute(query, params)
-        results = cur.fetchall()
-        
-        logger.info(f"Found {len(results)} candidate posts")
+        if USE_IN_MEMORY_DB:
+            # Execute both queries and combine results
+            logger.debug(f"Executing posts query: {query}")
+            cur.execute(query, params_posts)
+            posts_results = cur.fetchall()
+            posts_columns = [desc[0] for desc in cur.description]
+            
+            logger.debug(f"Executing crawled_posts query: {crawled_query}")
+            cur.execute(crawled_query, params_crawled)
+            crawled_results = cur.fetchall()
+            crawled_columns = [desc[0] for desc in cur.description]
+            
+            # Combine results
+            all_results = []
+            for row in posts_results:
+                all_results.append(dict(zip(posts_columns, row)))
+            for row in crawled_results:
+                all_results.append(dict(zip(crawled_columns, row)))
+            
+            # Sort by created_at and limit
+            all_results.sort(key=lambda x: x.get('created_at', ''), reverse=True)
+            results = all_results[:limit]
+            
+            logger.info(f"Found {len(posts_results)} posts from posts table, {len(crawled_results)} from crawled_posts table, {len(results)} total")
+        else:
+            logger.debug(f"Executing query: {query}")
+            cur.execute(query, params)
+            results = cur.fetchall()
+            
+            logger.info(f"Found {len(results)} candidate posts")
 
-        # Convert to list of dictionaries
-        columns = [desc[0] for desc in cur.description]
-        result_dicts = [dict(zip(columns, row)) for row in results]
+            # Convert to list of dictionaries
+            columns = [desc[0] for desc in cur.description]
+            results = [dict(zip(columns, row)) for row in results]
 
-        return result_dicts
+        return results
 
 
 def get_author_preference_score(user_interactions: List[Dict], author_id: str) -> float:
@@ -298,21 +369,30 @@ def get_author_preference_score(user_interactions: List[Dict], author_id: str) -
             elif action_type in negative_actions:
                 author_interactions["negative"] += 1
 
-    # Calculate preference score based on interaction data
+    # If we still have no interactions linked to this author, fall back to the
+    # heuristic path described above.
     if author_interactions["total"] == 0:
-        return 0.1  # Baseline score for authors without interactions
+        total = len(user_interactions)
+        if total == 0:
+            return 0.1
 
-    # Calculate positive ratio (with a small epsilon to avoid division by zero)
-    positive_ratio = author_interactions["positive"] / (
-        author_interactions["total"] + 0.001
-    )
+        positive = sum(
+            1
+            for i in user_interactions
+            if i.get("action_type") in positive_actions
+        )
 
-    # Apply a sigmoid function to map the ratio to a 0-1 range with a smooth curve
-    import math
+        positive_ratio = positive / total
+        preference_score = 1 / (1 + math.exp(-5 * (positive_ratio - 0.5)))
+        return max(preference_score, 0.1)
 
+    # --------------------------------------------------------------
+    # Standard path – we have at least one interaction for the target
+    # author, so compute the preference score normally.
+    # --------------------------------------------------------------
+    positive_ratio = author_interactions["positive"] / author_interactions["total"]
     preference_score = 1 / (1 + math.exp(-5 * (positive_ratio - 0.5)))
 
-    # Ensure minimum score is still the baseline
     return max(preference_score, 0.1)
 
 
@@ -497,7 +577,7 @@ def generate_specific_recommendation_reason_from_ranking(post: Dict, user_intera
     return "Recommended for you"
 
 
-def generate_rankings_for_user(user_id: str, model_id: Optional[int] = None) -> List[Dict]:
+def generate_rankings_for_user(user_id: str, model_id: Optional[int] = None, languages: Optional[List[str]] = None) -> List[Dict]:
     """
     Generate post rankings for a specific user using a specific model configuration.
 
@@ -514,6 +594,7 @@ def generate_rankings_for_user(user_id: str, model_id: Optional[int] = None) -> 
         model_id: Optional variant ID to use for algorithm configuration.
                  If provided, loads parameters from ab_variants table.
                  If None, uses default ALGORITHM_CONFIG.
+        languages: List of languages to filter posts by
 
     Returns:
         List of ranked posts with scores and reasons
@@ -544,18 +625,65 @@ def generate_rankings_for_user(user_id: str, model_id: Optional[int] = None) -> 
                 f"Retrieved {len(user_interactions)} interactions for user {user_alias}"
             )
 
+            # ------------------------------------------------------------------
+            # DATA AUGMENTATION ‑ ensure each interaction knows the author of the
+            # corresponding post.  The downstream reasoning helper
+            # (generate_specific_recommendation_reason_from_ranking) expects a
+            # 'post_author_id' field.  In production this information is easy to
+            # look up; in our earlier implementation it was missing which led to
+            # a KeyError.  We perform a single batched lookup **once** for all
+            # interactions to avoid per-row queries.
+            # ------------------------------------------------------------------
+            try:
+                interaction_post_ids = [i["post_id"] for i in user_interactions]
+
+                if interaction_post_ids:
+                    # Deduplicate and respect reasonable upper bound to keep
+                    # query efficient.
+                    unique_ids = list(dict.fromkeys(interaction_post_ids))[:500]
+
+                    if USE_IN_MEMORY_DB:
+                        placeholders = ", ".join(["?"] * len(unique_ids))
+                        lookup_query = (
+                            f"SELECT post_id, author_id FROM posts WHERE post_id IN ({placeholders})"
+                        )
+                    else:
+                        placeholders = ", ".join(["%s"] * len(unique_ids))
+                        lookup_query = (
+                            f"SELECT post_id, author_id FROM post_metadata WHERE post_id IN ({placeholders})"
+                        )
+
+                    with get_cursor(conn) as cur_lookup:
+                        cur_lookup.execute(lookup_query, tuple(unique_ids))
+                        mapping_rows = cur_lookup.fetchall()
+
+                    post_to_author = {pid: aid for pid, aid in mapping_rows}
+
+                    # Attach author id to each interaction dict (if available)
+                    for interaction in user_interactions:
+                        pid = interaction.get("post_id")
+                        interaction["post_author_id"] = post_to_author.get(pid)
+
+                    logger.debug(
+                        f"Augmented {len(user_interactions)} interactions with author IDs"
+                    )
+            except Exception as aug_err:
+                # Non-fatal – log and continue without augmentation (fallback
+                # logic in the reason generator will simply skip author-specific
+                # rules).
+                logger.warning(
+                    f"Unable to augment interactions with author IDs: {aug_err}"
+                )
+
             # Extract post IDs the user has already interacted with
             seen_post_ids = [
                 interaction["post_id"] for interaction in user_interactions
             ]
 
-            # Step 2: Get candidate posts (excluding ones user has seen)
+            # Step 2: Get candidate posts, excluding any the user has interacted with
+            # and respecting language preferences
             candidate_posts = get_candidate_posts(
-                conn,
-                limit=algorithm_config["max_candidates"],
-                days_limit=14,
-                exclude_post_ids=seen_post_ids,
-                include_synthetic=algorithm_config["include_synthetic"],
+                conn, exclude_post_ids=seen_post_ids, languages=languages
             )
             logger.debug(f"Found {len(candidate_posts)} candidate posts")
 
