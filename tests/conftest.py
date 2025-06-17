@@ -121,3 +121,101 @@ def mocked_redis_client():
 def variant_ids():
     """Create test variant IDs for A/B testing and performance monitoring tests."""
     return [1001, 1002, 1003]
+
+
+@pytest.fixture
+def seed_test_data(app):
+    """Seed the test database with comprehensive test data."""
+    from db.connection import get_db_connection
+    
+    with app.app_context():
+        with get_db_connection() as conn:
+            cur = conn.cursor()
+            
+            # Clear existing data more robustly
+            try:
+                cur.execute("DELETE FROM interactions")
+                cur.execute("DELETE FROM recommendations") 
+                cur.execute("DELETE FROM posts")
+                cur.execute("DELETE FROM crawled_posts")
+                cur.execute("DELETE FROM users")
+                cur.execute("DELETE FROM ab_experiments")
+            except Exception as e:
+                # Some tables might not exist, continue
+                pass
+            
+            # Seed users
+            cur.execute("""
+                INSERT OR REPLACE INTO users (user_id, username, display_name, preferences)
+                VALUES 
+                    ('test_user123', 'testuser', 'Test User', '{}'),
+                    ('test_user456', 'anotheruser', 'Another User', '{}'),
+                    ('test_user_main', 'testuser2', 'Test User 2', '{}')
+            """)
+            
+            # Seed posts with engagement data in metadata JSON (using test_ prefix to avoid conflicts)
+            posts_data = [
+                ('test_post1', 'Test post content 1', 'test_author1', '2024-01-01 10:00:00', '{"favourites_count": 10, "reblogs_count": 5, "replies_count": 2, "author_name": "test_author1"}', 'en'),
+                ('test_post2', 'Test post content 2', 'test_author2', '2024-01-02 11:00:00', '{"favourites_count": 42, "reblogs_count": 20, "replies_count": 8, "author_name": "test_author2"}', 'en'),
+                ('test_post3', 'Trending post content', 'test_author3', '2024-01-03 12:00:00', '{"favourites_count": 100, "reblogs_count": 50, "replies_count": 25, "author_name": "test_author3"}', 'en'),
+                ('test_post4', 'Another test post', 'test_author1', '2024-01-04 13:00:00', '{"favourites_count": 15, "reblogs_count": 8, "replies_count": 3, "author_name": "test_author1"}', 'en'),
+                ('test_post5', 'Fifth test post', 'test_author2', '2024-01-05 14:00:00', '{"favourites_count": 25, "reblogs_count": 12, "replies_count": 5, "author_name": "test_author2"}', 'en')
+            ]
+            
+            for post in posts_data:
+                cur.execute("""
+                    INSERT OR REPLACE INTO posts (post_id, content, author_id, created_at, metadata, language)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                """, post)
+            
+            # Seed crawled posts (simplified for SQLite schema)
+            crawled_posts_data = [
+                ('test_crawled1', 'Crawled post 1', 'test_author4', '2024-01-06 15:00:00', 'http://example.com/1', '{"favourites_count": 8, "reblogs_count": 4, "replies_count": 1, "author_name": "test_author4"}', '2024-01-06 15:00:00', 'en', 0.5),
+                ('test_crawled2', 'Crawled post 2', 'test_author5', '2024-01-07 16:00:00', 'http://example.com/2', '{"favourites_count": 12, "reblogs_count": 6, "replies_count": 2, "author_name": "test_author5"}', '2024-01-07 16:00:00', 'en', 0.7)
+            ]
+            
+            for post in crawled_posts_data:
+                cur.execute("""
+                    INSERT OR REPLACE INTO crawled_posts (post_id, content, author_id, created_at, source_url, metadata, 
+                                             crawled_at, language, engagement_score)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """, post)
+            
+            # Seed interactions
+            interactions_data = [
+                ('test_user123', 'test_user_alias_123', 'test_post1', 'favorite'),
+                ('test_user123', 'test_user_alias_123', 'test_post2', 'reblog'),
+                ('test_user456', 'test_user_alias_456', 'test_post1', 'favorite'),
+                ('test_user_main', 'test_user_alias_main', 'test_post3', 'favorite')
+            ]
+            
+            for interaction in interactions_data:
+                cur.execute("""
+                    INSERT OR REPLACE INTO interactions (user_id, user_alias, post_id, interaction_type)
+                    VALUES (?, ?, ?, ?)
+                """, interaction)
+            
+            # Seed recommendations
+            recommendations_data = [
+                ('test_user123', 'test_post1', 0.9, 'High engagement from similar users'),
+                ('test_user123', 'test_post2', 0.8, 'Trending in your network'),
+                ('test_user456', 'test_post3', 0.95, 'Matches your interests')
+            ]
+            
+            for rec in recommendations_data:
+                cur.execute("""
+                    INSERT OR REPLACE INTO recommendations (user_id, post_id, score, reason)
+                    VALUES (?, ?, ?, ?)
+                """, rec)
+            
+            # Seed AB experiments
+            cur.execute("""
+                INSERT OR REPLACE INTO ab_experiments (id, name, description, status)
+                VALUES 
+                    (1, 'test_experiment', 'A test experiment', 'active'),
+                    (2, 'another_experiment', 'Another test experiment', 'draft')
+            """)
+            
+            conn.commit()
+    
+    return True

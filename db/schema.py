@@ -253,7 +253,11 @@ CREATE TABLE IF NOT EXISTS crawled_posts (
     hashtags TEXT DEFAULT NULL,
     mentions TEXT DEFAULT NULL,
     language TEXT DEFAULT NULL,
-    engagement_score REAL DEFAULT 0.0
+    engagement_score REAL DEFAULT 0.0,
+    favourites_count INTEGER DEFAULT 0,
+    reblogs_count INTEGER DEFAULT 0,
+    replies_count INTEGER DEFAULT 0,
+    interaction_counts TEXT DEFAULT '{}'
 );
 
 -- Table: post_metadata
@@ -280,7 +284,11 @@ CREATE TABLE IF NOT EXISTS posts (
     author_id TEXT NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     metadata TEXT DEFAULT '{}',
-    language TEXT DEFAULT 'en'
+    language TEXT DEFAULT 'en',
+    favourites_count INTEGER DEFAULT 0,
+    reblogs_count INTEGER DEFAULT 0,
+    replies_count INTEGER DEFAULT 0,
+    interaction_counts TEXT DEFAULT '{}'
 );
 
 -- Table: interactions
@@ -288,8 +296,10 @@ CREATE TABLE IF NOT EXISTS posts (
 CREATE TABLE IF NOT EXISTS interactions (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id TEXT NOT NULL,
+    user_alias TEXT,
     post_id TEXT NOT NULL,
     interaction_type TEXT NOT NULL,
+    action_type TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(user_id, post_id, interaction_type)
 );
@@ -337,6 +347,7 @@ CREATE TABLE IF NOT EXISTS users (
     user_id TEXT UNIQUE NOT NULL,
     username TEXT,
     display_name TEXT,
+    preferences TEXT DEFAULT '{}',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

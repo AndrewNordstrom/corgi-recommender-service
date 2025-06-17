@@ -36,7 +36,7 @@ def get_posts():
 
     try:
         with get_db_connection() as conn:
-            with conn.cursor() as cur:
+            with get_cursor(conn) as cur:
                 if USE_IN_MEMORY_DB:
                     # SQLite version
                     cur.execute(
@@ -69,6 +69,14 @@ def get_posts():
                 if USE_IN_MEMORY_DB:
                     # SQLite format
                     for row in posts:
+                        # Parse metadata to get interaction counts
+                        metadata = {}
+                        if row[4]:  # metadata column
+                            try:
+                                metadata = json.loads(row[4])
+                            except:
+                                metadata = {}
+                        
                         post_data = {
                             "id": row[0],
                             "content": row[1] or "No content",
@@ -90,9 +98,9 @@ def get_posts():
                                 "bot": False
                             },
                             "created_at": row[3] or "2024-01-01T00:00:00Z",
-                            "favourites_count": 0,
-                            "reblogs_count": 0,
-                            "replies_count": 0,
+                            "favourites_count": metadata.get("favourites_count", 0),
+                            "reblogs_count": metadata.get("reblogs_count", 0),
+                            "replies_count": metadata.get("replies_count", 0),
                             "language": "en",
                         }
                         formatted_posts.append(post_data)
@@ -450,7 +458,7 @@ def get_posts_by_author(author_id):
         500 Server Error on failure
     """
     with get_db_connection() as conn:
-        with conn.cursor() as cur:
+        with get_cursor(conn) as cur:
             cur.execute(
                 """
                 SELECT post_id, author_id, author_name, content, content_type, created_at, 
@@ -517,7 +525,7 @@ def get_trending_posts():
 
     try:
         with get_db_connection() as conn:
-            with conn.cursor() as cur:
+            with get_cursor(conn) as cur:
                 if USE_IN_MEMORY_DB:
                     # SQLite version - simplified query without JSON operations
                     cur.execute(
@@ -535,6 +543,18 @@ def get_trending_posts():
                     # Format SQLite results
                     formatted_posts = []
                     for row in trending_posts:
+                        # Parse metadata to get interaction counts
+                        metadata = {}
+                        if row[4]:  # metadata column
+                            try:
+                                metadata = json.loads(row[4])
+                            except:
+                                metadata = {}
+                        
+                        favourites_count = metadata.get("favourites_count", 0)
+                        reblogs_count = metadata.get("reblogs_count", 0)
+                        replies_count = metadata.get("replies_count", 0)
+                        
                         post_data = {
                             "id": row[0],
                             "content": row[1] or "No content",
@@ -556,10 +576,10 @@ def get_trending_posts():
                                 "bot": False
                             },
                             "created_at": row[3] or "2024-01-01T00:00:00Z",
-                            "favourites_count": 0,
-                            "reblogs_count": 0,
-                            "replies_count": 0,
-                            "total_interactions": 0,
+                            "favourites_count": favourites_count,
+                            "reblogs_count": reblogs_count,
+                            "replies_count": replies_count,
+                            "total_interactions": favourites_count + reblogs_count + replies_count,
                             "language": "en",
                         }
                         formatted_posts.append(post_data)
@@ -649,7 +669,7 @@ def get_recommended_posts():
         # For now, just return the same as trending posts
         # In the future, this could use the recommendation engine
         with get_db_connection() as conn:
-            with conn.cursor() as cur:
+            with get_cursor(conn) as cur:
                 if USE_IN_MEMORY_DB:
                     # SQLite version
                     cur.execute(
@@ -667,6 +687,14 @@ def get_recommended_posts():
                     # Format SQLite results
                     formatted_posts = []
                     for row in posts:
+                        # Parse metadata to get interaction counts
+                        metadata = {}
+                        if row[4]:  # metadata column
+                            try:
+                                metadata = json.loads(row[4])
+                            except:
+                                metadata = {}
+                        
                         post_data = {
                             "id": row[0],
                             "content": row[1] or "No content",
@@ -688,9 +716,9 @@ def get_recommended_posts():
                                 "bot": False
                             },
                             "created_at": row[3] or "2024-01-01T00:00:00Z",
-                            "favourites_count": 0,
-                            "reblogs_count": 0,
-                            "replies_count": 0,
+                            "favourites_count": metadata.get("favourites_count", 0),
+                            "reblogs_count": metadata.get("reblogs_count", 0),
+                            "replies_count": metadata.get("replies_count", 0),
                             "language": "en",
                             "recommended": True,
                         }

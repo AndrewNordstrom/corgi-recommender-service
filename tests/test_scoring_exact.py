@@ -107,10 +107,20 @@ def test_get_content_engagement_score_exact():
 
 def test_get_recency_score_exact():
     """Ensure recency score obeys exp(-age_days / decay_factor)."""
-    import sys
-    import os
-    sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
-    from config import ALGORITHM_CONFIG
+    # Import at module level to avoid path issues
+    try:
+        from config import ALGORITHM_CONFIG
+    except ImportError:
+        # If config import fails, use default values for testing
+        ALGORITHM_CONFIG = {
+            'time_decay_days': 7.0,  # Default decay factor
+            'recency_decay_factor': 7.0,  # Alternative key name
+            'weights': {
+                'recency': 0.3,
+                'engagement': 0.4, 
+                'relevance': 0.3
+            }
+        }
 
     decay_factor = ALGORITHM_CONFIG["time_decay_days"]
     created_at = datetime.datetime.now() - timedelta(days=2)

@@ -21,7 +21,7 @@ def mock_db_conn():
     return mock_conn, mock_cursor
 
 
-@pytest.mark.xfail(reason="Privacy API requires authentication - tests need auth headers")
+@pytest.mark.xfail(reason="Privacy API requires authentication - tests need auth headers", strict=True)
 def test_get_privacy_settings(client):
     """Test getting privacy settings for a user."""
     response = client.get('/api/v1/privacy/settings?user_id=test_user')
@@ -31,7 +31,7 @@ def test_get_privacy_settings(client):
     assert 'privacy_level' in data
 
 
-@pytest.mark.xfail(reason="Privacy API requires authentication - tests need auth headers")
+@pytest.mark.xfail(reason="Privacy API requires authentication - tests need auth headers", strict=True)
 def test_get_privacy_settings_missing_user_id(client):
     """Test getting privacy settings without user_id."""
     response = client.get('/api/v1/privacy/settings')
@@ -39,13 +39,12 @@ def test_get_privacy_settings_missing_user_id(client):
     assert response.status_code == 400
 
 
-@pytest.mark.xfail(reason="Privacy API requires authentication - tests need auth headers")
+@pytest.mark.xfail(reason="Privacy API requires authentication - tests need auth headers", strict=True)
 def test_update_privacy_settings_success(client):
-    """Test updating privacy settings successfully."""
+    """Test successful privacy settings update."""
     data = {
         'user_id': 'test_user',
-        'privacy_level': 'strict',
-        'data_sharing': False
+        'privacy_level': 'limited'
     }
     
     response = client.put('/api/v1/privacy/settings',
@@ -53,15 +52,16 @@ def test_update_privacy_settings_success(client):
                          content_type='application/json')
     
     assert response.status_code == 200
+    response_data = response.get_json()
+    assert response_data['privacy_level'] == 'limited'
 
 
-@pytest.mark.xfail(reason="Privacy API requires authentication - tests need auth headers")
+@pytest.mark.xfail(reason="Privacy API requires authentication - tests need auth headers", strict=True)
 def test_update_privacy_settings_invalid_level(client):
-    """Test updating privacy settings with invalid level."""
+    """Test privacy settings update with invalid level."""
     data = {
         'user_id': 'test_user',
-        'privacy_level': 'invalid_level',
-        'data_sharing': False
+        'privacy_level': 'invalid_level'
     }
     
     response = client.put('/api/v1/privacy/settings',
@@ -71,11 +71,11 @@ def test_update_privacy_settings_invalid_level(client):
     assert response.status_code == 400
 
 
-@pytest.mark.xfail(reason="Privacy API requires authentication - tests need auth headers")
+@pytest.mark.xfail(reason="Privacy API requires authentication - tests need auth headers", strict=True)
 def test_update_privacy_settings_missing_fields(client):
-    """Test updating privacy settings with missing required fields."""
+    """Test privacy settings update with missing required fields."""
     data = {
-        'privacy_level': 'moderate'
+        'privacy_level': 'limited'
         # Missing user_id
     }
     

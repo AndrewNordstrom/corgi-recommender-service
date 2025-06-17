@@ -29,7 +29,7 @@ def _init_db():
     in_memory_conn.commit()
 
 
-@pytest.mark.xfail(reason="API requires authentication - tests need auth headers or mock setup")
+@pytest.mark.xfail(reason="API requires authentication - tests need auth headers or mock setup", strict=True)
 def test_create_experiment_success(client):
     """Test successful experiment creation."""
     experiment_data = {
@@ -51,7 +51,7 @@ def test_create_experiment_success(client):
     assert len(data['variants']) == 2
 
 
-@pytest.mark.xfail(reason="API requires authentication - tests need auth headers or mock setup")
+@pytest.mark.xfail(reason="API requires authentication - tests need auth headers or mock setup", strict=True)
 def test_create_experiment_invalid_allocation_sum(client):
     """Test experiment creation with invalid allocation sum."""
     experiment_data = {
@@ -104,7 +104,7 @@ def _create_experiment(name: str):
     return client.post(API_URL, data=json.dumps(payload), headers=ADMIN_HEADERS).get_json()
 
 
-@pytest.mark.xfail(reason="API requires authentication - tests need auth headers or mock setup")
+@pytest.mark.xfail(reason="API requires authentication - tests need auth headers or mock setup", strict=True)
 def test_list_experiments():
     _create_experiment("List Test")
     resp = client.get(API_URL, headers=ADMIN_HEADERS)
@@ -113,7 +113,7 @@ def test_list_experiments():
     assert len(data["experiments"]) >= 1
 
 
-@pytest.mark.xfail(reason="API requires authentication - missing experiment ID in response")
+@pytest.mark.xfail(reason="API requires authentication - missing experiment ID in response", strict=True)
 def test_start_stop_experiment_success_and_conflict():
     exp1 = _create_experiment("Exp1")
     exp2 = _create_experiment("Exp2")
