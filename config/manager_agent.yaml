@@ -1,0 +1,184 @@
+# Manager Agent Configuration
+# Comprehensive monitoring and alerting system for LLM agents
+
+slack:
+  # Slack webhook URL for notifications
+  webhook_url: "${SLACK_WEBHOOK_URL}"
+  # Channel to send alerts to
+  channel: "#corgi-alerts"
+
+monitoring:
+  # How often to check agent status (seconds)
+  check_interval_seconds: 30
+  
+  # How often to send summary reports (minutes)
+  summary_interval_minutes: 60
+  
+  # Hour of day to send daily cost reports (24-hour format)
+  daily_report_hour: 9
+
+thresholds:
+  # Cost spike detection threshold (percentage above normal) - SET TO 0 FOR ANY USAGE
+  cost_spike_percentage: 0.0
+  
+  # Infinite loop detection - calls per minute threshold
+  infinite_loop_calls_per_minute: 10
+  
+  # Circuit breaker - max consecutive failures before disabling
+  max_consecutive_failures: 5
+  
+  # Rate limiting - max calls per minute per agent
+  max_calls_per_minute: 60
+
+# Agent budget configurations
+agent_budgets:
+  # Default budget for all agents - SET VERY LOW FOR IMMEDIATE ALERTS
+  default:
+    hourly_limit_usd: 0.001  # Alert after $0.001 (any meaningful usage)
+    daily_limit_usd: 0.01
+    monthly_limit_usd: 0.1
+    hourly_token_limit: 100  # Alert after 100 tokens
+    daily_token_limit: 1000
+    monthly_token_limit: 10000
+    priority: 3  # 1=critical, 2=high, 3=medium, 4=low
+  
+  # Security Healing Agent - higher limits for critical operations
+  security_healing_agent:
+    hourly_limit_usd: 2.0
+    daily_limit_usd: 20.0
+    monthly_limit_usd: 200.0
+    hourly_token_limit: 20000
+    daily_token_limit: 200000
+    monthly_token_limit: 2000000
+    priority: 1
+  
+  # Browser Agent - medium limits for automation
+  browser_agent:
+    hourly_limit_usd: 0.5
+    daily_limit_usd: 5.0
+    monthly_limit_usd: 50.0
+    hourly_token_limit: 5000
+    daily_token_limit: 50000
+    monthly_token_limit: 500000
+    priority: 2
+  
+  # Test agents - low limits
+  test_agent:
+    hourly_limit_usd: 0.1
+    daily_limit_usd: 1.0
+    monthly_limit_usd: 10.0
+    hourly_token_limit: 1000
+    daily_token_limit: 10000
+    monthly_token_limit: 100000
+    priority: 4
+
+# Alert configuration
+alerts:
+  # Immediate alerts (sent right away)
+  immediate:
+    - cost_spike_critical  # >50% over budget
+    - circuit_breaker_open
+    - infinite_loop_detected
+    - budget_limit_exceeded
+  
+  # Batched alerts (aggregated and sent periodically)
+  batched:
+    - cost_spike_warning   # ANY usage over budget
+    - high_failure_rate
+    - slow_response_time
+    - any_api_usage        # NEW: Alert on any API usage
+  
+  # Rate limiting for alerts - REDUCED FOR IMMEDIATE NOTIFICATIONS
+  rate_limits:
+    # Max alerts per agent per hour - INCREASED FOR MORE ALERTS
+    max_alerts_per_agent_per_hour: 50
+    
+    # Cooldown period between similar alerts (minutes) - REDUCED FOR FASTER ALERTS
+    alert_cooldown_minutes: 1
+
+# Cost optimization settings
+optimization:
+  # Automatically suggest model downgrades
+  auto_suggest_model_downgrade: true
+  
+  # Threshold for suggesting Haiku over Sonnet (failure rate %)
+  haiku_suggestion_threshold: 5.0
+  
+  # Monitor for redundant API calls
+  detect_redundant_calls: true
+  
+  # Cache frequently used responses
+  enable_response_caching: false
+
+# Dashboard settings
+dashboard:
+  # Enable web dashboard endpoint
+  enabled: true
+  
+  # Port for dashboard (if running standalone)
+  port: 8080
+  
+  # Refresh interval for dashboard data (seconds)
+  refresh_interval: 30
+  
+  # Historical data retention (days)
+  history_retention_days: 30
+
+# Logging configuration
+logging:
+  # Log level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
+  level: INFO
+  
+  # Log file rotation
+  max_file_size_mb: 10
+  backup_count: 5
+  
+  # Include detailed request/response logging
+  detailed_logging: false
+
+# Integration settings
+integrations:
+  # Prometheus metrics export
+  prometheus:
+    enabled: false
+    port: 9090
+    metrics_prefix: "corgi_manager_"
+  
+  # Grafana dashboard
+  grafana:
+    enabled: false
+    dashboard_url: ""
+  
+  # Webhook for external systems
+  webhooks:
+    enabled: false
+    endpoints: []
+
+# Emergency controls
+emergency:
+  # Global kill switch - disable all agents
+  global_kill_switch: false
+  
+  # Emergency contact for critical alerts
+  emergency_contact: ""
+  
+  # Maximum daily spend across all agents
+  global_daily_limit_usd: 100.0
+  
+  # Automatic shutdown if global limit exceeded
+  auto_shutdown_on_limit: true
+
+# Pre-approval system
+pre_approval:
+  # Require approval for expensive operations
+  enabled: true
+  
+  # Threshold for requiring approval (USD)
+  approval_threshold_usd: 5.0
+  
+  # Approval methods: slack, email, webhook
+  approval_methods:
+    - slack
+  
+  # Timeout for approval requests (minutes)
+  approval_timeout_minutes: 30 

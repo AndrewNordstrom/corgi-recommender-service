@@ -98,6 +98,19 @@ def get_user_signals(user_id: str) -> Dict[str, Counter]:
         return {k: Counter(v) for k, v in _user_signals[user_alias].items()}
 
 
+def is_new_user(user_id: str) -> bool:
+    """
+    Placeholder check to see if a user is new.
+    
+    This is a temporary fix to prevent import errors. A real implementation
+    would check interaction history from the database.
+    """
+    user_alias = generate_user_alias(user_id)
+    with _signal_lock:
+        # A user is "new" for the purpose of this check if they have no signal history.
+        return user_alias not in _signal_history or not _signal_history[user_alias]
+
+
 def update_user_signals(
     user_id: str, post_metadata: Dict[str, Any], action_type: str
 ) -> Dict[str, Counter]:

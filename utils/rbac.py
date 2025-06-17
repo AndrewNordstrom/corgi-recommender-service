@@ -45,6 +45,42 @@ PERMISSIONS = {
     'view_analytics': 'View system analytics'
 }
 
+def validate_api_key_from_database(api_key: str) -> Optional[Dict[str, Any]]:
+    """
+    Validate API key against database records.
+    
+    Args:
+        api_key: The API key to validate
+        
+    Returns:
+        Optional[Dict]: User info if valid, None otherwise
+    """
+    try:
+        from db.connection import get_db_connection
+        
+        with get_db_connection() as conn:
+            cur = conn.cursor()
+            # Use parameterized query to prevent SQL injection
+            cur.execute("""
+                SELECT user_id, role, username, is_active 
+                FROM api_keys 
+                WHERE api_key = %s AND is_active = true
+            """, (api_key,))
+            
+            result = cur.fetchone()
+            if result:
+                user_id, role, username, is_active = result
+                return {
+                    'id': user_id,
+                    'role': role,
+                    'username': username,
+                    'api_key': api_key[:8] + '...'  # Truncated for logging
+                }
+    except Exception as e:
+        logger.error(f"Error validating API key: {e}")
+    
+    return None
+
 def get_user_from_request() -> Optional[Dict[str, Any]]:
     """
     Extract user information from the current request.
@@ -55,96 +91,125 @@ def get_user_from_request() -> Optional[Dict[str, Any]]:
     # Check for API key in headers
     api_key = request.headers.get('X-API-Key')
     if api_key:
-        # In a real implementation, this would validate against a database
-        # For now, we'll use a simple mock implementation
-        if api_key == 'admin-key':
-            return {'id': 'admin', 'role': 'admin', 'username': 'admin'}
-        elif api_key == 'user-key':
-            return {'id': 'user123', 'role': 'user', 'username': 'testuser'}
-        elif api_key == 'crawler-key':
-            return {'id': 'crawler', 'role': 'crawler', 'username': 'content_crawler'}
+        # Validate against database instead of hardcoded values
+        user = validate_api_key_from_database(api_key)
+        if user:
+            return user
+        else:
+            logger.warning(f"Invalid API key attempted: {api_key[:8]}...")
     
     # Check for Bearer token
     auth_header = request.headers.get('Authorization')
     if auth_header and auth_header.startswith('Bearer '):
         token = auth_header[7:]  # Remove 'Bearer ' prefix
-        # In a real implementation, this would validate the JWT token
-        # For now, we'll use a simple mock
-        if token == 'valid-user-token':
-            return {'id': 'user456', 'role': 'user', 'username': 'tokenuser'}
+        # Validate token properly (implementation depends on token type)
+        user = validate_bearer_token(token)
+        if user:
+            return user
     
     # No valid authentication found
     return None
 
-def get_user_role(user: Optional[Dict[str, Any]]) -> str:
+def validate_bearer_token(token: str) -> Optional[Dict[str, Any]]:
     """
-    Get the role of a user.
+    Validate Bearer token against database or JWT validation.
     
     Args:
-        user: User info dictionary
+        token: Bearer token to validate
         
     Returns:
-        str: User role, defaults to 'guest' if not authenticated
+        Optional[Dict]: User info if valid, None otherwise
+    """
+    try:
+        from utils.auth import get_user_by_token
+        
+        user_info = get_user_by_token(token)
+        if user_info:
+            return {
+                'id': user_info.get('user_id'),
+                'role': 'user',  # Default role, could be enhanced
+                'username': user_info.get('user_id'),
+                'instance_url': user_info.get('instance_url')
+            }
+    except Exception as e:
+        logger.error(f"Error validating bearer token: {e}")
+    
+    return None
+
+def has_role(user: Optional[Dict[str, Any]], required_role: str) -> bool:
+    """
+    Check if user has the required role.
+    
+    Args:
+        user: User dictionary
+        required_role: Required role name
+        
+    Returns:
+        bool: True if user has the role
     """
     if not user:
-        return 'guest'
-    return user.get('role', 'guest')
-
-def get_role_permissions(role: str) -> List[str]:
-    """
-    Get permissions for a role.
-    
-    Args:
-        role: Role name
-        
-    Returns:
-        List[str]: List of permissions for the role
-    """
-    role_info = ROLES.get(role, ROLES.get('guest', {}))
-    permissions = role_info.get('permissions', [])
-    
-    # Handle wildcard permissions (admin)
-    if '*' in permissions:
-        return list(PERMISSIONS.keys())
-    
-    return permissions
-
-def check_permission(user: Optional[Dict[str, Any]], required_permission: str) -> bool:
-    """
-    Check if a user has a specific permission.
-    
-    Args:
-        user: User info dictionary
-        required_permission: Permission to check
-        
-    Returns:
-        bool: True if user has permission, False otherwise
-    """
-    if not user and required_permission != 'read_public_content':
         return False
     
-    role = get_user_role(user)
-    permissions = get_role_permissions(role)
+    user_role = user.get('role', 'guest')
     
-    # Check for wildcard or specific permission
-    return '*' in permissions or required_permission in permissions
+    # Admin has all roles
+    if user_role == 'admin':
+        return True
+    
+    return user_role == required_role
+
+def has_permission(user: Optional[Dict[str, Any]], required_permission: str) -> bool:
+    """
+    Check if user has the required permission.
+    
+    Args:
+        user: User dictionary
+        required_permission: Required permission name
+        
+    Returns:
+        bool: True if user has the permission
+    """
+    if not user:
+        return False
+    
+    user_role = user.get('role', 'guest')
+    
+    if user_role not in ROLES:
+        return False
+    
+    role_permissions = ROLES[user_role]['permissions']
+    
+    # Check for wildcard permission (admin)
+    if '*' in role_permissions:
+        return True
+    
+    return required_permission in role_permissions
 
 def check_role(user: Optional[Dict[str, Any]], required_role: str) -> bool:
     """
-    Check if a user has a specific role.
+    Check if user has the required role.
     
     Args:
-        user: User info dictionary
-        required_role: Role to check
+        user: User dictionary
+        required_role: Required role name
         
     Returns:
-        bool: True if user has role, False otherwise
+        bool: True if user has the role
     """
-    if not user:
-        return required_role == 'guest'
+    return has_role(user, required_role)
+
+def check_permission(user: Optional[Dict[str, Any]], required_permission: str) -> bool:
+    """
+    Check if user has the required permission.
     
-    user_role = get_user_role(user)
-    return user_role == required_role
+    Args:
+        user: User dictionary
+        required_permission: Required permission name
+        
+    Returns:
+        bool: True if user has the permission
+    """
+    return has_permission(user, required_permission)
 
 def require_authentication(f):
     """

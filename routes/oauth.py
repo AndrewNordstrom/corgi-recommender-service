@@ -186,39 +186,41 @@ def callback():
     )
 
 
-@oauth_bp.route("/tokens", methods=["GET"])
-@log_route
-def list_tokens():
-    """
-    List all stored tokens (for demo purposes only).
+# Only expose token listing endpoint in development environments for security
+if os.getenv("FLASK_ENV") == "development":
+    @oauth_bp.route("/tokens", methods=["GET"])
+    @log_route
+    def list_tokens():
+        """
+        List all stored tokens (for demo purposes only).
 
-    This would not be present in a production implementation.
-    """
-    # Clean up expired tokens first
-    expired_count = auth_tokens.cleanup_expired()
-    if expired_count > 0:
-        logger.info(f"Cleaned up {expired_count} expired tokens")
+        This would not be present in a production implementation.
+        """
+        # Clean up expired tokens first
+        expired_count = auth_tokens.cleanup_expired()
+        if expired_count > 0:
+            logger.info(f"Cleaned up {expired_count} expired tokens")
 
-    # For security, only return limited token information (no actual tokens)
-    token_info = {
-        token: {
-            "user_id": data.get("user_id", "unknown"),
-            "instance": data.get("instance", "unknown"),
-            "created_at": data.get("created_at", 0),
-            "expires_at": data.get("expires_at", 0),
-            "is_valid": int(time.time()) < data.get("expires_at", 0),
+        # For security, only return limited token information (no actual tokens)
+        token_info = {
+            token: {
+                "user_id": data.get("user_id", "unknown"),
+                "instance": data.get("instance", "unknown"),
+                "created_at": data.get("created_at", 0),
+                "expires_at": data.get("expires_at", 0),
+                "is_valid": int(time.time()) < data.get("expires_at", 0),
+            }
+            for token, data in auth_tokens.tokens.items()
         }
-        for token, data in auth_tokens.tokens.items()
-    }
 
-    return jsonify(
-        {
-            "status": "scaffold_implementation",
-            "note": "This is a placeholder for Phase 3 OAuth implementation",
-            "tokens": token_info,
-            "active_token_count": len(token_info),
-        }
-    )
+        return jsonify(
+            {
+                "status": "scaffold_implementation",
+                "note": "This is a placeholder for Phase 3 OAuth implementation",
+                "tokens": token_info,
+                "active_token_count": len(token_info),
+            }
+        )
 
 
 @oauth_bp.route("/revoke", methods=["POST"])

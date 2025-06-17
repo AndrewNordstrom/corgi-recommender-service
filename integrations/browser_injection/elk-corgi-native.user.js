@@ -1,10 +1,10 @@
 // ==UserScript==
 // @name         ELK Native AI Recommendations
 // @namespace    http://tampermonkey.net/
-// @version      3.2
+// @version      3.3
 // @description  Native AI-powered recommendations for ELK (Powered by Corgi)
 // @author       ELK Community
-// @match        http://localhost:3004/*
+// @match        http://localhost:5314/*
 // @match        https://elk.zone/*
 // @grant        none
 // @run-at       document-end
@@ -108,6 +108,10 @@
                     to { opacity: 1; transform: translateY(0); }
                 }
                 
+                .elk-ai-btn {
+                    cursor: pointer;
+                }
+                
                 .elk-ai-btn:hover {
                     transform: scale(1.02);
                 }
@@ -148,23 +152,181 @@
         
         async loadAIContent() {
             try {
-                const response = await fetch(`${CORGI_API_URL}/api/v1/timelines/home`);
+                console.log('[Corgi] 🔄 Loading AI recommendations to inject alongside ELK timeline...');
+                
+                const userId = this.getCurrentUserId();
+                console.log('[Corgi] 👤 Current user ID:', userId);
+                
+                const response = await fetch(`${CORGI_API_URL}/api/v1/posts?limit=3&user_id=${userId}`);
+                if (!response.ok) {
+                    console.warn('[Corgi] ⚠️ API request failed:', response.status);
+                    return;
+                }
+                
                 const posts = await response.json();
+                console.log('[Corgi] 📊 Received posts:', posts.length);
                 
-                // Clear previous AI posts
-                this.container.querySelectorAll('.elk-ai-post').forEach(p => p.remove());
-                
-                // Render with ultra-native styling
-                posts.forEach(post => {
-                    const element = this.createNativePost(post);
-                    this.container.appendChild(element);
-                });
-                
-                console.log(`🤖 Rendered ${posts.length} AI posts natively`);
+                if (posts && posts.length > 0) {
+                    // Instead of replacing timeline, inject AI posts alongside ELK's posts
+                    this.injectAIRecommendations(posts);
+                } else {
+                    console.log('[Corgi] 📭 No posts to inject');
+                }
                 
             } catch (error) {
-                console.warn('AI temporarily unavailable');
+                console.error('[Corgi] ❌ Error loading AI content:', error);
             }
+        }
+        
+        injectAIRecommendations(aiPosts) {
+            const container = this.findTimelineContainer();
+            if (!container) {
+                console.warn('[Corgi] ⚠️ Timeline container not found for injection');
+                return;
+            }
+            
+            console.log('[Corgi] 🎯 Injecting', aiPosts.length, 'AI recommendations into existing timeline');
+            
+            // Find existing ELK posts in the timeline
+            const existingPosts = container.querySelectorAll('article, [role="article"]');
+            console.log('[Corgi] 📋 Found', existingPosts.length, 'existing ELK posts');
+            
+            // Inject AI posts at strategic positions (every 3rd post)
+            aiPosts.forEach((post, index) => {
+                const aiPost = this.createNativePost({
+                    ...post,
+                    is_recommendation: true,
+                    recommendation_reason: `AI-curated content based on your interests`
+                });
+                
+                // Calculate injection position (every 3rd post)
+                const injectionIndex = (index + 1) * 3;
+                
+                if (injectionIndex < existingPosts.length) {
+                    // Insert after existing post
+                    existingPosts[injectionIndex].parentNode.insertBefore(aiPost, existingPosts[injectionIndex].nextSibling);
+                    console.log('[Corgi] ✅ Injected AI post after position', injectionIndex);
+                } else {
+                    // Append to end
+                    container.appendChild(aiPost);
+                    console.log('[Corgi] ✅ Appended AI post to end');
+                }
+            });
+        }
+        
+        getCurrentUserId() {
+            // Enhanced user detection with 8 different methods
+            console.log('[Corgi] 🔍 Attempting to detect current user...');
+            
+            // Method 1: ELK Global State
+            try {
+                if (window.$elk && window.$elk.currentUser && window.$elk.currentUser.account) {
+                    const userId = window.$elk.currentUser.account.acct;
+                    console.log('[Corgi] ✅ Method 1 (ELK Global): Found user:', userId);
+                    return userId;
+                }
+            } catch (e) {
+                console.log('[Corgi] ❌ Method 1 failed:', e.message);
+            }
+            
+            // Method 2: Nuxt App Context
+            try {
+                if (window.$nuxt && window.$nuxt.$currentUser && window.$nuxt.$currentUser.account) {
+                    const userId = window.$nuxt.$currentUser.account.acct;
+                    console.log('[Corgi] ✅ Method 2 (Nuxt): Found user:', userId);
+                    return userId;
+                }
+            } catch (e) {
+                console.log('[Corgi] ❌ Method 2 failed:', e.message);
+            }
+            
+            // Method 3: localStorage Handle
+            try {
+                const handle = localStorage.getItem('elk-current-user-handle');
+                if (handle) {
+                    console.log('[Corgi] ✅ Method 3 (localStorage handle): Found user:', handle);
+                    return handle;
+                }
+            } catch (e) {
+                console.log('[Corgi] ❌ Method 3 failed:', e.message);
+            }
+            
+            // Method 4: localStorage Accounts
+            try {
+                const accounts = localStorage.getItem('elk-accounts');
+                if (accounts) {
+                    const parsed = JSON.parse(accounts);
+                    const activeAccount = Object.values(parsed).find(acc => acc.active);
+                    if (activeAccount && activeAccount.account && activeAccount.account.acct) {
+                        const userId = activeAccount.account.acct;
+                        console.log('[Corgi] ✅ Method 4 (localStorage accounts): Found user:', userId);
+                        return userId;
+                    }
+                }
+            } catch (e) {
+                console.log('[Corgi] ❌ Method 4 failed:', e.message);
+            }
+            
+            // Method 5: Settings Parsing
+            try {
+                const settings = localStorage.getItem('elk-settings');
+                if (settings) {
+                    const parsed = JSON.parse(settings);
+                    // Look for user handles in settings
+                    const settingsStr = JSON.stringify(parsed);
+                    const userMatch = settingsStr.match(/@[\w.-]+@[\w.-]+/);
+                    if (userMatch) {
+                        const userId = userMatch[0];
+                        console.log('[Corgi] ✅ Method 5 (Settings): Found user:', userId);
+                        return userId;
+                    }
+                }
+            } catch (e) {
+                console.log('[Corgi] ❌ Method 5 failed:', e.message);
+            }
+            
+            // Method 6: URL Path Extraction
+            try {
+                const path = window.location.pathname;
+                const userMatch = path.match(/\/@([\w.-]+@[\w.-]+)/);
+                if (userMatch) {
+                    const userId = userMatch[1];
+                    console.log('[Corgi] ✅ Method 6 (URL): Found user:', userId);
+                    return userId;
+                }
+            } catch (e) {
+                console.log('[Corgi] ❌ Method 6 failed:', e.message);
+            }
+            
+            // Method 7: Meta Tags
+            try {
+                const metaUser = document.querySelector('meta[name="current-user"]');
+                if (metaUser && metaUser.content) {
+                    const userId = metaUser.content;
+                    console.log('[Corgi] ✅ Method 7 (Meta): Found user:', userId);
+                    return userId;
+                }
+            } catch (e) {
+                console.log('[Corgi] ❌ Method 7 failed:', e.message);
+            }
+            
+            // Method 8: Vue App State
+            try {
+                const vueApp = document.querySelector('#__nuxt')?.__vue_app__;
+                if (vueApp && vueApp.config && vueApp.config.globalProperties) {
+                    const currentUser = vueApp.config.globalProperties.$currentUser;
+                    if (currentUser && currentUser.account && currentUser.account.acct) {
+                        const userId = currentUser.account.acct;
+                        console.log('[Corgi] ✅ Method 8 (Vue): Found user:', userId);
+                        return userId;
+                    }
+                }
+            } catch (e) {
+                console.log('[Corgi] ❌ Method 8 failed:', e.message);
+            }
+            
+            console.log('[Corgi] ⚠️ All user detection methods failed, using anonymous');
+            return 'anonymous';
         }
         
         createNativePost(post) {
@@ -184,6 +346,10 @@
             article.setAttribute('aria-label', isAI ? 'AI-recommended post' : 'Timeline post');
             
             article.dataset.postId = post.id || post.post_id || '';
+            article.dataset.postUrl = post.url || post.uri || '';
+            
+            // Make the post clickable
+            article.style.cursor = 'pointer';
             
             const emoji = isAI ? '🤖' : '📰';
             const name = isAI ? 'AI Curator' : 'Timeline';
@@ -278,15 +444,65 @@
         attachNativeHandlers(article) {
             article.addEventListener('click', (e) => {
                 const btn = e.target.closest('button[data-action]');
-                if (!btn) return;
+                if (btn) {
+                    // Handle action button clicks
+                    e.preventDefault();
+                    e.stopPropagation();
+                    
+                    // Native ELK-style feedback
+                    btn.style.transform = 'scale(0.95)';
+                    setTimeout(() => btn.style.transform = '', 150);
+                    
+                    const action = btn.dataset.action;
+                    this.handleNativeAction(action, btn);
+                    return;
+                }
                 
-                // Native ELK-style feedback
-                btn.style.transform = 'scale(0.95)';
-                setTimeout(() => btn.style.transform = '', 150);
+                // Handle post navigation clicks
+                const postId = article.dataset.postId;
+                const postUrl = article.dataset.postUrl;
                 
-                const action = btn.dataset.action;
-                this.handleNativeAction(action, btn);
+                console.log('[Corgi] 🖱️ Post clicked:', { postId, postUrl, target: e.target.tagName });
+                
+                if (postId && !e.target.closest('a')) {
+                    if (postUrl) {
+                        // Convert external Mastodon URL to ELK format
+                        const elkUrl = this.convertToELKUrl(postUrl);
+                        console.log('[Corgi] 🔗 URL conversion:', { original: postUrl, converted: elkUrl });
+                        
+                        if (elkUrl) {
+                            e.preventDefault();
+                            console.log('[Corgi] 🚀 Navigating to:', elkUrl);
+                            window.location.href = elkUrl;
+                        } else {
+                            console.warn('[Corgi] ❌ Could not convert URL:', postUrl);
+                        }
+                    } else {
+                        console.warn('[Corgi] ❌ No post URL found for post:', postId);
+                    }
+                }
             });
+        }
+        
+        convertToELKUrl(mastodonUrl) {
+            // Convert URLs like https://mastodon.world/@nlnews/114674636306841446
+            // to ELK format: http://localhost:5314/mastodon.world/@nlnews/114674636306841446
+            try {
+                const url = new URL(mastodonUrl);
+                const pathParts = url.pathname.split('/');
+                
+                if (pathParts.length >= 3 && pathParts[1].startsWith('@')) {
+                    // Format: /@username/postid
+                    const username = pathParts[1];
+                    const postId = pathParts[2];
+                    return `http://localhost:5314/${url.hostname}${username}/${postId}`;
+                }
+                
+                return null;
+            } catch (e) {
+                console.warn('[Corgi] Could not convert URL:', mastodonUrl, e);
+                return null;
+            }
         }
         
         handleNativeAction(action, button) {

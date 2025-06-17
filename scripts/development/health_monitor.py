@@ -78,12 +78,11 @@ class HealthMonitor:
             'backend': [
                 '/health',
                 '/api/v1/health',
-                '/api/v1/recommendations',
+                '/api/v1/recommendations/timeline',
                 '/api/v1/posts',
             ],
             'frontend': [
                 '/',
-                '/api/health',  # Next.js API route
             ]
         }
 

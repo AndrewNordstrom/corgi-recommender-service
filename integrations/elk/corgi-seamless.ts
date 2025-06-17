@@ -9,35 +9,115 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 
 // Helper function to get current user ID from ELK
 function getCurrentUserId(): string {
-  // Try to get current user from ELK's stores
+  console.log('[Corgi] 🔍 Attempting to get current user ID...')
+  
   if (typeof window !== 'undefined') {
-    // Access ELK's current user store
-    const currentUser = (window as any)?.$elk?.store?.currentUser
-    if (currentUser?.account?.id) {
-      return currentUser.account.id
-    }
-    
-    // Fallback: try to get from localStorage or sessionStorage
-    const elkUser = localStorage.getItem('elk-current-user') || sessionStorage.getItem('elk-current-user')
-    if (elkUser) {
-      try {
-        const user = JSON.parse(elkUser)
-        if (user?.account?.id) return user.account.id
-      } catch (e) {
-        console.warn('Failed to parse stored user data:', e)
+    // Method 1: Try to get from ELK's current user state (most reliable)
+    try {
+      // Check for ELK's global state
+      const elkGlobal = (window as any)?.$elk || (window as any)?.__ELK__ || (window as any)?._elk
+      if (elkGlobal?.currentUser?.account?.acct) {
+        console.log('[Corgi] ✅ Found user from ELK global state:', elkGlobal.currentUser.account.acct)
+        return elkGlobal.currentUser.account.acct
       }
+    } catch (e) {
+      console.log('[Corgi] Could not access ELK global state:', e)
     }
-    
-    // Fallback: try to extract from current URL or location
-    const currentUrl = window.location.href
-    const userMatch = currentUrl.match(/\/@([^\/]+)/) || currentUrl.match(/users\/([^\/]+)/)
-    if (userMatch?.[1]) {
-      return userMatch[1]
+
+    // Method 2: Try to get from Nuxt app context
+    try {
+      const nuxtApp = (window as any)?.$nuxt
+      if (nuxtApp?.$currentUser?.account?.acct) {
+        console.log('[Corgi] ✅ Found user from Nuxt app:', nuxtApp.$currentUser.account.acct)
+        return nuxtApp.$currentUser.account.acct
+      }
+    } catch (e) {
+      console.log('[Corgi] Could not access Nuxt app:', e)
+    }
+
+    // Method 3: Try localStorage for current user handle (ELK stores this)
+    try {
+      const currentUserHandle = localStorage.getItem('elk-current-user-handle')
+      if (currentUserHandle && currentUserHandle !== 'null' && currentUserHandle !== 'undefined') {
+        console.log('[Corgi] ✅ Found user from localStorage handle:', currentUserHandle)
+        return currentUserHandle
+      }
+    } catch (e) {
+      console.log('[Corgi] Could not access localStorage handle:', e)
+    }
+
+    // Method 4: Try to parse accounts from localStorage
+    try {
+      const accountsStr = localStorage.getItem('elk-accounts')
+      if (accountsStr) {
+        const accounts = JSON.parse(accountsStr)
+        // Look for active account or first account
+        const activeAccount = accounts.find((acc: any) => acc.active) || accounts[0]
+        if (activeAccount?.account?.acct) {
+          console.log('[Corgi] ✅ Found user from localStorage accounts:', activeAccount.account.acct)
+          return activeAccount.account.acct
+        }
+      }
+    } catch (e) {
+      console.log('[Corgi] Could not parse localStorage accounts:', e)
+    }
+
+    // Method 5: Try to get from ELK settings
+    try {
+      const settingsStr = localStorage.getItem('elk-settings')
+      if (settingsStr) {
+        const settings = JSON.parse(settingsStr)
+        // Look for user handles in settings
+        for (const key in settings) {
+          if (key.includes('@') && key.includes('.')) {
+            console.log('[Corgi] ✅ Found user from settings:', key)
+            return key
+          }
+        }
+      }
+    } catch (e) {
+      console.log('[Corgi] Could not parse localStorage settings:', e)
+    }
+
+    // Method 6: Try to extract from current URL path
+    try {
+      const path = window.location.pathname
+      // Look for patterns like /mastodon.social/@username or /@username
+      const userMatch = path.match(/\/@([^\/]+)/) || path.match(/\/([^\/]+@[^\/]+)/)
+      if (userMatch && userMatch[1] && userMatch[1] !== 'home' && userMatch[1] !== 'public') {
+        const userHandle = userMatch[1].includes('@') ? userMatch[1] : `${userMatch[1]}@${window.location.hostname}`
+        console.log('[Corgi] ✅ Found user from URL path:', userHandle)
+        return userHandle
+      }
+    } catch (e) {
+      console.log('[Corgi] Could not extract user from URL:', e)
+    }
+
+    // Method 7: Try to get from meta tags
+    try {
+      const metaUser = document.querySelector('meta[name="current-user"]')?.getAttribute('content')
+      if (metaUser && metaUser !== 'null' && metaUser !== 'undefined') {
+        console.log('[Corgi] ✅ Found user from meta tag:', metaUser)
+        return metaUser
+      }
+    } catch (e) {
+      console.log('[Corgi] Could not access meta tags:', e)
+    }
+
+    // Method 8: Try to get from Vue/Nuxt reactive state
+    try {
+      // Check for Vue app instance
+      const vueApp = (window as any)?.__VUE_APP__ || (window as any)?._vueApp
+      if (vueApp?.config?.globalProperties?.$currentUser?.account?.acct) {
+        console.log('[Corgi] ✅ Found user from Vue app:', vueApp.config.globalProperties.$currentUser.account.acct)
+        return vueApp.config.globalProperties.$currentUser.account.acct
+      }
+    } catch (e) {
+      console.log('[Corgi] Could not access Vue app:', e)
     }
   }
-  
-  // Final fallback - but this should be avoided in production
-  console.warn('Could not determine current user ID, falling back to anonymous')
+
+  console.log('[Corgi] ⚠️ Could not determine user ID, falling back to anonymous')
   return 'anonymous'
 }
 
@@ -79,45 +159,122 @@ function transformToMastodonPost(rec: any): CorgiRecommendation {
     return {
       ...rec,
       is_recommendation: true,
-      recommendation_reason: rec.recommendation_reason || rec.reason || 'AI recommended based on your interests'
+      recommendation_reason: rec.recommendation_reason || rec.reason || 'AI recommended based on your interests',
+      // Ensure the post has proper navigation URLs
+      url: rec.url || rec.uri,
+      uri: rec.uri || rec.url
     }
   }
 
-  // If it's a stub post, create a full Mastodon-compatible structure
-  const postId = rec.id || `rec_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-  const authorId = rec.author_id || `user_${Math.random().toString(36).substr(2, 6)}`
-  const authorName = rec.author_name || `User ${authorId.slice(-4)}`
+  // Helper function to convert Mastodon URL to ELK URL for navigation
+  function convertToELKUrl(mastodonUrl: string): string {
+    if (!mastodonUrl || mastodonUrl.includes('example.com')) {
+      return mastodonUrl
+    }
+    
+    try {
+      // Convert https://mastodon.world/@user/123 to http://localhost:5314/mastodon.world/@user/123
+      const url = new URL(mastodonUrl)
+      
+      // Extract the path components
+      const pathParts = url.pathname.split('/')
+      const hostname = url.hostname
+      
+      // Handle different Mastodon URL formats:
+      // https://mastodon.world/@user/123456 -> /mastodon.world/@user/123456
+      // https://mastodon.social/users/username/statuses/123456 -> /mastodon.social/@username/123456
+      
+      if (pathParts.includes('users') && pathParts.includes('statuses')) {
+        // Format: /users/username/statuses/123456
+        const userIndex = pathParts.indexOf('users')
+        const statusIndex = pathParts.indexOf('statuses')
+        if (userIndex >= 0 && statusIndex >= 0 && pathParts[userIndex + 1] && pathParts[statusIndex + 1]) {
+          const username = pathParts[userIndex + 1]
+          const statusId = pathParts[statusIndex + 1]
+          return `http://localhost:5314/${hostname}/@${username}/${statusId}`
+        }
+      } else if (pathParts[1] && pathParts[1].startsWith('@') && pathParts[2]) {
+        // Format: /@username/123456
+        return `http://localhost:5314/${hostname}${url.pathname}`
+      }
+      
+      // Fallback: just prepend ELK base URL
+      return `http://localhost:5314/${hostname}${url.pathname}`
+    } catch (e) {
+      console.warn('[Corgi] Could not convert URL:', mastodonUrl, e)
+      return mastodonUrl
+    }
+  }
+
+  // Helper functions for extracting account info from URLs
+  function extractUsernameFromUrl(url: string): string {
+    try {
+      const match = url.match(/@([^\/]+)/) || url.match(/users\/([^\/]+)/)
+      return match ? match[1] : 'unknown'
+    } catch {
+      return 'unknown'
+    }
+  }
+
+  function extractAcctFromUrl(url: string): string {
+    try {
+      const urlObj = new URL(url)
+      const username = extractUsernameFromUrl(url)
+      return `${username}@${urlObj.hostname}`
+    } catch {
+      return 'unknown@unknown'
+    }
+  }
+
+  function extractAccountUrlFromPostUrl(postUrl: string): string {
+    try {
+      const urlObj = new URL(postUrl)
+      const username = extractUsernameFromUrl(postUrl)
+      return `${urlObj.protocol}//${urlObj.hostname}/@${username}`
+    } catch {
+      return 'https://example.com/@unknown'
+    }
+  }
+
+  // Transform the recommendation into a Mastodon-compatible post
+  const postUrl = rec.url || rec.uri || `https://example.com/posts/${rec.id || rec.post_id || 'unknown'}`
+  const elkUrl = convertToELKUrl(postUrl)
   
   return {
-    id: postId,
-    uri: `https://example.com/posts/${postId}`,
-    url: `https://example.com/posts/${postId}`,
-    account: {
-      id: authorId,
-      username: authorName.toLowerCase().replace(/\s+/g, ''),
-      acct: `${authorName.toLowerCase().replace(/\s+/g, '')}@example.com`,
-      display_name: authorName,
-      avatar: `https://avatar.oxro.io/avatar.svg?name=${encodeURIComponent(authorName)}&background=random`,
-      url: `https://example.com/@${authorName.toLowerCase().replace(/\s+/g, '')}`
-    },
-    content: rec.content || 'AI-generated recommendation content',
+    id: rec.id || rec.post_id || Math.random().toString(36).substr(2, 9),
     created_at: rec.created_at || new Date().toISOString(),
-    reblog: null,
-    media_attachments: rec.media_attachments || [],
+    content: rec.content || rec.text || 'Recommended content',
+    account: {
+      id: rec.account?.id || rec.author_id || Math.random().toString(36).substr(2, 9),
+      username: rec.account?.username || rec.author_username || extractUsernameFromUrl(postUrl),
+      acct: rec.account?.acct || rec.author_acct || extractAcctFromUrl(postUrl),
+      display_name: rec.account?.display_name || rec.author_display_name || rec.author_username || extractUsernameFromUrl(postUrl),
+      url: rec.account?.url || rec.author_url || extractAccountUrlFromPostUrl(postUrl),
+      avatar: rec.account?.avatar || rec.author_avatar || 'https://via.placeholder.com/48x48.png?text=👤',
+      avatar_static: rec.account?.avatar_static || rec.author_avatar || 'https://via.placeholder.com/48x48.png?text=👤'
+    },
+    url: elkUrl, // Use ELK-compatible URL for navigation
+    uri: rec.uri || postUrl, // Keep original URI
+    favourites_count: rec.favourites_count || rec.favorites_count || 0,
+    reblogs_count: rec.reblogs_count || rec.boosts_count || 0,
     replies_count: rec.replies_count || 0,
-    reblogs_count: rec.reblogs_count || 0,
-    favourites_count: rec.favourites_count || 0,
-    favourited: rec.favourited || false,
-    reblogged: rec.reblogged || false,
+    language: rec.language || 'en',
+    visibility: rec.visibility || 'public',
+    media_attachments: rec.media_attachments || [],
+    mentions: rec.mentions || [],
+    tags: rec.tags || [],
+    emojis: rec.emojis || [],
+    card: rec.card || null,
     is_recommendation: true,
-    recommendation_reason: rec.recommendation_reason || rec.reason || 'AI recommended based on your interests'
+    recommendation_reason: rec.recommendation_reason || rec.reason || 'AI recommended based on your interests',
+    recommendation_score: rec.score || rec.recommendation_score || 0.5
   }
 }
 
 export function useCorgiSeamless() {
   // Configuration
   const config = ref<CorgiConfig>({
-    apiUrl: process.env.CORGI_API_URL || 'http://localhost:9999',
+    apiUrl: process.env.CORGI_API_URL || 'http://localhost:5002',
     enabled: true,
     proxyMode: true
   })

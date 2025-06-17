@@ -1,0 +1,520 @@
+# Agent Registry Configuration
+# Central registry of all agents in the Corgi Recommender Service
+
+version: "1.0"
+last_updated: "2025-01-16T20:13:11Z"
+total_agents: 16
+
+# Agent Categories
+categories:
+  core: "Essential system agents"
+  monitoring: "Monitoring and alerting agents"
+  interaction: "User interaction and testing agents"
+  security: "Security and compliance agents"
+  support: "Supporting utilities and tools"
+
+# Agent Registry
+agents:
+  # CORE AGENTS
+  manager_agent:
+    name: "Manager Agent"
+    category: "core"
+    file: "agents/manager_agent.py"
+    class: "ManagerAgent"
+    status: "broken"
+    priority: "critical"
+    description: "Central monitoring and management system for all agents"
+    capabilities:
+      - "Agent health monitoring"
+      - "Cost tracking coordination"
+      - "Slack alerting"
+      - "Issue detection and aggregation"
+    dependencies:
+      - "cost_tracker"
+      - "slack_notifier"
+    api_usage: false
+    cost_tracking: true
+    health_check: true
+    metrics: true
+    config_file: "config/manager_agent.yaml"
+    issues:
+      - "AST analysis errors"
+      - "Import/syntax issues"
+    recommended_actions:
+      - "Fix core functionality"
+      - "Restore operational status"
+
+  cost_tracker:
+    name: "Cost Tracker"
+    category: "core"
+    file: "agents/cost_tracker.py"
+    class: "CostTracker"
+    status: "broken"
+    priority: "critical"
+    description: "Tracks API costs, enforces budgets, and prevents runaway expenses"
+    capabilities:
+      - "API cost calculation"
+      - "Budget enforcement"
+      - "Circuit breaker logic"
+      - "Usage analytics"
+    dependencies: []
+    api_usage: false
+    cost_tracking: true
+    health_check: false
+    metrics: true
+    config_file: null
+    issues:
+      - "AST analysis errors"
+      - "Missing error handling"
+    recommended_actions:
+      - "Fix broken functionality"
+      - "Add comprehensive error handling"
+
+  core_agent_system:
+    name: "Core Agent System"
+    category: "core"
+    file: "agents/core_agent_system.py"
+    class: "AgentOrchestrator"
+    status: "operational"
+    priority: "high"
+    description: "Main agent orchestration and coordination system"
+    capabilities:
+      - "Agent lifecycle management"
+      - "Health monitoring"
+      - "Performance optimization"
+      - "System coordination"
+    dependencies: []
+    api_usage: true
+    cost_tracking: false
+    health_check: true
+    metrics: true
+    config_file: null
+    issues:
+      - "Missing cost tracking integration"
+      - "Security risks (shell commands)"
+    recommended_actions:
+      - "Add cost tracking integration"
+      - "Implement security controls"
+      - "Add circuit breakers"
+
+  # MONITORING AGENTS
+  slack_notifier:
+    name: "Slack Notifier"
+    category: "monitoring"
+    file: "agents/slack_notifier.py"
+    class: "SlackNotifier"
+    status: "operational"
+    priority: "high"
+    description: "Sends alerts and notifications to Slack channels"
+    capabilities:
+      - "Multi-severity alerts"
+      - "Rich message formatting"
+      - "Rate limiting"
+      - "Alert aggregation"
+    dependencies: []
+    api_usage: true
+    cost_tracking: false
+    health_check: false
+    metrics: false
+    config_file: null
+    issues:
+      - "No cost tracking for webhook calls"
+      - "Missing health check"
+    recommended_actions:
+      - "Add cost tracking integration"
+      - "Implement health check endpoint"
+
+  web_agent_dashboard:
+    name: "Web Agent Dashboard"
+    category: "monitoring"
+    file: "agents/web_agent_dashboard.py"
+    class: null
+    status: "broken"
+    priority: "medium"
+    description: "Web-based dashboard for agent monitoring and control"
+    capabilities:
+      - "Real-time agent status"
+      - "Performance metrics"
+      - "Control interface"
+      - "Export functionality"
+    dependencies:
+      - "core_agent_system"
+    api_usage: false
+    cost_tracking: false
+    health_check: true
+    metrics: true
+    config_file: null
+    issues:
+      - "AST analysis errors"
+      - "Flask application structure"
+    recommended_actions:
+      - "Fix broken functionality"
+      - "Add authentication"
+      - "Improve error handling"
+
+  # INTERACTION AGENTS
+  browser_agent:
+    name: "Browser Agent"
+    category: "interaction"
+    file: "agents/browser_agent.py"
+    class: "BrowserAgent"
+    status: "operational"
+    priority: "high"
+    description: "Automated browser testing and user simulation"
+    capabilities:
+      - "Web automation"
+      - "User behavior simulation"
+      - "Claude integration"
+      - "Interaction logging"
+    dependencies:
+      - "claude_interface"
+      - "token_tracker"
+      - "interaction_logger"
+      - "feedback_module"
+      - "user_profiles"
+    api_usage: true
+    cost_tracking: false
+    health_check: false
+    metrics: false
+    config_file: null
+    issues:
+      - "High cost risk (Claude-3-Opus)"
+      - "No budget controls"
+      - "Missing circuit breaker"
+    recommended_actions:
+      - "CRITICAL: Add budget controls"
+      - "Implement cost tracking"
+      - "Add circuit breaker protection"
+
+  user_profiles:
+    name: "User Profiles"
+    category: "interaction"
+    file: "agents/user_profiles.py"
+    class: "UserProfile"
+    status: "broken"
+    priority: "medium"
+    description: "Manages synthetic user profiles for testing"
+    capabilities:
+      - "Profile management"
+      - "Behavior simulation"
+      - "Feedback generation"
+      - "Heuristic decisions"
+    dependencies: []
+    api_usage: false
+    cost_tracking: false
+    health_check: false
+    metrics: false
+    config_file: null
+    issues:
+      - "AST analysis errors"
+      - "Complex structure"
+    recommended_actions:
+      - "Fix broken functionality"
+      - "Simplify architecture"
+      - "Add error handling"
+
+  interaction_logger:
+    name: "Interaction Logger"
+    category: "interaction"
+    file: "agents/interaction_logger.py"
+    class: "InteractionLogger"
+    status: "operational"
+    priority: "low"
+    description: "Logs user interactions and session data"
+    capabilities:
+      - "Session tracking"
+      - "Action logging"
+      - "Data persistence"
+      - "Analysis support"
+    dependencies: []
+    api_usage: false
+    cost_tracking: false
+    health_check: false
+    metrics: false
+    config_file: null
+    issues:
+      - "No health check"
+      - "Limited metrics"
+    recommended_actions:
+      - "Add health check"
+      - "Implement metrics"
+
+  feedback_module:
+    name: "Feedback Module"
+    category: "interaction"
+    file: "agents/feedback_module.py"
+    class: "FeedbackModule"
+    status: "operational"
+    priority: "medium"
+    description: "Handles user feedback and API submissions"
+    capabilities:
+      - "Feedback processing"
+      - "API integration"
+      - "Privacy controls"
+      - "Data analysis"
+    dependencies: []
+    api_usage: true
+    cost_tracking: false
+    health_check: false
+    metrics: false
+    config_file: null
+    issues:
+      - "No cost tracking for API calls"
+      - "Missing health check"
+    recommended_actions:
+      - "Add cost tracking integration"
+      - "Implement health check"
+
+  # SECURITY AGENTS
+  security_healing_agent:
+    name: "Security Healing Agent"
+    category: "security"
+    file: "agents/security_healing_agent.py"
+    class: "SecurityHealingAgent"
+    status: "operational"
+    priority: "critical"
+    description: "LLM-powered security vulnerability detection and healing"
+    capabilities:
+      - "Vulnerability scanning"
+      - "Automated fixes"
+      - "LLM analysis"
+      - "Rollback capabilities"
+    dependencies:
+      - "claude_interface"
+      - "core_agent_system"
+    api_usage: true
+    cost_tracking: false
+    health_check: true
+    metrics: false
+    config_file: "config/security_healing.yaml"
+    issues:
+      - "High cost risk (LLM usage)"
+      - "Security risks (shell commands)"
+      - "No cost tracking"
+    recommended_actions:
+      - "CRITICAL: Add budget controls"
+      - "Implement cost tracking"
+      - "Secure shell command execution"
+
+  # SUPPORT AGENTS
+  claude_interface:
+    name: "Claude Interface"
+    category: "support"
+    file: "agents/claude_interface.py"
+    class: "ClaudeInterface"
+    status: "operational"
+    priority: "high"
+    description: "Central interface for Claude API interactions"
+    capabilities:
+      - "API abstraction"
+      - "Token tracking"
+      - "Error handling"
+      - "Connection validation"
+    dependencies:
+      - "token_tracker"
+    api_usage: true
+    cost_tracking: false
+    health_check: false
+    metrics: false
+    config_file: null
+    issues:
+      - "High cost risk (direct API access)"
+      - "No budget controls"
+      - "Missing health check"
+    recommended_actions:
+      - "CRITICAL: Add budget controls"
+      - "Implement cost tracking integration"
+      - "Add health check endpoint"
+
+  token_tracker:
+    name: "Token Tracker"
+    category: "support"
+    file: "agents/token_tracker.py"
+    class: "TokenTracker"
+    status: "operational"
+    priority: "high"
+    description: "Tracks token usage and calculates costs"
+    capabilities:
+      - "Token counting"
+      - "Cost calculation"
+      - "Usage logging"
+      - "Limit enforcement"
+    dependencies: []
+    api_usage: false
+    cost_tracking: true
+    health_check: false
+    metrics: true
+    config_file: null
+    issues:
+      - "No budget controls configured"
+      - "Missing health check"
+    recommended_actions:
+      - "Configure budget controls"
+      - "Add health check"
+      - "Integrate with Manager Agent"
+
+  agent_config:
+    name: "Agent Config"
+    category: "support"
+    file: "agents/agent_config.py"
+    class: "AgentConfig"
+    status: "operational"
+    priority: "low"
+    description: "Configuration management for agents"
+    capabilities:
+      - "Config loading"
+      - "Validation"
+      - "Default values"
+      - "Environment integration"
+    dependencies: []
+    api_usage: false
+    cost_tracking: false
+    health_check: false
+    metrics: false
+    config_file: null
+    issues:
+      - "No health check"
+      - "Limited validation"
+    recommended_actions:
+      - "Add health check"
+      - "Improve validation"
+
+  agent_launcher:
+    name: "Agent Launcher"
+    category: "support"
+    file: "agents/agent_launcher.py"
+    class: "AgentSystemLauncher"
+    status: "operational"
+    priority: "medium"
+    description: "Manages agent lifecycle and system startup"
+    capabilities:
+      - "System startup"
+      - "Process management"
+      - "Lifecycle control"
+      - "Configuration loading"
+    dependencies:
+      - "agent_config"
+    api_usage: false
+    cost_tracking: false
+    health_check: false
+    metrics: false
+    config_file: null
+    issues:
+      - "Security risks (process management)"
+      - "No health check"
+    recommended_actions:
+      - "Implement security controls"
+      - "Add health check"
+
+  # TESTING AGENTS
+  test_runner:
+    name: "Test Runner"
+    category: "support"
+    file: "agents/test_runner.py"
+    class: null
+    status: "broken"
+    priority: "low"
+    description: "Automated testing framework for agents"
+    capabilities:
+      - "Test execution"
+      - "Result reporting"
+      - "Coverage analysis"
+      - "Performance testing"
+    dependencies: []
+    api_usage: false
+    cost_tracking: false
+    health_check: false
+    metrics: false
+    config_file: null
+    issues:
+      - "AST analysis errors"
+      - "Testing infrastructure"
+    recommended_actions:
+      - "Fix broken functionality"
+      - "Improve test coverage"
+
+  test_all_features:
+    name: "Feature Tester"
+    category: "support"
+    file: "agents/test_all_features.py"
+    class: null
+    status: "operational"
+    priority: "low"
+    description: "Comprehensive feature testing with real API calls"
+    capabilities:
+      - "Feature validation"
+      - "API testing"
+      - "Integration testing"
+      - "Performance validation"
+    dependencies:
+      - "claude_interface"
+    api_usage: true
+    cost_tracking: false
+    health_check: false
+    metrics: false
+    config_file: null
+    issues:
+      - "High cost risk (testing with expensive models)"
+      - "No budget controls"
+    recommended_actions:
+      - "CRITICAL: Add budget controls"
+      - "Implement cost tracking"
+      - "Use cheaper models for testing"
+
+# System Statistics
+statistics:
+  operational_agents: 11
+  broken_agents: 5
+  high_cost_risk: 5
+  security_risks: 3
+  missing_cost_tracking: 13
+  missing_health_checks: 12
+  missing_circuit_breakers: 14
+
+# Integration Matrix
+integrations:
+  manager_agent_connected: 1  # Only cost_tracker
+  slack_integration: 1        # Only slack_notifier
+  claude_api_users: 5
+  database_users: 4
+  config_file_users: 6
+
+# Risk Assessment Summary
+risk_levels:
+  critical: 5  # Broken core agents
+  high: 8      # Cost and security risks
+  medium: 2    # Operational issues
+  low: 1       # Minor improvements
+
+# Recommended Actions by Priority
+action_priorities:
+  critical:
+    - "Fix broken core agents (manager_agent, cost_tracker)"
+    - "Implement budget controls on API agents"
+    - "Address security vulnerabilities"
+  high:
+    - "Add cost tracking to all API agents"
+    - "Implement circuit breakers"
+    - "Add comprehensive error handling"
+  medium:
+    - "Add health checks to all agents"
+    - "Implement monitoring integration"
+    - "Improve logging coverage"
+  low:
+    - "Add type hints"
+    - "Improve documentation"
+    - "Code optimization"
+
+# Manager Agent Enhancement Plan
+manager_agent_enhancements:
+  immediate:
+    - "Fix core functionality"
+    - "Restore operational status"
+  short_term:
+    - "Expand monitoring to all 16 agents"
+    - "Implement audit capabilities"
+    - "Enhanced Slack alerting"
+  long_term:
+    - "Predictive failure detection"
+    - "Self-healing capabilities"
+    - "Automated optimization" 

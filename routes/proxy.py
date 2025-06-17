@@ -18,6 +18,7 @@ import datetime
 import os
 import re
 import hashlib
+from werkzeug.security import check_password_hash
 
 from db.connection import get_db_connection, get_cursor, USE_IN_MEMORY_DB
 from utils.logging_decorator import log_route
@@ -304,6 +305,9 @@ def get_user_instance(req):
 def get_user_by_token(token):
     """
     Look up user information based on an OAuth token.
+    This function now iterates through tokens to check against a hashed value
+    for enhanced security. This is a temporary measure until a more scalable
+    token lookup (e.g., using a selector) is implemented.
 
     Args:
         token: The OAuth token to look up
@@ -314,25 +318,32 @@ def get_user_by_token(token):
     try:
         with get_db_connection() as conn:
             with get_cursor(conn) as cur:
-                # Use correct placeholder syntax based on database type
-                placeholder = "?" if USE_IN_MEMORY_DB else "%s"
-                
+                # Inefficient, but secure: fetch all tokens and check hash.
+                # This mitigates plaintext token risk until a proper token
+                # storage/lookup mechanism (e.g., selector-verifier) is built.
                 cur.execute(
-                    f"""
-                    SELECT user_id, instance_url, access_token 
+                    """
+                    SELECT user_id, instance_url, access_token, token_expires_at
                     FROM user_identities 
-                    WHERE access_token = {placeholder}
-                """,
-                    (token,),
+                    WHERE is_active = true
+                """
                 )
 
-                result = cur.fetchone()
-                if result:
-                    return {
-                        "user_id": result[0],
-                        "instance_url": result[1],
-                        "access_token": result[2],
-                    }
+                for user_id, instance_url, hashed_token, token_expires_at in cur.fetchall():
+                    # SECURITY: Check if token hash matches
+                    if hashed_token and check_password_hash(hashed_token, token):
+                        # SECURITY: Check if token is expired
+                        if token_expires_at and datetime.datetime.now() > token_expires_at:
+                            logger.warning(f"Attempted to use expired token for user {user_id}")
+                            continue  # Check next token
+
+                        # Valid token found
+                        return {
+                            "user_id": user_id,
+                            "instance_url": instance_url,
+                            "access_token": token,  # Return the original token for this session
+                        }
+        
     except Exception as e:
         logger.error(f"Database error looking up token: {e}")
 
@@ -359,18 +370,9 @@ def get_authenticated_user(req):
         if user_info:
             return user_info["user_id"]
 
-    # Check if development mode is explicitly enabled
-    if (
-        os.environ.get("FLASK_ENV") == "development"
-        and os.environ.get("ALLOW_QUERY_USER_ID") == "true"
-    ):
-        # Only allow query parameter user_id in development when explicitly enabled
-        user_id = req.args.get("user_id")
-        if user_id:
-            logger.warning(
-                f"Using user_id from query parameter: {user_id} - THIS IS INSECURE AND ONLY FOR DEVELOPMENT"
-            )
-            return user_id
+    # SECURITY FIX: Removed development authentication bypass
+    # Query parameter authentication is inherently insecure and has been removed
+    # All authentication must go through proper token validation
 
     # No user identified
     return None
@@ -1710,20 +1712,19 @@ def generate_proxy_cache_key(endpoint, params, user_id, instance):
         str: Cache key for this request
     """
     # Sort params for consistent key generation
-    sorted_params = sorted(params.items()) if params else []
-    params_str = "&".join([f"{k}={v}" for k, v in sorted_params])
-    
+    sorted_params = json.dumps(params, sort_keys=True)
+
     # Create cache key components
     key_parts = [
-        endpoint or "",
-        params_str,
+        endpoint,
+        sorted_params,
         user_id or "anonymous",
-        instance or "default"
+        instance or "unknown",
     ]
-    
+
     # Join and hash for consistent key
     key_string = "|".join(key_parts)
-    return hashlib.md5(key_string.encode()).hexdigest()
+    return hashlib.sha256(key_string.encode()).hexdigest()
 
 
 def determine_proxy_cache_ttl(endpoint):

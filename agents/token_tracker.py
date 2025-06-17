@@ -12,6 +12,11 @@ class TokenTracker:
 
     # Current Claude pricing (subject to change)
     PRICING = {
+        # Claude 4 models
+        "claude-sonnet-4-20250514": {
+            "input": 3.0,
+            "output": 15.0,
+        },  # $3/$15 per million tokens
         # Claude 3 models
         "claude-3-opus-20240229": {
             "input": 15.0,

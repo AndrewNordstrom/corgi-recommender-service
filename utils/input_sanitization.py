@@ -56,6 +56,24 @@ def sanitize_string(value: Any, field_name: str = "field", max_length: int = MAX
         logger.warning(f"Control characters detected in {field_name}: {repr(value[:50])}")
         raise ValueError(f"Invalid {field_name} format or content")
     
+    # SECURITY ENHANCEMENT: Check for path traversal patterns
+    if '../' in value or '..\\'  in value or '/..' in value or '\\..' in value:
+        logger.warning(f"Path traversal pattern detected in {field_name}: {repr(value[:50])}")
+        raise ValueError(f"Invalid {field_name} format or content")
+    
+    # SECURITY ENHANCEMENT: Check for script injection patterns
+    dangerous_patterns = [
+        '<script', '</script', 'javascript:', 'vbscript:', 'onload=', 'onerror=',
+        'data:text/html', 'data:application/', '<iframe', '<object', '<embed',
+        'onmouseover=', 'onfocus=', 'onclick=', 'alert(', 'document.cookie', 'window.location'
+    ]
+    
+    value_lower = value.lower()
+    for pattern in dangerous_patterns:
+        if pattern in value_lower:
+            logger.warning(f"Dangerous pattern '{pattern}' detected in {field_name}: {repr(value[:50])}")
+            raise ValueError(f"Invalid {field_name} format or content")
+    
     # Check length
     if len(value) > max_length:
         logger.warning(f"String too long for {field_name}: {len(value)} > {max_length}")
@@ -204,7 +222,7 @@ def validate_context_field(context: Any) -> Dict[str, Any]:
     
     # Check for suspicious keys that might indicate schema pollution
     suspicious_keys = ['admin', 'role', 'administrator', 'is_admin', 'is_superuser', 
-                      'privileges', 'permissions', 'access_level']
+                      'privileges', 'permissions', 'access_level', '__proto__', 'constructor', 'prototype']
     for key in context:
         if key.lower() in suspicious_keys:
             logger.warning(f"Suspicious key in context: {key}")

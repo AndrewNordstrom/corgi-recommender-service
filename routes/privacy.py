@@ -14,6 +14,7 @@ from utils.privacy import (
     update_user_privacy_level,
 )
 from utils.logging_decorator import log_route
+from utils.rbac import require_authentication, get_current_user
 
 # Set up logging
 logger = logging.getLogger(__name__)
@@ -24,35 +25,26 @@ privacy_bp = Blueprint("privacy", __name__)
 
 @privacy_bp.route("", methods=["GET"])
 @log_route
+@require_authentication
 def get_privacy():
     """
-    Get privacy settings for a user.
-
-    Query parameters:
-        user_id: ID of the user to get settings for (optional if Authorization header is provided)
+    Get privacy settings for the authenticated user.
 
     Headers:
-        Authorization: Bearer token for user authentication (alternative to user_id param)
+        Authorization: Bearer token for user authentication
 
     Returns:
         200 OK with privacy settings
-        400 Bad Request if user_id is missing
+        401 Unauthorized if token is invalid
         500 Server Error on failure
     """
-    # Try to get user_id from query params first, then from Authorization header
-    user_id = request.args.get("user_id")
-    
-    if not user_id:
-        # Try to extract from Authorization header
-        auth_header = request.headers.get("Authorization")
-        if auth_header and auth_header.startswith("Bearer "):
-            token = auth_header.split(" ")[1]
-            # Try to resolve user from token (mock lookup for integration tests)
-            user_id = f"user_from_token_{hash(token) % 10000}"
-            logger.info(f"Extracted user_id {user_id} from Authorization header")
+    # Get user from the authentication decorator
+    current_user = get_current_user()
+    user_id = current_user.get("id")
 
     if not user_id:
-        return jsonify({"error": "Missing required parameter: user_id (provide either user_id query param or Authorization header)"}), 400
+        # This case should ideally not be reached if require_authentication works
+        return jsonify({"error": "Could not identify authenticated user"}), 401
 
     with get_db_connection() as conn:
         tracking_level = get_user_privacy_level(conn, user_id)
@@ -62,13 +54,13 @@ def get_privacy():
 
 @privacy_bp.route("", methods=["POST"])
 @log_route
+@require_authentication
 def update_privacy():
     """
-    Update privacy settings for a user.
+    Update privacy settings for the authenticated user.
 
     Request body:
     {
-        "user_id": "123",
         "tracking_level": "full" | "limited" | "none"
     }
 
@@ -78,13 +70,17 @@ def update_privacy():
         500 Server Error on failure
     """
     data = request.json
+    
+    # Get user from the authentication decorator
+    current_user = get_current_user()
+    user_id = current_user.get("id")
 
     # Validate required fields
-    user_id = data.get("user_id")
     tracking_level = data.get("tracking_level")
 
     if not user_id:
-        return jsonify({"error": "Missing required field: user_id"}), 400
+        # This case should not be reached due to the decorator
+        return jsonify({"error": "Could not identify authenticated user"}), 401
 
     if not tracking_level:
         return jsonify({"error": "Missing required field: tracking_level"}), 400

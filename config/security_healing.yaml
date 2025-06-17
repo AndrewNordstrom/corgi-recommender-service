@@ -1,0 +1,159 @@
+# Security Healing Configuration
+# Controls the behavior of the LLM-powered security healing system
+
+# General Settings
+enabled: true
+log_level: INFO
+max_healing_attempts_per_hour: 5
+healing_history_retention_days: 30
+
+# LLM Configuration
+llm:
+  provider: "claude"  # claude, openai, local
+  model: "claude-3-sonnet"
+  max_tokens: 4000
+  temperature: 0.1  # Low temperature for consistent security decisions
+  
+# Auto-Fix Settings
+auto_fix:
+  enabled: true
+  risk_levels:
+    low: true      # Auto-fix low-risk vulnerabilities
+    medium: false  # Require approval for medium-risk
+    high: false    # Always require approval for high-risk
+    critical: false # Always require approval for critical
+  
+  # Types of vulnerabilities that can be auto-fixed
+  allowed_types:
+    - dependency_update
+    - configuration_fix
+    - security_header_update
+  
+  # Types that always require human approval
+  forbidden_types:
+    - code_modification
+    - database_schema_change
+    - authentication_change
+
+# Safety Controls
+safety:
+  # Always create backups before applying fixes
+  create_backups: true
+  backup_retention_days: 7
+  
+  # Rollback settings
+  auto_rollback_on_failure: true
+  rollback_timeout_minutes: 5
+  
+  # Rate limiting
+  max_concurrent_fixes: 1
+  cooldown_between_fixes_minutes: 5
+  
+  # Verification requirements
+  verify_fixes: true
+  verification_timeout_minutes: 2
+
+# Vulnerability Scanning
+scanning:
+  # Tools to use for vulnerability detection
+  tools:
+    pip_audit: true
+    npm_audit: true
+    bandit: true
+    safety: true
+    semgrep: false  # Optional, requires installation
+  
+  # Scan intervals
+  scheduled_scan_interval_hours: 6
+  emergency_scan_triggers:
+    - new_cve_published
+    - dependency_alert
+    - security_incident
+  
+  # Severity thresholds
+  severity_thresholds:
+    critical: 9.0
+    high: 7.0
+    medium: 4.0
+    low: 1.0
+
+# Notification Settings
+notifications:
+  # When to send notifications
+  notify_on:
+    - vulnerability_detected
+    - auto_fix_applied
+    - fix_failed
+    - approval_required
+  
+  # Notification channels (configure endpoints separately)
+  channels:
+    slack: false
+    email: false
+    webhook: false
+    dashboard: true
+
+# Integration Settings
+integration:
+  # Existing monitoring systems
+  prometheus_metrics: true
+  grafana_dashboard: true
+  
+  # CI/CD integration
+  github_actions: true
+  pre_commit_hooks: false
+  
+  # Development workflow
+  block_deployment_on_critical: true
+  require_security_review_on_high: true
+
+# Approval Workflow
+approval:
+  # Who can approve fixes
+  approvers:
+    - security_team
+    - senior_developers
+    - system_administrators
+  
+  # Approval timeouts
+  approval_timeout_hours: 24
+  escalation_timeout_hours: 48
+  
+  # Auto-approval conditions
+  auto_approve_if:
+    - risk_level_low_and_fix_tested
+    - dependency_patch_release
+    - security_header_missing
+
+# Reporting
+reporting:
+  # Generate reports
+  daily_summary: true
+  weekly_detailed: true
+  monthly_trend_analysis: true
+  
+  # Report formats
+  formats:
+    - json
+    - html
+    - pdf
+  
+  # Report distribution
+  recipients:
+    - security_team
+    - development_leads
+    - management
+
+# Development/Testing Settings
+development:
+  # Test mode - don't actually apply fixes
+  dry_run: false
+  
+  # Enhanced logging for debugging
+  debug_mode: false
+  
+  # Test with mock vulnerabilities
+  inject_test_vulnerabilities: false
+  
+  # Simulate LLM responses for testing
+  mock_llm_responses: false 

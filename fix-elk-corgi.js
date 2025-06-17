@@ -2,8 +2,8 @@
 // Paste this in the ELK browser console to see recommendations naturally in your timeline
 
 // Set Corgi API URL
-window.__CORGI_API_BASE_URL = 'http://localhost:9999';
-localStorage.setItem('corgi_api_url', 'http://localhost:9999');
+window.__CORGI_API_BASE_URL = 'http://localhost:5002';
+localStorage.setItem('corgi_api_url', 'http://localhost:5002');
 localStorage.setItem('corgi_enabled', 'true');
 
 console.log('✅ Corgi API configured to use port 9999');
@@ -250,7 +250,7 @@ function startCorgiObserver() {
 }
 
 // Check if we can reach Corgi API
-fetch('http://localhost:9999/health')
+fetch('http://localhost:5002/health')
   .then(r => r.json())
   .then(data => {
     console.log('✅ Corgi API is responding:', data);
@@ -276,7 +276,7 @@ fetch('http://localhost:9999/health')
 if (window.$nuxt) {
   try {
     if (window.$nuxt.$config && window.$nuxt.$config.public) {
-      window.$nuxt.$config.public.corgiApiUrl = 'http://localhost:9999';
+      window.$nuxt.$config.public.corgiApiUrl = 'http://localhost:5002';
       window.$nuxt.$config.public.useCorgi = true;
     }
   } catch (e) {

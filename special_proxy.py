@@ -28,9 +28,31 @@ DB_FILE = os.path.join(os.path.dirname(__file__), 'corgi_demo.db')
 # Create Flask app
 app = Flask(__name__)
 
-# Configure CORS
+# Configure CORS - SECURITY FIX: Restrict origins
 from flask_cors import CORS
-CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)
+
+# Define allowed origins based on environment
+ENV = os.getenv("FLASK_ENV", "development")
+if ENV == "production":
+    # Production: Only allow specific trusted domains
+    ALLOWED_ORIGINS = os.getenv("CORS_ALLOWED_ORIGINS", "").split(",")
+    if not ALLOWED_ORIGINS or ALLOWED_ORIGINS == [""]:
+        logger.error("CORS_ALLOWED_ORIGINS must be set in production")
+        sys.exit(1)
+else:
+    # Development: Allow localhost variants but not wildcard
+    ALLOWED_ORIGINS = [
+        "http://localhost:3000",
+        "http://localhost:5314", 
+        "http://localhost:3013",
+        "http://127.0.0.1:3000",
+        "http://127.0.0.1:5314",
+        "http://127.0.0.1:3013"
+    ]
+
+CORS(app, 
+     resources={r"/*": {"origins": ALLOWED_ORIGINS}}, 
+     supports_credentials=True)
 
 # Custom error handler for all exceptions
 @app.errorhandler(Exception)
@@ -339,6 +361,26 @@ def mastodon_api_proxy(path):
         return verify_app_credentials()
     elif path == 'accounts/verify_credentials':
         return verify_account_credentials()
+    
+    # Skip proxying for Corgi-specific endpoints - let them be handled by the Corgi API server
+    corgi_endpoints = [
+        'recommendations',  # /api/v1/recommendations/*
+        'posts',           # /api/v1/posts
+        'health',          # /api/v1/health
+        'docs',            # /api/v1/docs
+        'metrics',         # /api/v1/metrics (if any)
+    ]
+    
+    for endpoint in corgi_endpoints:
+        if path == endpoint or path.startswith(f'{endpoint}/'):
+            # Return 404 to indicate this endpoint should be handled by the Corgi server
+            # The client should try the Corgi server directly
+            logger.info(f"Skipping proxy for Corgi endpoint: /api/v1/{path}")
+            return jsonify({
+                "error": "Endpoint not handled by proxy",
+                "message": f"The endpoint /api/v1/{path} should be handled by the Corgi API server",
+                "corgi_endpoint": True
+            }), 404
         
     # Otherwise handle as a standard proxy request
     return proxy_to_mastodon(path)

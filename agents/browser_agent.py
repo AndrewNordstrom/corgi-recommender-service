@@ -974,7 +974,7 @@ class BrowserAgent:
         }
 
         payload = {
-            "model": "claude-3-opus-20240229",  # Use appropriate model
+            "model": "claude-sonnet-4-20250514",  # Use Claude Sonnet 4 with thinking
             "messages": messages,
             "max_tokens": 4096,
         }

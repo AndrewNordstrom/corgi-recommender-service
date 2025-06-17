@@ -1,0 +1,4779 @@
+{
+  "timestamp": "2025-06-16T20:13:05.199502",
+  "agents": {
+    "slack_notifier": {
+      "file_path": "/Users/andrewnordstrom/Elk_Corgi/corgi-recommender-service/agents/slack_notifier.py",
+      "file_size": 20113,
+      "last_modified": "2025-06-16T19:48:58.864724",
+      "status": "analyzed",
+      "classes": [
+        {
+          "name": "SlackAlert",
+          "bases": [],
+          "methods": [],
+          "decorators": [
+            "dataclass"
+          ],
+          "docstring": "Represents a Slack alert",
+          "line_number": 20
+        },
+        {
+          "name": "SlackNotifier",
+          "bases": [],
+          "methods": [
+            {
+              "name": "__init__",
+              "args": [
+                "self",
+                "webhook_url",
+                "channel",
+                "verify_ssl"
+              ],
+              "is_async": false,
+              "decorators": [],
+              "docstring": null,
+              "line_number": 45
+            },
+            {
+              "name": "_build_alert_blocks",
+              "args": [
+                "self",
+                "alert"
+              ],
+              "is_async": false,
+              "decorators": [],
+              "docstring": "Build Slack blocks for an alert",
+              "line_number": 89
+            },
+            {
+              "name": "_generate_issue_tldr",
+              "args": [
+                "self",
+                "issues"
+              ],
+              "is_async": false,
+              "decorators": [],
+              "docstring": "Generate a TLDR summary for a group of issues",
+              "line_number": 472
+            }
+          ],
+          "decorators": [],
+          "docstring": "Comprehensive Slack notification system",
+          "line_number": 30
+        }
+      ],
+      "functions": [],
+      "imports": [
+        {
+          "module": "asyncio",
+          "alias": null,
+          "type": "import"
+        },
+        {
+          "module": "json",
+          "alias": null,
+          "type": "import"
+        },
+        {
+          "module": "logging",
+          "alias": null,
+          "type": "import"
+        },
+        {
+          "module": "aiohttp",
+          "alias": null,
+          "type": "import"
+        },
+        {
+          "module": "ssl",
+          "alias": null,
+          "type": "import"
+        },
+        {
+          "module": "datetime.datetime",
+          "alias": null,
+          "type": "from_import",
+          "from_module": "datetime"
+        },
+        {
+          "module": "datetime.timedelta",
+          "alias": null,
+          "type": "from_import",
+          "from_module": "datetime"
+        },
+        {
+          "module": "typing.Dict",
+          "alias": null,
+          "type": "from_import",
+          "from_module": "typing"
+        },
+        {
+          "module": "typing.List",
+          "alias": null,
+          "type": "from_import",
+          "from_module": "typing"
+        },
+        {
+          "module": "typing.Optional",
+          "alias": null,
+          "type": "from_import",
+          "from_module": "typing"
+        },
+        {
+          "module": "typing.Any",
+          "alias": null,
+          "type": "from_import",
+          "from_module": "typing"
+        },
+        {
+          "module": "dataclasses.dataclass",
+          "alias": null,
+          "type": "from_import",
+          "from_module": "dataclasses"
+        },
+        {
+          "module": "pathlib.Path",
+          "alias": null,
+          "type": "from_import",
+          "from_module": "pathlib"
+        },
+        {
+          "module": "os",
+          "alias": null,
+          "type": "import"
+        }
+      ],
+      "dependencies": [],
+      "code_quality": {
+        "total_lines": 543,
+        "code_lines": 444,
+        "comment_lines": 22,
+        "docstring_lines": 28,
+        "has_error_handling": true,
+        "error_handling_blocks": 4,
+        "has_logging": true,
+        "has_type_hints": true,
+        "has_dataclasses": true,
+        "has_async": true,
+        "todo_comments": 0,
+        "complexity_indicators": {
+          "nested_loops": 0,
+          "conditional_complexity": 41,
+          "function_count": 3
+        },
+        "quality_score": 90
+      },
+      "integration_status": {
+        "importable": true,
+        "uses_cost_tracker": false,
+        "uses_token_tracker": false,
+        "uses_manager_agent": false,
+        "uses_slack_notifier": true,
+        "uses_claude_api": true,
+        "uses_database": false,
+        "uses_config_files": true,
+        "has_health_endpoint": false,
+        "has_metrics": false,
+        "api_integrations": [
+          "HTTP_CLIENT",
+          "SLACK_API"
+        ],
+        "external_dependencies": [
+          "aiohttp",
+          "ssl",
+          "dataclasses"
+        ]
+      },
+      "risk_assessment": {
+        "high_cost_risk": false,
+        "security_risks": [],
+        "infinite_loop_risk": false,
+        "file_system_risk": false,
+        "network_risk": false,
+        "privilege_escalation_risk": false,
+        "data_exposure_risk": false,
+        "circuit_breaker_missing": false
+      },
+      "devops_readiness": {
+        "has_health_check": false,
+        "has_metrics": false,
+        "has_logging": true,
+        "has_config_management": false,
+        "has_error_recovery": false,
+        "has_graceful_shutdown": false,
+        "containerizable": true,
+        "monitoring_ready": false,
+        "scalable": false
+      },
+      "agent_classes": []
+    },
+    "browser_agent": {
+      "file_path": "/Users/andrewnordstrom/Elk_Corgi/corgi-recommender-service/agents/browser_agent.py",
+      "file_size": 40963,
+      "last_modified": "2025-06-04T21:20:34.627258",
+      "status": "analyzed",
+      "classes": [
+        {
+          "name": "BrowserAgent",
+          "bases": [],
+          "methods": [
+            {
+              "name": "__init__",
+              "args": [
+                "self",
+                "api_key",
+                "base_url",
+                "logger",
+                "feedback_module",
+                "max_tokens",
+                "max_interactions",
+                "token_tracker",
+                "tools_enabled",
+                "no_llm"
+              ],
+              "is_async": false,
+              "decorators": [],
+              "docstring": "Initialize a browser agent that uses Claude's computer_use tool to interact with the Corgi Recommender.\n\nArgs:\n    api_key: Claude API key (defaults to ANTHROPIC_API_KEY env var if not provided)\n    base_url: The base URL for the Corgi Recommender service\n    logger: Optional custom logger for tracking interactions\n    feedback_module: Optional feedback module for submitting recommendations feedback\n    max_tokens: Maximum number of tokens to use\n    max_interactions: Maximum number of browser interactions\n    token_tracker: Optional token usage tracker\n    tools_enabled: Whether to enable tool usage (e.g., computer_use)\n    no_llm: Run in heuristic mode without using Claude",
+              "line_number": 23
+            },
+            {
+              "name": "start_session",
+              "args": [
+                "self",
+                "goal",
+                "user_profile",
+                "system_prompt"
+              ],
+              "is_async": false,
+              "decorators": [],
+              "docstring": "Start a new agent session with a specific goal.\n\nArgs:\n    goal: The objective for the agent (e.g., \"scroll timeline, favorite 2 corgi posts\")\n    user_profile: Optional UserProfile to use for this session\n    system_prompt: Optional additional system instructions\n\nReturns:\n    session_id: Identifier for the current agent session",
+              "line_number": 109
+            },
+            {
+              "name": "run_interaction",
+              "args": [
+                "self",
+                "goal",
+                "max_turns",
+                "user_profile",
+                "time_of_day",
+                "test_goal"
+              ],
+              "is_async": false,
+              "decorators": [],
+              "docstring": "Execute a goal-directed interaction with the Corgi UI.\n\nArgs:\n    goal: The objective for the agent\n    max_turns: Maximum number of interaction turns to allow\n    user_profile: Optional UserProfile to use for this session\n    time_of_day: Optional time context for behavior adaptation\n    test_goal: Optional specific test goal\n\nReturns:\n    results: Dictionary containing session results and logs",
+              "line_number": 160
+            },
+            {
+              "name": "_run_heuristic_interaction",
+              "args": [
+                "self",
+                "goal",
+                "max_turns",
+                "user_profile",
+                "time_of_day",
+                "test_goal"
+              ],
+              "is_async": false,
+              "decorators": [],
+              "docstring": "Run an interaction using rules-based heuristics instead of Claude LLM.\n\nArgs:\n    goal: The objective for the agent\n    max_turns: Maximum number of interaction turns\n    user_profile: Optional UserProfile for this session\n    time_of_day: Optional time context\n    test_goal: Optional specific test goal\n\nReturns:\n    Dictionary with results",
+              "line_number": 437
+            },
+            {
+              "name": "_process_tool_use",
+              "args": [
+                "self",
+                "tool_use"
+              ],
+              "is_async": false,
+              "decorators": [],
+              "docstring": "Process special commands from the computer_use tool.\n\nArgs:\n    tool_use: The computer_use tool input\n\nReturns:\n    Tool response with observations",
+              "line_number": 599
+            },
+            {
+              "name": "_handle_privacy_change",
+              "args": [
+                "self",
+                "input_text"
+              ],
+              "is_async": false,
+              "decorators": [],
+              "docstring": "Handle a privacy setting change request.\n\nArgs:\n    input_text: The tool use input text\n\nReturns:\n    Tool response with privacy change results",
+              "line_number": 624
+            },
+            {
+              "name": "_handle_recommendation_rating",
+              "args": [
+                "self",
+                "input_text"
+              ],
+              "is_async": false,
+              "decorators": [],
+              "docstring": "Handle a request to rate a recommendation.\n\nArgs:\n    input_text: The tool use input text\n\nReturns:\n    Tool response with rating results",
+              "line_number": 698
+            },
+            {
+              "name": "_handle_batch_recommendation_rating",
+              "args": [
+                "self",
+                "input_text"
+              ],
+              "is_async": false,
+              "decorators": [],
+              "docstring": "Handle a request to rate multiple recommendations at once.\n\nArgs:\n    input_text: The tool use input text\n\nReturns:\n    Tool response with batch rating results",
+              "line_number": 795
+            },
+            {
+              "name": "_simulate_browser_interaction",
+              "args": [
+                "self",
+                "input_text"
+              ],
+              "is_async": false,
+              "decorators": [],
+              "docstring": "Simulate a browser interaction.\n\nArgs:\n    input_text: The tool use input text\n\nReturns:\n    Simulated browser response",
+              "line_number": 869
+            },
+            {
+              "name": "execute_claude_request",
+              "args": [
+                "self",
+                "messages",
+                "tools"
+              ],
+              "is_async": false,
+              "decorators": [],
+              "docstring": "Execute a request to Claude API with computer_use tools.\n\nArgs:\n    messages: List of message objects for the conversation\n    tools: List of tool configurations to enable\n\nReturns:\n    Claude's API response",
+              "line_number": 958
+            },
+            {
+              "name": "_generate_session_id",
+              "args": [
+                "self"
+              ],
+              "is_async": false,
+              "decorators": [],
+              "docstring": "Generate a unique session ID.",
+              "line_number": 1030
+            },
+            {
+              "name": "_generate_random_post_content",
+              "args": [
+                "self"
+              ],
+              "is_async": false,
+              "decorators": [],
+              "docstring": "Generate random post content for testing.\n\nReturns:\n    Simulated post content",
+              "line_number": 1041
+            }
+          ],
+          "decorators": [],
+          "docstring": null,
+          "line_number": 22
+        }
+      ],
+      "functions": [],
+      "imports": [
+        {
+          "module": "os",
+          "alias": null,
+          "type": "import"
+        },
+        {
+          "module": "requests",
+          "alias": null,
+          "type": "import"
+        },
+        {
+          "module": "json",
+          "alias": null,
+          "type": "import"
+        },
+        {
+          "module": "logging",
+          "alias": null,
+          "type": "import"
+        },
+        {
+          "module": "random",
+          "alias": null,
+          "type": "import"
+        },
+        {
+          "module": "typing.Dict",
+          "alias": null,
+          "type": "from_import",
+          "from_module": "typing"
+        },
+        {
+          "module": "typing.List",
+          "alias": null,
+          "type": "from_import",
+          "from_module": "typing"
+        },
+        {
+          "module": "typing.Any",
+          "alias": null,
+          "type": "from_import",
+          "from_module": "typing"
+        },
+        {
+          "module": "typing.Optional",
+          "alias": null,
+          "type": "from_import",
+          "from_module": "typing"
+        },
+        {
+          "module": "typing.Set",
+          "alias": null,
+          "type": "from_import",
+          "from_module": "typing"
+        },
+        {
+          "module": "typing.Tuple",
+          "alias": null,
+          "type": "from_import",
+          "from_module": "typing"
+        },
+        {
+          "module": "datetime.datetime",
+          "alias": null,
+          "type": "from_import",
+          "from_module": "datetime"
+        },
+        {
+          "module": "interaction_logger.InteractionLogger",
+          "alias": null,
+          "type": "from_import",
+          "from_module": "interaction_logger"
+        },
+        {
+          "module": "feedback_module.FeedbackModule",
+          "alias": null,
+          "type": "from_import",
+          "from_module": "feedback_module"
+        },
+        {
+          "module": "user_profiles.UserProfile",
+          "alias": null,
+          "type": "from_import",
+          "from_module": "user_profiles"
+        },
+        {
+          "module": "claude_interface.ClaudeInterface",
+          "alias": null,
+          "type": "from_import",
+          "from_module": "claude_interface"
+        },
+        {
+          "module": "token_tracker.TokenTracker",
+          "alias": null,
+          "type": "from_import",
+          "from_module": "token_tracker"
+        },
+        {
+          "module": "uuid",
+          "alias": null,
+          "type": "import"
+        },
+        {
+          "module": "time",
+          "alias": null,
+          "type": "import"
+        }
+      ],
+      "dependencies": [],
+      "code_quality": {
+        "total_lines": 1061,
+        "code_lines": 803,
+        "comment_lines": 108,
+        "docstring_lines": 24,
+        "has_error_handling": true,
+        "error_handling_blocks": 11,
+        "has_logging": true,
+        "has_type_hints": true,
+        "has_dataclasses": false,
+        "has_async": false,
+        "todo_comments": 0,
+        "complexity_indicators": {
+          "nested_loops": 35,
+          "conditional_complexity": 120,
+          "function_count": 12
+        },
+        "quality_score": 90
+      },
+      "integration_status": {
+        "importable": true,
+        "uses_cost_tracker": false,
+        "uses_token_tracker": true,
+        "uses_manager_agent": false,
+        "uses_slack_notifier": false,
+        "uses_claude_api": true,
+        "uses_database": false,
+        "uses_config_files": true,
+        "has_health_endpoint": false,
+        "has_metrics": true,
+        "api_integrations": [
+          "HTTP_CLIENT",
+          "ANTHROPIC_API"
+        ],
+        "external_dependencies": [
+          "requests",
+          "random",
+          "interaction_logger",
+          "feedback_module",
+          "user_profiles",
+          "claude_interface",
+          "token_tracker",
+          "uuid",
+          "time"
+        ]
+      },
+      "risk_assessment": {
+        "high_cost_risk": true,
+        "security_risks": [],
+        "infinite_loop_risk": false,
+        "file_system_risk": false,
+        "network_risk": true,
+        "privilege_escalation_risk": false,
+        "data_exposure_risk": false,
+        "circuit_breaker_missing": true
+      },
+      "devops_readiness": {
+        "has_health_check": false,
+        "has_metrics": true,
+        "has_logging": true,
+        "has_config_management": true,
+        "has_error_recovery": false,
+        "has_graceful_shutdown": false,
+        "containerizable": true,
+        "monitoring_ready": false,
+        "scalable": false
+      },
+      "agent_classes": [
+        {
+          "name": "BrowserAgent",
+          "instantiable": false,
+          "methods": [
+            "execute_claude_request",
+            "run_interaction",
+            "start_session"
+          ],
+          "has_health_check": false,
+          "has_execute": false,
+          "base_classes": [
+            "object"
+          ]
+        }
+      ]
+    },
+    "cost_tracker": {
+      "file_path": "/Users/andrewnordstrom/Elk_Corgi/corgi-recommender-service/agents/cost_tracker.py",
+      "file_size": 18150,
+      "last_modified": "2025-06-16T18:25:35.619762",
+      "status": "error",
+      "classes": [
+        {
+          "name": "APICall",
+          "bases": [],
+          "methods": [],
+          "decorators": [
+            "dataclass"
+          ],
+          "docstring": "Represents a single API call",
+          "line_number": 22
+        },
+        {
+          "name": "AgentBudget",
+          "bases": [],
+          "methods": [],
+          "decorators": [
+            "dataclass"
+          ],
+          "docstring": "Budget allocation for an agent",
+          "line_number": 36
+        },
+        {
+          "name": "UsageStats",
+          "bases": [],
+          "methods": [],
+          "decorators": [
+            "dataclass"
+          ],
+          "docstring": "Usage statistics for an agent",
+          "line_number": 48
+        },
+        {
+          "name": "CostTracker",
+          "bases": [],
+          "methods": [
+            {
+              "name": "__init__",
+              "args": [
+                "self",
+                "db_path"
+              ],
+              "is_async": false,
+              "decorators": [],
+              "docstring": null,
+              "line_number": 79
+            },
+            {
+              "name": "_init_database",
+              "args": [
+                "self"
+              ],
+              "is_async": false,
+              "decorators": [],
+              "docstring": "Initialize SQLite database for cost tracking",
+              "line_number": 86
+            },
+            {
+              "name": "set_agent_budget",
+              "args": [
+                "self",
+                "budget"
+              ],
+              "is_async": false,
+              "decorators": [],
+              "docstring": "Set budget limits for an agent",
+              "line_number": 130
+            },
+            {
+              "name": "load_budgets",
+              "args": [
+                "self"
+              ],
+              "is_async": false,
+              "decorators": [],
+              "docstring": "Load agent budgets from database",
+              "line_number": 146
+            },
+            {
+              "name": "calculate_cost",
+              "args": [
+                "self",
+                "model",
+                "input_tokens",
+                "output_tokens"
+              ],
+              "is_async": false,
+              "decorators": [],
+              "docstring": "Calculate cost for API call",
+              "line_number": 163
+            },
+            {
+              "name": "record_api_call",
+              "args": [
+                "self",
+                "call"
+              ],
+              "is_async": false,
+              "decorators": [],
+              "docstring": "Record an API call in the database",
+              "line_number": 175
+            },
+            {
+              "name": "check_budget_limits",
+              "args": [
+                "self",
+                "agent_id",
+                "estimated_cost"
+              ],
+              "is_async": false,
+              "decorators": [],
+              "docstring": "Check if agent is within budget limits",
+              "line_number": 189
+            },
+            {
+              "name": "get_usage_stats",
+              "args": [
+                "self",
+                "agent_id",
+                "period"
+              ],
+              "is_async": false,
+              "decorators": [],
+              "docstring": "Get usage statistics for an agent in a time period",
+              "line_number": 244
+            },
+            {
+              "name": "get_all_agents_usage",
+              "args": [
+                "self",
+                "period"
+              ],
+              "is_async": false,
+              "decorators": [],
+              "docstring": "Get usage stats for all agents",
+              "line_number": 285
+            },
+            {
+              "name": "check_circuit_breaker",
+              "args": [
+                "self",
+                "agent_id"
+              ],
+              "is_async": false,
+              "decorators": [],
+              "docstring": "Check if agent should be circuit broken due to failures",
+              "line_number": 293
+            },
+            {
+              "name": "record_failure",
+              "args": [
+                "self",
+                "agent_id"
+              ],
+              "is_async": false,
+              "decorators": [],
+              "docstring": "Record a failure for circuit breaker logic",
+              "line_number": 323
+            },
+            {
+              "name": "record_success",
+              "args": [
+                "self",
+                "agent_id"
+              ],
+              "is_async": false,
+              "decorators": [],
+              "docstring": "Record a success for circuit breaker logic",
+              "line_number": 343
+            },
+            {
+              "name": "get_cost_summary",
+              "args": [
+                "self",
+                "period"
+              ],
+              "is_async": false,
+              "decorators": [],
+              "docstring": "Get comprehensive cost summary",
+              "line_number": 348
+            }
+          ],
+          "decorators": [],
+          "docstring": "Comprehensive cost tracking and budget management",
+          "line_number": 60
+        }
+      ],
+      "functions": [],
+      "imports": [
+        {
+          "module": "asyncio",
+          "alias": null,
+          "type": "import"
+        },
+        {
+          "module": "json",
+          "alias": null,
+          "type": "import"
+        },
+        {
+          "module": "sqlite3",
+          "alias": null,
+          "type": "import"
+        },
+        {
+          "module": "time",
+          "alias": null,
+          "type": "import"
+        },
+        {
+          "module": "datetime.datetime",
+          "alias": null,
+          "type": "from_import",
+          "from_module": "datetime"
+        },
+        {
+          "module": "datetime.timedelta",
+          "alias": null,
+          "type": "from_import",
+          "from_module": "datetime"
+        },
+        {
+          "module": "pathlib.Path",
+          "alias": null,
+          "type": "from_import",
+          "from_module": "pathlib"
+        },
+        {
+          "module": "typing.Dict",
+          "alias": null,
+          "type": "from_import",
+          "from_module": "typing"
+        },
+        {
+          "module": "typing.List",
+          "alias": null,
+          "type": "from_import",
+          "from_module": "typing"
+        },
+        {
+          "module": "typing.Optional",
+          "alias": null,
+          "type": "from_import",
+          "from_module": "typing"
+        },
+        {
+          "module": "typing.Any",
+          "alias": null,
+          "type": "from_import",
+          "from_module": "typing"
+        },
+        {
+          "module": "dataclasses.dataclass",
+          "alias": null,
+          "type": "from_import",
+          "from_module": "dataclasses"
+        },
+        {
+          "module": "dataclasses.asdict",
+          "alias": null,
+          "type": "from_import",
+          "from_module": "dataclasses"
+        },
+        {
+          "module": "functools.wraps",
+          "alias": null,
+          "type": "from_import",
+          "from_module": "functools"
+        },
+        {
+          "module": "logging",
+          "alias": null,
+          "type": "import"
+        },
+        {
+          "module": "contextlib.asynccontextmanager",
+          "alias": null,
+          "type": "from_import",
+          "from_module": "contextlib"
+        }
+      ],
+      "dependencies": [],
+      "code_quality": {},
+      "integration_status": {},
+      "risk_assessment": {},
+      "devops_readiness": {},
+      "error": "argument of type 'Attribute' is not iterable"
+    },
+    "security_healing_agent": {
+      "file_path": "/Users/andrewnordstrom/Elk_Corgi/corgi-recommender-service/agents/security_healing_agent.py",
+      "file_size": 26313,
+      "last_modified": "2025-06-16T18:18:23.738069",
+      "status": "analyzed",
+      "classes": [
+        {
+          "name": "VulnerabilityFinding",
+          "bases": [],
+          "methods": [],
+          "decorators": [
+            "dataclass"
+          ],
+          "docstring": "Represents a security vulnerability finding",
+          "line_number": 23
+        },
+        {
+          "name": "HealingAction",
+          "bases": [],
+          "methods": [],
+          "decorators": [
+            "dataclass"
+          ],
+          "docstring": "Represents a proposed healing action",
+          "line_number": 36
+        },
+        {
+          "name": "SecurityHealingAgent",
+          "bases": [
+            "BaseAgent"
+          ],
+          "methods": [
+            {
+              "name": "__init__",
+              "args": [
+                "self"
+              ],
+              "is_async": false,
+              "decorators": [],
+              "docstring": null,
+              "line_number": 49
+            },
+            {
+              "name": "_should_auto_execute",
+              "args": [
+                "self",
+                "action"
+              ],
+              "is_async": false,
+              "decorators": [],
+              "docstring": "Determine if action should be auto-executed",
+              "line_number": 339
+            },
+            {
+              "name": "_calculate_risk_score",
+              "args": [
+                "self",
+                "vuln_data"
+              ],
+              "is_async": false,
+              "decorators": [],
+              "docstring": "Calculate risk score for vulnerability",
+              "line_number": 376
+            },
+            {
+              "name": "_create_action",
+              "args": [
+                "self",
+                "action_type",
+                "description",
+                "result"
+              ],
+              "is_async": false,
+              "decorators": [],
+              "docstring": "Create an agent action",
+              "line_number": 396
+            },
+            {
+              "name": "_create_approval_request",
+              "args": [
+                "self",
+                "action"
+              ],
+              "is_async": false,
+              "decorators": [],
+              "docstring": "Create an approval request action",
+              "line_number": 419
+            },
+            {
+              "name": "_update_healing_history",
+              "args": [
+                "self",
+                "vulnerabilities",
+                "healing_plan",
+                "actions"
+              ],
+              "is_async": false,
+              "decorators": [],
+              "docstring": "Update the healing history",
+              "line_number": 434
+            },
+            {
+              "name": "_create_fallback_healing_plan",
+              "args": [
+                "self",
+                "vulnerabilities"
+              ],
+              "is_async": false,
+              "decorators": [],
+              "docstring": "Create a basic healing plan when LLM fails",
+              "line_number": 447
+            },
+            {
+              "name": "_map_severity",
+              "args": [
+                "self",
+                "severity"
+              ],
+              "is_async": false,
+              "decorators": [],
+              "docstring": "Map various severity formats to standard format",
+              "line_number": 471
+            },
+            {
+              "name": "_get_recent_changes",
+              "args": [
+                "self"
+              ],
+              "is_async": false,
+              "decorators": [],
+              "docstring": "Get recent git changes",
+              "line_number": 481
+            },
+            {
+              "name": "_safety_check",
+              "args": [
+                "self",
+                "action"
+              ],
+              "is_async": false,
+              "decorators": [],
+              "docstring": "Perform safety checks before executing action",
+              "line_number": 492
+            }
+          ],
+          "decorators": [],
+          "docstring": "LLM-powered security self-healing agent",
+          "line_number": 46
+        },
+        {
+          "name": "HealingPlan",
+          "bases": [],
+          "methods": [
+            {
+              "name": "from_dict",
+              "args": [
+                "cls",
+                "data"
+              ],
+              "is_async": false,
+              "decorators": [
+                "classmethod"
+              ],
+              "docstring": "Create HealingPlan from dictionary",
+              "line_number": 638
+            }
+          ],
+          "decorators": [
+            "dataclass"
+          ],
+          "docstring": "Represents a complete healing plan",
+          "line_number": 629
+        }
+      ],
+      "functions": [],
+      "imports": [
+        {
+          "module": "asyncio",
+          "alias": null,
+          "type": "import"
+        },
+        {
+          "module": "json",
+          "alias": null,
+          "type": "import"
+        },
+        {
+          "module": "subprocess",
+          "alias": null,
+          "type": "import"
+        },
+        {
+          "module": "time",
+          "alias": null,
+          "type": "import"
+        },
+        {
+          "module": "datetime.datetime",
+          "alias": null,
+          "type": "from_import",
+          "from_module": "datetime"
+        },
+        {
+          "module": "pathlib.Path",
+          "alias": null,
+          "type": "from_import",
+          "from_module": "pathlib"
+        },
+        {
+          "module": "typing.Dict",
+          "alias": null,
+          "type": "from_import",
+          "from_module": "typing"
+        },
+        {
+          "module": "typing.List",
+          "alias": null,
+          "type": "from_import",
+          "from_module": "typing"
+        },
+        {
+          "module": "typing.Any",
+          "alias": null,
+          "type": "from_import",
+          "from_module": "typing"
+        },
+        {
+          "module": "typing.Optional",
+          "alias": null,
+          "type": "from_import",
+          "from_module": "typing"
+        },
+        {
+          "module": "logging",
+          "alias": null,
+          "type": "import"
+        },
+        {
+          "module": "dataclasses.dataclass",
+          "alias": null,
+          "type": "from_import",
+          "from_module": "dataclasses"
+        },
+        {
+          "module": "core_agent_system.BaseAgent",
+          "alias": null,
+          "type": "from_import",
+          "from_module": "core_agent_system"
+        },
+        {
+          "module": "core_agent_system.AgentPriority",
+          "alias": null,
+          "type": "from_import",
+          "from_module": "core_agent_system"
+        },
+        {
+          "module": "core_agent_system.AgentAction",
+          "alias": null,
+          "type": "from_import",
+          "from_module": "core_agent_system"
+        },
+        {
+          "module": "claude_interface.ClaudeInterface",
+          "alias": null,
+          "type": "from_import",
+          "from_module": "claude_interface"
+        },
+        {
+          "module": "shutil",
+          "alias": null,
+          "type": "import"
+        }
+      ],
+      "dependencies": [],
+      "code_quality": {
+        "total_lines": 670,
+        "code_lines": 530,
+        "comment_lines": 38,
+        "docstring_lines": 68,
+        "has_error_handling": true,
+        "error_handling_blocks": 12,
+        "has_logging": true,
+        "has_type_hints": true,
+        "has_dataclasses": true,
+        "has_async": true,
+        "todo_comments": 0,
+        "complexity_indicators": {
+          "nested_loops": 0,
+          "conditional_complexity": 47,
+          "function_count": 11
+        },
+        "quality_score": 90
+      },
+      "integration_status": {
+        "importable": false,
+        "import_error": "No module named 'core_agent_system'",
+        "uses_cost_tracker": false,
+        "uses_token_tracker": false,
+        "uses_manager_agent": false,
+        "uses_slack_notifier": false,
+        "uses_claude_api": true,
+        "uses_database": false,
+        "uses_config_files": true,
+        "has_health_endpoint": true,
+        "has_metrics": false,
+        "api_integrations": [],
+        "external_dependencies": [
+          "subprocess",
+          "time",
+          "dataclasses",
+          "core_agent_system",
+          "core_agent_system",
+          "core_agent_system",
+          "claude_interface",
+          "shutil"
+        ]
+      },
+      "risk_assessment": {
+        "high_cost_risk": false,
+        "security_risks": [],
+        "infinite_loop_risk": true,
+        "file_system_risk": false,
+        "network_risk": false,
+        "privilege_escalation_risk": false,
+        "data_exposure_risk": false,
+        "circuit_breaker_missing": false
+      },
+      "devops_readiness": {
+        "has_health_check": true,
+        "has_metrics": false,
+        "has_logging": true,
+        "has_config_management": true,
+        "has_error_recovery": true,
+        "has_graceful_shutdown": false,
+        "containerizable": true,
+        "monitoring_ready": false,
+        "scalable": true
+      }
+    },
+    "web_agent_dashboard": {
+      "file_path": "/Users/andrewnordstrom/Elk_Corgi/corgi-recommender-service/agents/web_agent_dashboard.py",
+      "file_size": 19724,
+      "last_modified": "2025-06-09T19:37:22.582793",
+      "status": "error",
+      "classes": [],
+      "functions": [],
+      "imports": [
+        {
+          "module": "flask.Flask",
+          "alias": null,
+          "type": "from_import",
+          "from_module": "flask"
+        },
+        {
+          "module": "flask.render_template_string",
+          "alias": null,
+          "type": "from_import",
+          "from_module": "flask"
+        },
+        {
+          "module": "flask.jsonify",
+          "alias": null,
+          "type": "from_import",
+          "from_module": "flask"
+        },
+        {
+          "module": "flask.request",
+          "alias": null,
+          "type": "from_import",
+          "from_module": "flask"
+        },
+        {
+          "module": "sqlite3",
+          "alias": null,
+          "type": "import"
+        },
+        {
+          "module": "json",
+          "alias": null,
+          "type": "import"
+        },
+        {
+          "module": "datetime.datetime",
+          "alias": null,
+          "type": "from_import",
+          "from_module": "datetime"
+        },
+        {
+          "module": "datetime.timedelta",
+          "alias": null,
+          "type": "from_import",
+          "from_module": "datetime"
+        },
+        {
+          "module": "asyncio",
+          "alias": null,
+          "type": "import"
+        },
+        {
+          "module": "threading",
+          "alias": null,
+          "type": "import"
+        },
+        {
+          "module": "core_agent_system.AgentOrchestrator",
+          "alias": null,
+          "type": "from_import",
+          "from_module": "core_agent_system"
+        }
+      ],
+      "dependencies": [],
+      "code_quality": {},
+      "integration_status": {},
+      "risk_assessment": {},
+      "devops_readiness": {},
+      "error": "argument of type 'Call' is not iterable"
+    },
+    "interaction_logger": {
+      "file_path": "/Users/andrewnordstrom/Elk_Corgi/corgi-recommender-service/agents/interaction_logger.py",
+      "file_size": 6385,
+      "last_modified": "2025-06-04T21:20:34.628528",
+      "status": "analyzed",
+      "classes": [
+        {
+          "name": "InteractionLogger",
+          "bases": [],
+          "methods": [
+            {
+              "name": "__init__",
+              "args": [
+                "self",
+                "log_dir"
+              ],
+              "is_async": false,
+              "decorators": [],
+              "docstring": "Initialize the interaction logger.\n\nArgs:\n    log_dir: Directory to store log files (defaults to 'logs/agent_sessions')",
+              "line_number": 12
+            },
+            {
+              "name": "start_session",
+              "args": [
+                "self",
+                "session_id",
+                "goal"
+              ],
+              "is_async": false,
+              "decorators": [],
+              "docstring": "Initialize a new logging session.\n\nArgs:\n    session_id: Unique identifier for this session\n    goal: The objective for this session",
+              "line_number": 41
+            },
+            {
+              "name": "log_action",
+              "args": [
+                "self",
+                "action_type",
+                "details",
+                "session_id"
+              ],
+              "is_async": false,
+              "decorators": [],
+              "docstring": "Log an action taken by the agent.\n\nArgs:\n    action_type: Type of action (e.g., 'click', 'scroll', 'favorite')\n    details: Dictionary with action details\n    session_id: Optional session ID (uses current session if None)",
+              "line_number": 70
+            },
+            {
+              "name": "end_session",
+              "args": [
+                "self",
+                "session_id",
+                "summary"
+              ],
+              "is_async": false,
+              "decorators": [],
+              "docstring": "End a logging session and return the complete log.\n\nArgs:\n    session_id: ID of the session to end\n    summary: Optional summary information about the session\n\nReturns:\n    The complete session log dictionary",
+              "line_number": 110
+            },
+            {
+              "name": "get_session_logs",
+              "args": [
+                "self",
+                "session_id"
+              ],
+              "is_async": false,
+              "decorators": [],
+              "docstring": "Get the complete logs for a session.\n\nArgs:\n    session_id: ID of the session to retrieve\n\nReturns:\n    Dictionary containing the session logs",
+              "line_number": 152
+            },
+            {
+              "name": "_save_session_json",
+              "args": [
+                "self",
+                "session_id"
+              ],
+              "is_async": false,
+              "decorators": [],
+              "docstring": "Save a session's logs to a JSON file.\n\nArgs:\n    session_id: ID of the session to save\n\nReturns:\n    Path to the saved JSON file",
+              "line_number": 167
+            }
+          ],
+          "decorators": [],
+          "docstring": "Logger for tracking agent interactions with the Corgi Recommender.",
+          "line_number": 9
+        }
+      ],
+      "functions": [],
+      "imports": [
+        {
+          "module": "json",
+          "alias": null,
+          "type": "import"
+        },
+        {
+          "module": "time",
+          "alias": null,
+          "type": "import"
+        },
+        {
+          "module": "os",
+          "alias": null,
+          "type": "import"
+        },
+        {
+          "module": "logging",
+          "alias": null,
+          "type": "import"
+        },
+        {
+          "module": "typing.Dict",
+          "alias": null,
+          "type": "from_import",
+          "from_module": "typing"
+        },
+        {
+          "module": "typing.List",
+          "alias": null,
+          "type": "from_import",
+          "from_module": "typing"
+        },
+        {
+          "module": "typing.Any",
+          "alias": null,
+          "type": "from_import",
+          "from_module": "typing"
+        },
+        {
+          "module": "typing.Optional",
+          "alias": null,
+          "type": "from_import",
+          "from_module": "typing"
+        },
+        {
+          "module": "datetime.datetime",
+          "alias": null,
+          "type": "from_import",
+          "from_module": "datetime"
+        }
+      ],
+      "dependencies": [],
+      "code_quality": {
+        "total_lines": 187,
+        "code_lines": 132,
+        "comment_lines": 16,
+        "docstring_lines": 14,
+        "has_error_handling": false,
+        "error_handling_blocks": 0,
+        "has_logging": true,
+        "has_type_hints": true,
+        "has_dataclasses": false,
+        "has_async": false,
+        "todo_comments": 0,
+        "complexity_indicators": {
+          "nested_loops": 0,
+          "conditional_complexity": 12,
+          "function_count": 6
+        },
+        "quality_score": 70
+      },
+      "integration_status": {
+        "importable": true,
+        "uses_cost_tracker": false,
+        "uses_token_tracker": false,
+        "uses_manager_agent": false,
+        "uses_slack_notifier": false,
+        "uses_claude_api": false,
+        "uses_database": false,
+        "uses_config_files": true,
+        "has_health_endpoint": false,
+        "has_metrics": false,
+        "api_integrations": [],
+        "external_dependencies": [
+          "time"
+        ]
+      },
+      "risk_assessment": {
+        "high_cost_risk": false,
+        "security_risks": [],
+        "infinite_loop_risk": true,
+        "file_system_risk": false,
+        "network_risk": false,
+        "privilege_escalation_risk": false,
+        "data_exposure_risk": false,
+        "circuit_breaker_missing": false
+      },
+      "devops_readiness": {
+        "has_health_check": false,
+        "has_metrics": false,
+        "has_logging": true,
+        "has_config_management": false,
+        "has_error_recovery": false,
+        "has_graceful_shutdown": false,
+        "containerizable": true,
+        "monitoring_ready": false,
+        "scalable": false
+      },
+      "agent_classes": []
+    },
+    "user_profiles": {
+      "file_path": "/Users/andrewnordstrom/Elk_Corgi/corgi-recommender-service/agents/user_profiles.py",
+      "file_size": 48828,
+      "last_modified": "2025-06-04T21:20:34.630651",
+      "status": "error",
+      "classes": [
+        {
+          "name": "UserProfile",
+          "bases": [],
+          "methods": [
+            {
+              "name": "__init__",
+              "args": [
+                "self",
+                "name",
+                "description",
+                "preferred_topics",
+                "use_browser"
+              ],
+              "is_async": false,
+              "decorators": [],
+              "docstring": "Initialize a user profile.\n\nArgs:\n    name: Name identifier for this user profile\n    description: Human-readable description of this user's behavior\n    preferred_topics: List of topics this user is interested in\n    use_browser: Whether this profile requires browser tooling",
+              "line_number": 11
+            },
+            {
+              "name": "get_behavior_prompt",
+              "args": [
+                "self",
+                "time_of_day",
+                "test_goal"
+              ],
+              "is_async": false,
+              "decorators": [],
+              "docstring": "Return the prompt that guides this user's behavior.\n\nArgs:\n    time_of_day: Optional time context (morning, afternoon, evening, night)\n    test_goal: Optional specific test goal for this session\n\nReturns:\n    A string prompt describing how this user should behave",
+              "line_number": 32
+            },
+            {
+              "name": "rate_recommendation",
+              "args": [
+                "self",
+                "post_content"
+              ],
+              "is_async": false,
+              "decorators": [],
+              "docstring": "Generate a natural language feedback response to a post.\n\nArgs:\n    post_content: Content of the post to rate\n\nReturns:\n    Natural language feedback about the recommendation",
+              "line_number": 46
+            },
+            {
+              "name": "get_session_config",
+              "args": [
+                "self",
+                "time_of_day",
+                "test_goal"
+              ],
+              "is_async": false,
+              "decorators": [],
+              "docstring": "Get configuration parameters for a session with this user.\n\nArgs:\n    time_of_day: Optional time context\n    test_goal: Optional specific test goal\n\nReturns:\n    Dictionary of configuration parameters",
+              "line_number": 57
+            },
+            {
+              "name": "handle_post_batch",
+              "args": [
+                "self",
+                "post_contents"
+              ],
+              "is_async": false,
+              "decorators": [],
+              "docstring": "Process a batch of posts and provide feedback.\n\nArgs:\n    post_contents: List of post contents to evaluate\n\nReturns:\n    Dictionary mapping post content to feedback",
+              "line_number": 78
+            },
+            {
+              "name": "make_heuristic_decision",
+              "args": [
+                "self",
+                "action_type",
+                "context"
+              ],
+              "is_async": false,
+              "decorators": [],
+              "docstring": "Make a decision using heuristics instead of LLM (for no-llm mode).\n\nArgs:\n    action_type: Type of action to decide on (e.g., 'rating', 'privacy', 'interact')\n    context: Contextual information for the decision\n\nReturns:\n    Decision result",
+              "line_number": 91
+            }
+          ],
+          "decorators": [],
+          "docstring": "Base class for synthetic user profiles that interact with the Corgi Recommender.",
+          "line_number": 8
+        },
+        {
+          "name": "TechFan",
+          "bases": [
+            "UserProfile"
+          ],
+          "methods": [
+            {
+              "name": "__init__",
+              "args": [
+                "self"
+              ],
+              "is_async": false,
+              "decorators": [],
+              "docstring": null,
+              "line_number": 134
+            },
+            {
+              "name": "get_behavior_prompt",
+              "args": [
+                "self",
+                "time_of_day",
+                "test_goal"
+              ],
+              "is_async": false,
+              "decorators": [],
+              "docstring": "Generate a behavior prompt for the tech fan.\n\nArgs:\n    time_of_day: Optional time context\n    test_goal: Optional specific test goal\n\nReturns:\n    Behavior prompt for the tech fan",
+              "line_number": 154
+            },
+            {
+              "name": "rate_recommendation",
+              "args": [
+                "self",
+                "post_content"
+              ],
+              "is_async": false,
+              "decorators": [],
+              "docstring": "Generate feedback for a post based on tech preferences.\n\nArgs:\n    post_content: Content of the post to rate\n\nReturns:\n    Natural language feedback",
+              "line_number": 202
+            },
+            {
+              "name": "handle_post_batch",
+              "args": [
+                "self",
+                "post_contents"
+              ],
+              "is_async": false,
+              "decorators": [],
+              "docstring": "Process multiple tech posts efficiently.\n\nArgs:\n    post_contents: List of post contents to evaluate\n\nReturns:\n    Dictionary mapping post content to feedback",
+              "line_number": 237
+            },
+            {
+              "name": "make_heuristic_decision",
+              "args": [
+                "self",
+                "action_type",
+                "context"
+              ],
+              "is_async": false,
+              "decorators": [],
+              "docstring": "Make tech-fan decisions using heuristics.\n\nArgs:\n    action_type: Type of action to decide on\n    context: Contextual information for the decision\n\nReturns:\n    Decision result",
+              "line_number": 286
+            }
+          ],
+          "decorators": [],
+          "docstring": "A synthetic user who is interested in technology-related content.",
+          "line_number": 131
+        },
+        {
+          "name": "NewsSkeptic",
+          "bases": [
+            "UserProfile"
+          ],
+          "methods": [
+            {
+              "name": "__init__",
+              "args": [
+                "self"
+              ],
+              "is_async": false,
+              "decorators": [],
+              "docstring": null,
+              "line_number": 338
+            },
+            {
+              "name": "get_behavior_prompt",
+              "args": [
+                "self",
+                "time_of_day",
+                "test_goal"
+              ],
+              "is_async": false,
+              "decorators": [],
+              "docstring": "Generate a behavior prompt for the news skeptic.\n\nArgs:\n    time_of_day: Optional time context\n    test_goal: Optional specific test goal\n\nReturns:\n    Behavior prompt for the news skeptic",
+              "line_number": 368
+            },
+            {
+              "name": "rate_recommendation",
+              "args": [
+                "self",
+                "post_content"
+              ],
+              "is_async": false,
+              "decorators": [],
+              "docstring": "Generate feedback for a post based on skeptical assessment.\n\nArgs:\n    post_content: Content of the post to rate\n\nReturns:\n    Natural language feedback with skeptical analysis",
+              "line_number": 422
+            },
+            {
+              "name": "handle_post_batch",
+              "args": [
+                "self",
+                "post_contents"
+              ],
+              "is_async": false,
+              "decorators": [],
+              "docstring": "Process multiple news posts with skeptical assessment.\n\nArgs:\n    post_contents: List of post contents to evaluate\n\nReturns:\n    Dictionary mapping post content to feedback",
+              "line_number": 474
+            },
+            {
+              "name": "make_heuristic_decision",
+              "args": [
+                "self",
+                "action_type",
+                "context"
+              ],
+              "is_async": false,
+              "decorators": [],
+              "docstring": "Make skeptical-news decisions using heuristics.\n\nArgs:\n    action_type: Type of action to decide on\n    context: Contextual information for the decision\n\nReturns:\n    Decision result",
+              "line_number": 544
+            }
+          ],
+          "decorators": [],
+          "docstring": "A synthetic user who is skeptical of news content and prefers factual, verified information.",
+          "line_number": 335
+        },
+        {
+          "name": "MemeLover",
+          "bases": [
+            "UserProfile"
+          ],
+          "methods": [
+            {
+              "name": "__init__",
+              "args": [
+                "self"
+              ],
+              "is_async": false,
+              "decorators": [],
+              "docstring": null,
+              "line_number": 604
+            },
+            {
+              "name": "get_behavior_prompt",
+              "args": [
+                "self",
+                "time_of_day",
+                "test_goal"
+              ],
+              "is_async": false,
+              "decorators": [],
+              "docstring": "Generate a behavior prompt for the meme lover.\n\nArgs:\n    time_of_day: Optional time context\n    test_goal: Optional specific test goal\n\nReturns:\n    Behavior prompt for the meme lover",
+              "line_number": 624
+            },
+            {
+              "name": "rate_recommendation",
+              "args": [
+                "self",
+                "post_content"
+              ],
+              "is_async": false,
+              "decorators": [],
+              "docstring": "Generate feedback for a post based on humor preferences.\n\nArgs:\n    post_content: Content of the post to rate\n\nReturns:\n    Natural language feedback with humor assessment",
+              "line_number": 677
+            },
+            {
+              "name": "handle_post_batch",
+              "args": [
+                "self",
+                "post_contents"
+              ],
+              "is_async": false,
+              "decorators": [],
+              "docstring": "Process multiple posts for humor content.\n\nArgs:\n    post_contents: List of post contents to evaluate\n\nReturns:\n    Dictionary mapping post content to feedback",
+              "line_number": 724
+            },
+            {
+              "name": "make_heuristic_decision",
+              "args": [
+                "self",
+                "action_type",
+                "context"
+              ],
+              "is_async": false,
+              "decorators": [],
+              "docstring": "Make humor-based decisions using heuristics.\n\nArgs:\n    action_type: Type of action to decide on\n    context: Contextual information for the decision\n\nReturns:\n    Decision result",
+              "line_number": 788
+            }
+          ],
+          "decorators": [],
+          "docstring": "A synthetic user who enjoys humorous, light-hearted content and memes.",
+          "line_number": 601
+        },
+        {
+          "name": "PrivacyTester",
+          "bases": [
+            "UserProfile"
+          ],
+          "methods": [
+            {
+              "name": "__init__",
+              "args": [
+                "self"
+              ],
+              "is_async": false,
+              "decorators": [],
+              "docstring": null,
+              "line_number": 837
+            },
+            {
+              "name": "get_behavior_prompt",
+              "args": [
+                "self",
+                "time_of_day",
+                "test_goal"
+              ],
+              "is_async": false,
+              "decorators": [],
+              "docstring": "Generate a behavior prompt for the privacy tester.\n\nArgs:\n    time_of_day: Optional time context\n    test_goal: Optional specific test goal\n\nReturns:\n    Behavior prompt for the privacy tester",
+              "line_number": 860
+            },
+            {
+              "name": "rate_recommendation",
+              "args": [
+                "self",
+                "post_content"
+              ],
+              "is_async": false,
+              "decorators": [],
+              "docstring": "Generate feedback focusing on privacy implications of recommendations.\n\nArgs:\n    post_content: Content of the post to rate\n\nReturns:\n    Natural language feedback with privacy assessment",
+              "line_number": 936
+            },
+            {
+              "name": "handle_post_batch",
+              "args": [
+                "self",
+                "post_contents"
+              ],
+              "is_async": false,
+              "decorators": [],
+              "docstring": "Process a batch of posts with privacy focus.\n\nArgs:\n    post_contents: List of post contents to evaluate\n\nReturns:\n    Dictionary mapping post content to feedback",
+              "line_number": 976
+            },
+            {
+              "name": "make_heuristic_decision",
+              "args": [
+                "self",
+                "action_type",
+                "context"
+              ],
+              "is_async": false,
+              "decorators": [],
+              "docstring": "Make privacy-focused decisions using heuristics.\n\nArgs:\n    action_type: Type of action to decide on\n    context: Contextual information for the decision\n\nReturns:\n    Decision result",
+              "line_number": 1025
+            }
+          ],
+          "decorators": [],
+          "docstring": "A synthetic user who tests privacy features and observes recommendation changes.",
+          "line_number": 834
+        },
+        {
+          "name": "TextOnlyUser",
+          "bases": [
+            "UserProfile"
+          ],
+          "methods": [
+            {
+              "name": "__init__",
+              "args": [
+                "self"
+              ],
+              "is_async": false,
+              "decorators": [],
+              "docstring": null,
+              "line_number": 1071
+            },
+            {
+              "name": "get_behavior_prompt",
+              "args": [
+                "self",
+                "time_of_day",
+                "test_goal"
+              ],
+              "is_async": false,
+              "decorators": [],
+              "docstring": "Generate a behavior prompt for the text-only user.\n\nArgs:\n    time_of_day: Optional time context\n    test_goal: Optional specific test goal\n\nReturns:\n    Behavior prompt for the text-only user",
+              "line_number": 1090
+            },
+            {
+              "name": "rate_recommendation",
+              "args": [
+                "self",
+                "post_content"
+              ],
+              "is_async": false,
+              "decorators": [],
+              "docstring": "Generate simple text feedback for a recommendation.\n\nArgs:\n    post_content: Content to rate\n\nReturns:\n    Text feedback",
+              "line_number": 1121
+            },
+            {
+              "name": "make_heuristic_decision",
+              "args": [
+                "self",
+                "action_type",
+                "context"
+              ],
+              "is_async": false,
+              "decorators": [],
+              "docstring": "Make text-based decisions using heuristics.\n\nArgs:\n    action_type: Type of action to decide on\n    context: Contextual information for the decision\n\nReturns:\n    Decision result",
+              "line_number": 1140
+            }
+          ],
+          "decorators": [],
+          "docstring": "A synthetic user who only interacts via text without requiring browser tools.",
+          "line_number": 1068
+        }
+      ],
+      "functions": [],
+      "imports": [
+        {
+          "module": "typing.Dict",
+          "alias": null,
+          "type": "from_import",
+          "from_module": "typing"
+        },
+        {
+          "module": "typing.Any",
+          "alias": null,
+          "type": "from_import",
+          "from_module": "typing"
+        },
+        {
+          "module": "typing.List",
+          "alias": null,
+          "type": "from_import",
+          "from_module": "typing"
+        },
+        {
+          "module": "typing.Optional",
+          "alias": null,
+          "type": "from_import",
+          "from_module": "typing"
+        },
+        {
+          "module": "typing.Set",
+          "alias": null,
+          "type": "from_import",
+          "from_module": "typing"
+        },
+        {
+          "module": "os",
+          "alias": null,
+          "type": "import"
+        },
+        {
+          "module": "json",
+          "alias": null,
+          "type": "import"
+        },
+        {
+          "module": "random",
+          "alias": null,
+          "type": "import"
+        },
+        {
+          "module": "datetime.datetime",
+          "alias": null,
+          "type": "from_import",
+          "from_module": "datetime"
+        }
+      ],
+      "dependencies": [],
+      "code_quality": {},
+      "integration_status": {},
+      "risk_assessment": {},
+      "devops_readiness": {},
+      "error": "argument of type 'Subscript' is not iterable"
+    },
+    "token_tracker": {
+      "file_path": "/Users/andrewnordstrom/Elk_Corgi/corgi-recommender-service/agents/token_tracker.py",
+      "file_size": 10378,
+      "last_modified": "2025-06-04T21:20:34.630188",
+      "status": "analyzed",
+      "classes": [
+        {
+          "name": "TokenTracker",
+          "bases": [],
+          "methods": [
+            {
+              "name": "__init__",
+              "args": [
+                "self",
+                "max_tokens",
+                "log_file"
+              ],
+              "is_async": false,
+              "decorators": [],
+              "docstring": "Initialize token tracker.\n\nArgs:\n    max_tokens: Optional maximum token limit (triggers warning when reached)\n    log_file: Path to log file (defaults to logs/token_usage.log)",
+              "line_number": 40
+            },
+            {
+              "name": "_setup_logging",
+              "args": [
+                "self"
+              ],
+              "is_async": false,
+              "decorators": [],
+              "docstring": "Set up logging for token usage.",
+              "line_number": 72
+            },
+            {
+              "name": "_calculate_cost",
+              "args": [
+                "self",
+                "model",
+                "input_tokens",
+                "output_tokens"
+              ],
+              "is_async": false,
+              "decorators": [],
+              "docstring": "Calculate cost based on token usage and model pricing.\n\nArgs:\n    model: Claude model used\n    input_tokens: Number of input tokens\n    output_tokens: Number of output tokens\n\nReturns:\n    Estimated cost in USD",
+              "line_number": 103
+            },
+            {
+              "name": "record_usage",
+              "args": [
+                "self",
+                "model",
+                "input_tokens",
+                "output_tokens",
+                "request_duration"
+              ],
+              "is_async": false,
+              "decorators": [],
+              "docstring": "Record token usage for a request.\n\nArgs:\n    model: Claude model used\n    input_tokens: Number of input tokens\n    output_tokens: Number of output tokens\n    request_duration: Optional duration of the request in seconds\n\nReturns:\n    Dictionary with usage statistics",
+              "line_number": 125
+            },
+            {
+              "name": "get_usage_summary",
+              "args": [
+                "self"
+              ],
+              "is_async": false,
+              "decorators": [],
+              "docstring": "Get a summary of token usage and costs.\n\nReturns:\n    Dictionary with usage summary",
+              "line_number": 200
+            },
+            {
+              "name": "log_summary",
+              "args": [
+                "self"
+              ],
+              "is_async": false,
+              "decorators": [],
+              "docstring": "Log a summary of token usage.",
+              "line_number": 223
+            },
+            {
+              "name": "save_usage_to_file",
+              "args": [
+                "self",
+                "file_path"
+              ],
+              "is_async": false,
+              "decorators": [],
+              "docstring": "Save usage statistics to a JSON file.\n\nArgs:\n    file_path: Path to save the file (defaults to logs/token_usage_{timestamp}.json)\n\nReturns:\n    Path to the saved file",
+              "line_number": 251
+            },
+            {
+              "name": "reset",
+              "args": [
+                "self"
+              ],
+              "is_async": false,
+              "decorators": [],
+              "docstring": "Reset all token usage statistics.",
+              "line_number": 277
+            }
+          ],
+          "decorators": [],
+          "docstring": "Track token usage and costs for Claude API calls.",
+          "line_number": 10
+        }
+      ],
+      "functions": [],
+      "imports": [
+        {
+          "module": "os",
+          "alias": null,
+          "type": "import"
+        },
+        {
+          "module": "json",
+          "alias": null,
+          "type": "import"
+        },
+        {
+          "module": "logging",
+          "alias": null,
+          "type": "import"
+        },
+        {
+          "module": "time",
+          "alias": null,
+          "type": "import"
+        },
+        {
+          "module": "typing.Dict",
+          "alias": null,
+          "type": "from_import",
+          "from_module": "typing"
+        },
+        {
+          "module": "typing.Any",
+          "alias": null,
+          "type": "from_import",
+          "from_module": "typing"
+        },
+        {
+          "module": "typing.Optional",
+          "alias": null,
+          "type": "from_import",
+          "from_module": "typing"
+        },
+        {
+          "module": "typing.List",
+          "alias": null,
+          "type": "from_import",
+          "from_module": "typing"
+        },
+        {
+          "module": "datetime.datetime",
+          "alias": null,
+          "type": "from_import",
+          "from_module": "datetime"
+        },
+        {
+          "module": "datetime.timedelta",
+          "alias": null,
+          "type": "from_import",
+          "from_module": "datetime"
+        },
+        {
+          "module": "threading",
+          "alias": null,
+          "type": "import"
+        }
+      ],
+      "dependencies": [],
+      "code_quality": {
+        "total_lines": 289,
+        "code_lines": 216,
+        "comment_lines": 26,
+        "docstring_lines": 18,
+        "has_error_handling": false,
+        "error_handling_blocks": 0,
+        "has_logging": true,
+        "has_type_hints": true,
+        "has_dataclasses": false,
+        "has_async": false,
+        "todo_comments": 0,
+        "complexity_indicators": {
+          "nested_loops": 0,
+          "conditional_complexity": 7,
+          "function_count": 8
+        },
+        "quality_score": 70
+      },
+      "integration_status": {
+        "importable": true,
+        "uses_cost_tracker": false,
+        "uses_token_tracker": true,
+        "uses_manager_agent": false,
+        "uses_slack_notifier": false,
+        "uses_claude_api": true,
+        "uses_database": false,
+        "uses_config_files": true,
+        "has_health_endpoint": false,
+        "has_metrics": false,
+        "api_integrations": [],
+        "external_dependencies": [
+          "time",
+          "threading"
+        ]
+      },
+      "risk_assessment": {
+        "high_cost_risk": true,
+        "security_risks": [],
+        "infinite_loop_risk": true,
+        "file_system_risk": false,
+        "network_risk": false,
+        "privilege_escalation_risk": false,
+        "data_exposure_risk": false,
+        "circuit_breaker_missing": false
+      },
+      "devops_readiness": {
+        "has_health_check": false,
+        "has_metrics": false,
+        "has_logging": true,
+        "has_config_management": false,
+        "has_error_recovery": true,
+        "has_graceful_shutdown": false,
+        "containerizable": true,
+        "monitoring_ready": false,
+        "scalable": false
+      },
+      "agent_classes": []
+    },
+    "agent_config": {
+      "file_path": "/Users/andrewnordstrom/Elk_Corgi/corgi-recommender-service/agents/agent_config.py",
+      "file_size": 12934,
+      "last_modified": "2025-06-09T19:39:21.734274",
+      "status": "analyzed",
+      "classes": [
+        {
+          "name": "AgentConfig",
+          "bases": [],
+          "methods": [],
+          "decorators": [
+            "dataclass"
+          ],
+          "docstring": "Base configuration for agents",
+          "line_number": 16
+        },
+        {
+          "name": "WebsiteHealthConfig",
+          "bases": [
+            "AgentConfig"
+          ],
+          "methods": [
+            {
+              "name": "__post_init__",
+              "args": [
+                "self"
+              ],
+              "is_async": false,
+              "decorators": [],
+              "docstring": null,
+              "line_number": 35
+            }
+          ],
+          "decorators": [
+            "dataclass"
+          ],
+          "docstring": "Configuration for Website Health Agent",
+          "line_number": 26
+        },
+        {
+          "name": "SecurityConfig",
+          "bases": [
+            "AgentConfig"
+          ],
+          "methods": [
+            {
+              "name": "__post_init__",
+              "args": [
+                "self"
+              ],
+              "is_async": false,
+              "decorators": [],
+              "docstring": null,
+              "line_number": 53
+            }
+          ],
+          "decorators": [
+            "dataclass"
+          ],
+          "docstring": "Configuration for Security Agent",
+          "line_number": 45
+        },
+        {
+          "name": "PerformanceConfig",
+          "bases": [
+            "AgentConfig"
+          ],
+          "methods": [],
+          "decorators": [
+            "dataclass"
+          ],
+          "docstring": "Configuration for Performance Optimization Agent",
+          "line_number": 66
+        },
+        {
+          "name": "UserExperienceConfig",
+          "bases": [
+            "AgentConfig"
+          ],
+          "methods": [
+            {
+              "name": "__post_init__",
+              "args": [
+                "self"
+              ],
+              "is_async": false,
+              "decorators": [],
+              "docstring": null,
+              "line_number": 82
+            }
+          ],
+          "decorators": [
+            "dataclass"
+          ],
+          "docstring": "Configuration for User Experience Agent",
+          "line_number": 76
+        },
+        {
+          "name": "ContentConfig",
+          "bases": [
+            "AgentConfig"
+          ],
+          "methods": [],
+          "decorators": [
+            "dataclass"
+          ],
+          "docstring": "Configuration for Content Management Agent",
+          "line_number": 91
+        },
+        {
+          "name": "MLModelConfig",
+          "bases": [
+            "AgentConfig"
+          ],
+          "methods": [
+            {
+              "name": "__post_init__",
+              "args": [
+                "self"
+              ],
+              "is_async": false,
+              "decorators": [],
+              "docstring": null,
+              "line_number": 107
+            }
+          ],
+          "decorators": [
+            "dataclass"
+          ],
+          "docstring": "Configuration for ML Model Agent",
+          "line_number": 100
+        },
+        {
+          "name": "DeploymentConfig",
+          "bases": [
+            "AgentConfig"
+          ],
+          "methods": [
+            {
+              "name": "__post_init__",
+              "args": [
+                "self"
+              ],
+              "is_async": false,
+              "decorators": [],
+              "docstring": null,
+              "line_number": 126
+            }
+          ],
+          "decorators": [
+            "dataclass"
+          ],
+          "docstring": "Configuration for Deployment Agent",
+          "line_number": 119
+        },
+        {
+          "name": "SystemConfig",
+          "bases": [],
+          "methods": [
+            {
+              "name": "__post_init__",
+              "args": [
+                "self"
+              ],
+              "is_async": false,
+              "decorators": [],
+              "docstring": null,
+              "line_number": 154
+            }
+          ],
+          "decorators": [
+            "dataclass"
+          ],
+          "docstring": "Overall system configuration",
+          "line_number": 134
+        },
+        {
+          "name": "ConfigManager",
+          "bases": [],
+          "methods": [
+            {
+              "name": "__init__",
+              "args": [
+                "self",
+                "config_file"
+              ],
+              "is_async": false,
+              "decorators": [],
+              "docstring": null,
+              "line_number": 173
+            },
+            {
+              "name": "load_config",
+              "args": [
+                "self"
+              ],
+              "is_async": false,
+              "decorators": [],
+              "docstring": "Load configuration from file",
+              "line_number": 178
+            },
+            {
+              "name": "save_config",
+              "args": [
+                "self"
+              ],
+              "is_async": false,
+              "decorators": [],
+              "docstring": "Save configuration to file",
+              "line_number": 198
+            },
+            {
+              "name": "_dict_to_config",
+              "args": [
+                "self",
+                "data"
+              ],
+              "is_async": false,
+              "decorators": [],
+              "docstring": "Convert dictionary to SystemConfig",
+              "line_number": 216
+            },
+            {
+              "name": "_config_to_dict",
+              "args": [
+                "self",
+                "config"
+              ],
+              "is_async": false,
+              "decorators": [],
+              "docstring": "Convert SystemConfig to dictionary",
+              "line_number": 243
+            },
+            {
+              "name": "get_agent_config",
+              "args": [
+                "self",
+                "agent_name"
+              ],
+              "is_async": false,
+              "decorators": [],
+              "docstring": "Get configuration for a specific agent",
+              "line_number": 256
+            },
+            {
+              "name": "update_agent_config",
+              "args": [
+                "self",
+                "agent_name",
+                "updates"
+              ],
+              "is_async": false,
+              "decorators": [],
+              "docstring": "Update configuration for a specific agent",
+              "line_number": 260
+            },
+            {
+              "name": "get_environment_overrides",
+              "args": [
+                "self"
+              ],
+              "is_async": false,
+              "decorators": [],
+              "docstring": "Get configuration overrides from environment variables",
+              "line_number": 269
+            },
+            {
+              "name": "apply_environment_overrides",
+              "args": [
+                "self"
+              ],
+              "is_async": false,
+              "decorators": [],
+              "docstring": "Apply environment variable overrides",
+              "line_number": 296
+            }
+          ],
+          "decorators": [],
+          "docstring": "Manages configuration loading and saving",
+          "line_number": 170
+        }
+      ],
+      "functions": [
+        {
+          "name": "get_config",
+          "args": [],
+          "is_async": false,
+          "decorators": [],
+          "docstring": "Get the global configuration",
+          "line_number": 306
+        },
+        {
+          "name": "get_agent_config",
+          "args": [
+            "agent_name"
+          ],
+          "is_async": false,
+          "decorators": [],
+          "docstring": "Get configuration for a specific agent",
+          "line_number": 310
+        },
+        {
+          "name": "update_agent_config",
+          "args": [
+            "agent_name",
+            "updates"
+          ],
+          "is_async": false,
+          "decorators": [],
+          "docstring": "Update configuration for a specific agent",
+          "line_number": 314
+        },
+        {
+          "name": "reload_config",
+          "args": [],
+          "is_async": false,
+          "decorators": [],
+          "docstring": "Reload configuration from file",
+          "line_number": 318
+        },
+        {
+          "name": "create_example_config",
+          "args": [],
+          "is_async": false,
+          "decorators": [],
+          "docstring": "Create an example configuration file",
+          "line_number": 324
+        }
+      ],
+      "imports": [
+        {
+          "module": "os",
+          "alias": null,
+          "type": "import"
+        },
+        {
+          "module": "json",
+          "alias": null,
+          "type": "import"
+        },
+        {
+          "module": "yaml",
+          "alias": null,
+          "type": "import"
+        },
+        {
+          "module": "pathlib.Path",
+          "alias": null,
+          "type": "from_import",
+          "from_module": "pathlib"
+        },
+        {
+          "module": "typing.Dict",
+          "alias": null,
+          "type": "from_import",
+          "from_module": "typing"
+        },
+        {
+          "module": "typing.Any",
+          "alias": null,
+          "type": "from_import",
+          "from_module": "typing"
+        },
+        {
+          "module": "typing.Optional",
+          "alias": null,
+          "type": "from_import",
+          "from_module": "typing"
+        },
+        {
+          "module": "dataclasses.dataclass",
+          "alias": null,
+          "type": "from_import",
+          "from_module": "dataclasses"
+        },
+        {
+          "module": "dataclasses.asdict",
+          "alias": null,
+          "type": "from_import",
+          "from_module": "dataclasses"
+        },
+        {
+          "module": "datetime.timedelta",
+          "alias": null,
+          "type": "from_import",
+          "from_module": "datetime"
+        }
+      ],
+      "dependencies": [],
+      "code_quality": {
+        "total_lines": 380,
+        "code_lines": 316,
+        "comment_lines": 14,
+        "docstring_lines": 48,
+        "has_error_handling": true,
+        "error_handling_blocks": 2,
+        "has_logging": false,
+        "has_type_hints": true,
+        "has_dataclasses": true,
+        "has_async": false,
+        "todo_comments": 0,
+        "complexity_indicators": {
+          "nested_loops": 0,
+          "conditional_complexity": 31,
+          "function_count": 20
+        },
+        "quality_score": 70
+      },
+      "integration_status": {
+        "importable": true,
+        "uses_cost_tracker": false,
+        "uses_token_tracker": false,
+        "uses_manager_agent": false,
+        "uses_slack_notifier": false,
+        "uses_claude_api": false,
+        "uses_database": true,
+        "uses_config_files": true,
+        "has_health_endpoint": true,
+        "has_metrics": false,
+        "api_integrations": [],
+        "external_dependencies": [
+          "yaml",
+          "dataclasses",
+          "dataclasses"
+        ]
+      },
+      "risk_assessment": {
+        "high_cost_risk": false,
+        "security_risks": [],
+        "infinite_loop_risk": true,
+        "file_system_risk": false,
+        "network_risk": false,
+        "privilege_escalation_risk": false,
+        "data_exposure_risk": false,
+        "circuit_breaker_missing": false
+      },
+      "devops_readiness": {
+        "has_health_check": true,
+        "has_metrics": false,
+        "has_logging": false,
+        "has_config_management": true,
+        "has_error_recovery": true,
+        "has_graceful_shutdown": false,
+        "containerizable": true,
+        "monitoring_ready": false,
+        "scalable": false
+      },
+      "agent_classes": [
+        {
+          "name": "AgentConfig",
+          "instantiable": true,
+          "methods": [
+            "enabled",
+            "execution_interval",
+            "priority",
+            "retry_attempts",
+            "retry_delay",
+            "timeout"
+          ],
+          "has_health_check": false,
+          "has_execute": false,
+          "base_classes": [
+            "object"
+          ]
+        }
+      ]
+    },
+    "feedback_module": {
+      "file_path": "/Users/andrewnordstrom/Elk_Corgi/corgi-recommender-service/agents/feedback_module.py",
+      "file_size": 13162,
+      "last_modified": "2025-06-04T21:20:34.628234",
+      "status": "analyzed",
+      "classes": [
+        {
+          "name": "FeedbackModule",
+          "bases": [],
+          "methods": [
+            {
+              "name": "__init__",
+              "args": [
+                "self",
+                "feedback_dir",
+                "api_base_url"
+              ],
+              "is_async": false,
+              "decorators": [],
+              "docstring": "Initialize the feedback module.\n\nArgs:\n    feedback_dir: Directory to store feedback files (defaults to 'logs/agent_feedback')\n    api_base_url: Base URL for the Corgi Recommender API",
+              "line_number": 12
+            },
+            {
+              "name": "record_feedback",
+              "args": [
+                "self",
+                "session_id",
+                "user_id",
+                "post_id",
+                "feedback_text",
+                "submit_to_api"
+              ],
+              "is_async": false,
+              "decorators": [],
+              "docstring": "Record feedback from an agent session.\n\nArgs:\n    session_id: ID of the agent session that generated this feedback\n    user_id: ID of the user profile providing feedback\n    post_id: ID of the post being rated\n    feedback_text: Natural language feedback about the post\n    submit_to_api: Whether to submit feedback to the API (default: False)\n\nReturns:\n    Dictionary containing feedback record and submission status",
+              "line_number": 42
+            },
+            {
+              "name": "submit_feedback_to_api",
+              "args": [
+                "self",
+                "user_id",
+                "post_id",
+                "feedback_text"
+              ],
+              "is_async": false,
+              "decorators": [],
+              "docstring": "Submit feedback to the Corgi Recommender API.\n\nArgs:\n    user_id: ID of the user providing feedback\n    post_id: ID of the post being rated\n    feedback_text: Natural language feedback text\n\nReturns:\n    API response data",
+              "line_number": 95
+            },
+            {
+              "name": "_save_feedback_to_file",
+              "args": [
+                "self",
+                "feedback_record"
+              ],
+              "is_async": false,
+              "decorators": [],
+              "docstring": "Save a feedback record to a JSON file.\n\nArgs:\n    feedback_record: Dictionary containing the feedback data\n\nReturns:\n    Path to the saved file",
+              "line_number": 145
+            },
+            {
+              "name": "update_privacy_settings",
+              "args": [
+                "self",
+                "user_id",
+                "tracking_level"
+              ],
+              "is_async": false,
+              "decorators": [],
+              "docstring": "Update a user's privacy settings.\n\nArgs:\n    user_id: ID of the user to update settings for\n    tracking_level: New privacy level ('full', 'limited', or 'none')\n\nReturns:\n    API response data",
+              "line_number": 168
+            },
+            {
+              "name": "get_privacy_settings",
+              "args": [
+                "self",
+                "user_id"
+              ],
+              "is_async": false,
+              "decorators": [],
+              "docstring": "Get a user's current privacy settings.\n\nArgs:\n    user_id: ID of the user to get settings for\n\nReturns:\n    Dictionary with user's privacy settings",
+              "line_number": 214
+            },
+            {
+              "name": "_log_privacy_change",
+              "args": [
+                "self",
+                "user_id",
+                "new_level",
+                "response_data"
+              ],
+              "is_async": false,
+              "decorators": [],
+              "docstring": "Log a privacy setting change.\n\nArgs:\n    user_id: ID of the user whose settings were changed\n    new_level: New privacy level\n    response_data: API response data",
+              "line_number": 243
+            },
+            {
+              "name": "analyze_recent_feedback",
+              "args": [
+                "self",
+                "limit"
+              ],
+              "is_async": false,
+              "decorators": [],
+              "docstring": "Analyze recent feedback to extract patterns and insights.\n\nArgs:\n    limit: Maximum number of recent feedback entries to analyze\n\nReturns:\n    Analysis results as a dictionary",
+              "line_number": 273
+            },
+            {
+              "name": "get_feedback_for_session",
+              "args": [
+                "self",
+                "session_id"
+              ],
+              "is_async": false,
+              "decorators": [],
+              "docstring": "Retrieve all feedback records for a particular session.\n\nArgs:\n    session_id: ID of the session to retrieve feedback for\n\nReturns:\n    List of feedback records for the session",
+              "line_number": 351
+            }
+          ],
+          "decorators": [],
+          "docstring": "Module for handling agent-generated feedback about the Corgi Recommender.",
+          "line_number": 9
+        }
+      ],
+      "functions": [],
+      "imports": [
+        {
+          "module": "json",
+          "alias": null,
+          "type": "import"
+        },
+        {
+          "module": "os",
+          "alias": null,
+          "type": "import"
+        },
+        {
+          "module": "logging",
+          "alias": null,
+          "type": "import"
+        },
+        {
+          "module": "requests",
+          "alias": null,
+          "type": "import"
+        },
+        {
+          "module": "typing.Dict",
+          "alias": null,
+          "type": "from_import",
+          "from_module": "typing"
+        },
+        {
+          "module": "typing.List",
+          "alias": null,
+          "type": "from_import",
+          "from_module": "typing"
+        },
+        {
+          "module": "typing.Any",
+          "alias": null,
+          "type": "from_import",
+          "from_module": "typing"
+        },
+        {
+          "module": "typing.Optional",
+          "alias": null,
+          "type": "from_import",
+          "from_module": "typing"
+        },
+        {
+          "module": "datetime.datetime",
+          "alias": null,
+          "type": "from_import",
+          "from_module": "datetime"
+        }
+      ],
+      "dependencies": [],
+      "code_quality": {
+        "total_lines": 376,
+        "code_lines": 276,
+        "comment_lines": 32,
+        "docstring_lines": 20,
+        "has_error_handling": true,
+        "error_handling_blocks": 3,
+        "has_logging": true,
+        "has_type_hints": true,
+        "has_dataclasses": false,
+        "has_async": false,
+        "todo_comments": 0,
+        "complexity_indicators": {
+          "nested_loops": 0,
+          "conditional_complexity": 16,
+          "function_count": 9
+        },
+        "quality_score": 90
+      },
+      "integration_status": {
+        "importable": true,
+        "uses_cost_tracker": false,
+        "uses_token_tracker": false,
+        "uses_manager_agent": false,
+        "uses_slack_notifier": false,
+        "uses_claude_api": false,
+        "uses_database": false,
+        "uses_config_files": true,
+        "has_health_endpoint": false,
+        "has_metrics": false,
+        "api_integrations": [
+          "HTTP_CLIENT"
+        ],
+        "external_dependencies": [
+          "requests"
+        ]
+      },
+      "risk_assessment": {
+        "high_cost_risk": false,
+        "security_risks": [],
+        "infinite_loop_risk": true,
+        "file_system_risk": false,
+        "network_risk": true,
+        "privilege_escalation_risk": false,
+        "data_exposure_risk": false,
+        "circuit_breaker_missing": false
+      },
+      "devops_readiness": {
+        "has_health_check": false,
+        "has_metrics": false,
+        "has_logging": true,
+        "has_config_management": false,
+        "has_error_recovery": false,
+        "has_graceful_shutdown": false,
+        "containerizable": true,
+        "monitoring_ready": false,
+        "scalable": false
+      },
+      "agent_classes": []
+    },
+    "claude_interface": {
+      "file_path": "/Users/andrewnordstrom/Elk_Corgi/corgi-recommender-service/agents/claude_interface.py",
+      "file_size": 10744,
+      "last_modified": "2025-06-04T21:20:34.627889",
+      "status": "analyzed",
+      "classes": [
+        {
+          "name": "ClaudeInterface",
+          "bases": [],
+          "methods": [
+            {
+              "name": "__init__",
+              "args": [
+                "self",
+                "token_tracker"
+              ],
+              "is_async": false,
+              "decorators": [],
+              "docstring": "Initialize the Claude API interface.\n\nArgs:\n    token_tracker: Optional TokenTracker for monitoring usage",
+              "line_number": 13
+            },
+            {
+              "name": "_validate_api_connection",
+              "args": [
+                "self"
+              ],
+              "is_async": false,
+              "decorators": [],
+              "docstring": "Validate connection to Claude API.\n\nReturns:\n    True if connection is valid, False otherwise",
+              "line_number": 54
+            },
+            {
+              "name": "send_message",
+              "args": [
+                "self",
+                "message",
+                "system",
+                "messages",
+                "model",
+                "max_tokens",
+                "temperature",
+                "tools"
+              ],
+              "is_async": false,
+              "decorators": [],
+              "docstring": "Send a message to Claude API.\n\nArgs:\n    message: The user message to send\n    system: Optional system prompt\n    messages: Optional list of previous messages (overrides message if provided)\n    model: Claude model to use (defaults to claude-3-opus)\n    max_tokens: Maximum tokens for the response\n    temperature: Sampling temperature (0.0 to 1.0)\n    tools: Optional list of tools to enable\n\nReturns:\n    The API response",
+              "line_number": 82
+            },
+            {
+              "name": "process_with_tools",
+              "args": [
+                "self",
+                "messages",
+                "tools",
+                "system",
+                "model",
+                "max_tokens"
+              ],
+              "is_async": false,
+              "decorators": [],
+              "docstring": "Process a conversation with tools enabled.\n\nArgs:\n    messages: List of message objects for the conversation\n    tools: List of tool configurations to enable\n    system: Optional system prompt\n    model: Claude model to use (defaults to default_model)\n    max_tokens: Maximum response tokens\n\nReturns:\n    Claude's API response",
+              "line_number": 186
+            },
+            {
+              "name": "get_response_text",
+              "args": [
+                "self",
+                "response"
+              ],
+              "is_async": false,
+              "decorators": [],
+              "docstring": "Extract text content from a Claude API response.\n\nArgs:\n    response: The Claude API response\n\nReturns:\n    Extracted text content",
+              "line_number": 273
+            }
+          ],
+          "decorators": [],
+          "docstring": "Interface for interacting with Claude API with usage monitoring and error handling.",
+          "line_number": 10
+        }
+      ],
+      "functions": [],
+      "imports": [
+        {
+          "module": "os",
+          "alias": null,
+          "type": "import"
+        },
+        {
+          "module": "json",
+          "alias": null,
+          "type": "import"
+        },
+        {
+          "module": "requests",
+          "alias": null,
+          "type": "import"
+        },
+        {
+          "module": "logging",
+          "alias": null,
+          "type": "import"
+        },
+        {
+          "module": "time",
+          "alias": null,
+          "type": "import"
+        },
+        {
+          "module": "typing.Dict",
+          "alias": null,
+          "type": "from_import",
+          "from_module": "typing"
+        },
+        {
+          "module": "typing.List",
+          "alias": null,
+          "type": "from_import",
+          "from_module": "typing"
+        },
+        {
+          "module": "typing.Any",
+          "alias": null,
+          "type": "from_import",
+          "from_module": "typing"
+        },
+        {
+          "module": "typing.Optional",
+          "alias": null,
+          "type": "from_import",
+          "from_module": "typing"
+        },
+        {
+          "module": "typing.Union",
+          "alias": null,
+          "type": "from_import",
+          "from_module": "typing"
+        },
+        {
+          "module": "dotenv.load_dotenv",
+          "alias": null,
+          "type": "from_import",
+          "from_module": "dotenv"
+        }
+      ],
+      "dependencies": [],
+      "code_quality": {
+        "total_lines": 307,
+        "code_lines": 223,
+        "comment_lines": 36,
+        "docstring_lines": 12,
+        "has_error_handling": true,
+        "error_handling_blocks": 3,
+        "has_logging": true,
+        "has_type_hints": true,
+        "has_dataclasses": false,
+        "has_async": false,
+        "todo_comments": 0,
+        "complexity_indicators": {
+          "nested_loops": 0,
+          "conditional_complexity": 31,
+          "function_count": 5
+        },
+        "quality_score": 90
+      },
+      "integration_status": {
+        "importable": true,
+        "uses_cost_tracker": false,
+        "uses_token_tracker": true,
+        "uses_manager_agent": false,
+        "uses_slack_notifier": false,
+        "uses_claude_api": true,
+        "uses_database": false,
+        "uses_config_files": true,
+        "has_health_endpoint": false,
+        "has_metrics": true,
+        "api_integrations": [
+          "HTTP_CLIENT",
+          "ANTHROPIC_API"
+        ],
+        "external_dependencies": [
+          "requests",
+          "time",
+          "dotenv"
+        ]
+      },
+      "risk_assessment": {
+        "high_cost_risk": true,
+        "security_risks": [],
+        "infinite_loop_risk": true,
+        "file_system_risk": false,
+        "network_risk": true,
+        "privilege_escalation_risk": false,
+        "data_exposure_risk": false,
+        "circuit_breaker_missing": true
+      },
+      "devops_readiness": {
+        "has_health_check": false,
+        "has_metrics": true,
+        "has_logging": true,
+        "has_config_management": true,
+        "has_error_recovery": false,
+        "has_graceful_shutdown": false,
+        "containerizable": true,
+        "monitoring_ready": false,
+        "scalable": false
+      },
+      "agent_classes": []
+    },
+    "manager_agent": {
+      "file_path": "/Users/andrewnordstrom/Elk_Corgi/corgi-recommender-service/agents/manager_agent.py",
+      "file_size": 23345,
+      "last_modified": "2025-06-16T18:33:02.625858",
+      "status": "error",
+      "classes": [
+        {
+          "name": "AgentStatus",
+          "bases": [],
+          "methods": [],
+          "decorators": [
+            "dataclass"
+          ],
+          "docstring": "Current status of an agent",
+          "line_number": 26
+        },
+        {
+          "name": "Issue",
+          "bases": [],
+          "methods": [],
+          "decorators": [
+            "dataclass"
+          ],
+          "docstring": "Represents an issue detected by the manager",
+          "line_number": 40
+        },
+        {
+          "name": "ManagerAgent",
+          "bases": [],
+          "methods": [
+            {
+              "name": "__init__",
+              "args": [
+                "self",
+                "config_path"
+              ],
+              "is_async": false,
+              "decorators": [],
+              "docstring": null,
+              "line_number": 54
+            },
+            {
+              "name": "_load_config",
+              "args": [
+                "self"
+              ],
+              "is_async": false,
+              "decorators": [],
+              "docstring": "Load configuration from YAML file",
+              "line_number": 94
+            },
+            {
+              "name": "_setup_logging",
+              "args": [
+                "self"
+              ],
+              "is_async": false,
+              "decorators": [],
+              "docstring": "Setup logging configuration",
+              "line_number": 135
+            },
+            {
+              "name": "_init_database",
+              "args": [
+                "self"
+              ],
+              "is_async": false,
+              "decorators": [],
+              "docstring": "Initialize SQLite database for manager state",
+              "line_number": 161
+            },
+            {
+              "name": "_load_agent_budgets",
+              "args": [
+                "self"
+              ],
+              "is_async": false,
+              "decorators": [],
+              "docstring": "Load agent budgets from configuration",
+              "line_number": 195
+            },
+            {
+              "name": "_calculate_agent_status",
+              "args": [
+                "self",
+                "usage"
+              ],
+              "is_async": false,
+              "decorators": [],
+              "docstring": "Calculate current status for an agent",
+              "line_number": 310
+            },
+            {
+              "name": "_count_recent_calls",
+              "args": [
+                "self",
+                "agent_id",
+                "seconds"
+              ],
+              "is_async": false,
+              "decorators": [],
+              "docstring": "Count API calls in the last N seconds",
+              "line_number": 349
+            },
+            {
+              "name": "_group_issues",
+              "args": [
+                "self"
+              ],
+              "is_async": false,
+              "decorators": [],
+              "docstring": "Group similar issues together",
+              "line_number": 485
+            },
+            {
+              "name": "_generate_optimization_suggestions",
+              "args": [
+                "self",
+                "cost_summary"
+              ],
+              "is_async": false,
+              "decorators": [],
+              "docstring": "Generate optimization suggestions based on cost data",
+              "line_number": 513
+            }
+          ],
+          "decorators": [],
+          "docstring": "Comprehensive agent monitoring and management system",
+          "line_number": 51
+        }
+      ],
+      "functions": [],
+      "imports": [
+        {
+          "module": "asyncio",
+          "alias": null,
+          "type": "import"
+        },
+        {
+          "module": "json",
+          "alias": null,
+          "type": "import"
+        },
+        {
+          "module": "logging",
+          "alias": null,
+          "type": "import"
+        },
+        {
+          "module": "os",
+          "alias": null,
+          "type": "import"
+        },
+        {
+          "module": "sqlite3",
+          "alias": null,
+          "type": "import"
+        },
+        {
+          "module": "time",
+          "alias": null,
+          "type": "import"
+        },
+        {
+          "module": "datetime.datetime",
+          "alias": null,
+          "type": "from_import",
+          "from_module": "datetime"
+        },
+        {
+          "module": "datetime.timedelta",
+          "alias": null,
+          "type": "from_import",
+          "from_module": "datetime"
+        },
+        {
+          "module": "pathlib.Path",
+          "alias": null,
+          "type": "from_import",
+          "from_module": "pathlib"
+        },
+        {
+          "module": "typing.Dict",
+          "alias": null,
+          "type": "from_import",
+          "from_module": "typing"
+        },
+        {
+          "module": "typing.List",
+          "alias": null,
+          "type": "from_import",
+          "from_module": "typing"
+        },
+        {
+          "module": "typing.Optional",
+          "alias": null,
+          "type": "from_import",
+          "from_module": "typing"
+        },
+        {
+          "module": "typing.Any",
+          "alias": null,
+          "type": "from_import",
+          "from_module": "typing"
+        },
+        {
+          "module": "typing.Set",
+          "alias": null,
+          "type": "from_import",
+          "from_module": "typing"
+        },
+        {
+          "module": "dataclasses.dataclass",
+          "alias": null,
+          "type": "from_import",
+          "from_module": "dataclasses"
+        },
+        {
+          "module": "dataclasses.asdict",
+          "alias": null,
+          "type": "from_import",
+          "from_module": "dataclasses"
+        },
+        {
+          "module": "yaml",
+          "alias": null,
+          "type": "import"
+        },
+        {
+          "module": "contextlib.asynccontextmanager",
+          "alias": null,
+          "type": "from_import",
+          "from_module": "contextlib"
+        },
+        {
+          "module": "cost_tracker.CostTracker",
+          "alias": null,
+          "type": "from_import",
+          "from_module": "cost_tracker"
+        },
+        {
+          "module": "cost_tracker.AgentBudget",
+          "alias": null,
+          "type": "from_import",
+          "from_module": "cost_tracker"
+        },
+        {
+          "module": "cost_tracker.APICall",
+          "alias": null,
+          "type": "from_import",
+          "from_module": "cost_tracker"
+        },
+        {
+          "module": "cost_tracker.UsageStats",
+          "alias": null,
+          "type": "from_import",
+          "from_module": "cost_tracker"
+        },
+        {
+          "module": "slack_notifier.SlackNotifier",
+          "alias": null,
+          "type": "from_import",
+          "from_module": "slack_notifier"
+        },
+        {
+          "module": "slack_notifier.SlackAlert",
+          "alias": null,
+          "type": "from_import",
+          "from_module": "slack_notifier"
+        }
+      ],
+      "dependencies": [],
+      "code_quality": {},
+      "integration_status": {},
+      "risk_assessment": {},
+      "devops_readiness": {},
+      "error": "argument of type 'Constant' is not iterable"
+    },
+    "test_runner": {
+      "file_path": "/Users/andrewnordstrom/Elk_Corgi/corgi-recommender-service/agents/test_runner.py",
+      "file_size": 28980,
+      "last_modified": "2025-06-04T21:37:07.675926",
+      "status": "error",
+      "classes": [],
+      "functions": [],
+      "imports": [
+        {
+          "module": "argparse",
+          "alias": null,
+          "type": "import"
+        },
+        {
+          "module": "json",
+          "alias": null,
+          "type": "import"
+        },
+        {
+          "module": "os",
+          "alias": null,
+          "type": "import"
+        },
+        {
+          "module": "sys",
+          "alias": null,
+          "type": "import"
+        },
+        {
+          "module": "logging",
+          "alias": null,
+          "type": "import"
+        },
+        {
+          "module": "typing.Dict",
+          "alias": null,
+          "type": "from_import",
+          "from_module": "typing"
+        },
+        {
+          "module": "typing.Any",
+          "alias": null,
+          "type": "from_import",
+          "from_module": "typing"
+        },
+        {
+          "module": "typing.Optional",
+          "alias": null,
+          "type": "from_import",
+          "from_module": "typing"
+        },
+        {
+          "module": "datetime.datetime",
+          "alias": null,
+          "type": "from_import",
+          "from_module": "datetime"
+        },
+        {
+          "module": "agents.browser_agent.BrowserAgent",
+          "alias": null,
+          "type": "from_import",
+          "from_module": "agents.browser_agent"
+        },
+        {
+          "module": "agents.user_profiles.get_profile_by_name",
+          "alias": null,
+          "type": "from_import",
+          "from_module": "agents.user_profiles"
+        },
+        {
+          "module": "agents.user_profiles.list_available_profiles",
+          "alias": null,
+          "type": "from_import",
+          "from_module": "agents.user_profiles"
+        },
+        {
+          "module": "agents.user_profiles.get_time_of_day",
+          "alias": null,
+          "type": "from_import",
+          "from_module": "agents.user_profiles"
+        },
+        {
+          "module": "agents.interaction_logger.InteractionLogger",
+          "alias": null,
+          "type": "from_import",
+          "from_module": "agents.interaction_logger"
+        },
+        {
+          "module": "agents.feedback_module.FeedbackModule",
+          "alias": null,
+          "type": "from_import",
+          "from_module": "agents.feedback_module"
+        }
+      ],
+      "dependencies": [],
+      "code_quality": {},
+      "integration_status": {},
+      "risk_assessment": {},
+      "devops_readiness": {},
+      "error": "argument of type 'BinOp' is not iterable"
+    },
+    "test_all_features": {
+      "file_path": "/Users/andrewnordstrom/Elk_Corgi/corgi-recommender-service/agents/test_all_features.py",
+      "file_size": 9453,
+      "last_modified": "2025-06-04T21:37:07.659266",
+      "status": "analyzed",
+      "classes": [],
+      "functions": [
+        {
+          "name": "setup_logging",
+          "args": [],
+          "is_async": false,
+          "decorators": [],
+          "docstring": "Set up logging for the test script.",
+          "line_number": 31
+        },
+        {
+          "name": "test_token_tracking",
+          "args": [
+            "logger"
+          ],
+          "is_async": false,
+          "decorators": [],
+          "docstring": "Test token usage tracking features.",
+          "line_number": 46
+        },
+        {
+          "name": "test_browser_agent_no_llm",
+          "args": [
+            "logger"
+          ],
+          "is_async": false,
+          "decorators": [],
+          "docstring": "Test the browser agent in no-LLM (heuristic) mode.",
+          "line_number": 83
+        },
+        {
+          "name": "test_browser_agent_with_tools",
+          "args": [
+            "logger"
+          ],
+          "is_async": false,
+          "decorators": [],
+          "docstring": "Test the browser agent with tool access control.",
+          "line_number": 120
+        },
+        {
+          "name": "test_batch_processing",
+          "args": [
+            "logger"
+          ],
+          "is_async": false,
+          "decorators": [],
+          "docstring": "Test batch processing of posts.",
+          "line_number": 162
+        },
+        {
+          "name": "test_interaction_limits",
+          "args": [
+            "logger"
+          ],
+          "is_async": false,
+          "decorators": [],
+          "docstring": "Test browser interaction limits.",
+          "line_number": 202
+        },
+        {
+          "name": "main",
+          "args": [],
+          "is_async": false,
+          "decorators": [],
+          "docstring": "Main entry point for the test script.",
+          "line_number": 247
+        }
+      ],
+      "imports": [
+        {
+          "module": "os",
+          "alias": null,
+          "type": "import"
+        },
+        {
+          "module": "sys",
+          "alias": null,
+          "type": "import"
+        },
+        {
+          "module": "logging",
+          "alias": null,
+          "type": "import"
+        },
+        {
+          "module": "argparse",
+          "alias": null,
+          "type": "import"
+        },
+        {
+          "module": "typing.Dict",
+          "alias": null,
+          "type": "from_import",
+          "from_module": "typing"
+        },
+        {
+          "module": "typing.Any",
+          "alias": null,
+          "type": "from_import",
+          "from_module": "typing"
+        },
+        {
+          "module": "typing.List",
+          "alias": null,
+          "type": "from_import",
+          "from_module": "typing"
+        },
+        {
+          "module": "agents.browser_agent.BrowserAgent",
+          "alias": null,
+          "type": "from_import",
+          "from_module": "agents.browser_agent"
+        },
+        {
+          "module": "agents.token_tracker.TokenTracker",
+          "alias": null,
+          "type": "from_import",
+          "from_module": "agents.token_tracker"
+        },
+        {
+          "module": "agents.user_profiles.get_profile_by_name",
+          "alias": null,
+          "type": "from_import",
+          "from_module": "agents.user_profiles"
+        },
+        {
+          "module": "agents.user_profiles.list_available_profiles",
+          "alias": null,
+          "type": "from_import",
+          "from_module": "agents.user_profiles"
+        },
+        {
+          "module": "agents.interaction_logger.InteractionLogger",
+          "alias": null,
+          "type": "from_import",
+          "from_module": "agents.interaction_logger"
+        },
+        {
+          "module": "agents.feedback_module.FeedbackModule",
+          "alias": null,
+          "type": "from_import",
+          "from_module": "agents.feedback_module"
+        }
+      ],
+      "dependencies": [],
+      "code_quality": {
+        "total_lines": 295,
+        "code_lines": 202,
+        "comment_lines": 28,
+        "docstring_lines": 16,
+        "has_error_handling": true,
+        "error_handling_blocks": 5,
+        "has_logging": true,
+        "has_type_hints": true,
+        "has_dataclasses": false,
+        "has_async": false,
+        "todo_comments": 0,
+        "complexity_indicators": {
+          "nested_loops": 0,
+          "conditional_complexity": 12,
+          "function_count": 7
+        },
+        "quality_score": 90
+      },
+      "integration_status": {
+        "importable": true,
+        "uses_cost_tracker": false,
+        "uses_token_tracker": true,
+        "uses_manager_agent": false,
+        "uses_slack_notifier": false,
+        "uses_claude_api": true,
+        "uses_database": false,
+        "uses_config_files": false,
+        "has_health_endpoint": false,
+        "has_metrics": false,
+        "api_integrations": [],
+        "external_dependencies": [
+          "argparse",
+          "agents",
+          "agents",
+          "agents",
+          "agents",
+          "agents",
+          "agents"
+        ]
+      },
+      "risk_assessment": {
+        "high_cost_risk": true,
+        "security_risks": [],
+        "infinite_loop_risk": true,
+        "file_system_risk": false,
+        "network_risk": false,
+        "privilege_escalation_risk": false,
+        "data_exposure_risk": false,
+        "circuit_breaker_missing": false
+      },
+      "devops_readiness": {
+        "has_health_check": false,
+        "has_metrics": false,
+        "has_logging": true,
+        "has_config_management": false,
+        "has_error_recovery": false,
+        "has_graceful_shutdown": false,
+        "containerizable": true,
+        "monitoring_ready": false,
+        "scalable": false
+      },
+      "agent_classes": [
+        {
+          "name": "BrowserAgent",
+          "instantiable": false,
+          "methods": [
+            "execute_claude_request",
+            "run_interaction",
+            "start_session"
+          ],
+          "has_health_check": false,
+          "has_execute": false,
+          "base_classes": [
+            "object"
+          ]
+        }
+      ]
+    },
+    "core_agent_system": {
+      "file_path": "/Users/andrewnordstrom/Elk_Corgi/corgi-recommender-service/agents/core_agent_system.py",
+      "file_size": 48390,
+      "last_modified": "2025-06-09T19:36:15.033352",
+      "status": "analyzed",
+      "classes": [
+        {
+          "name": "AgentPriority",
+          "bases": [
+            "Enum"
+          ],
+          "methods": [],
+          "decorators": [],
+          "docstring": null,
+          "line_number": 25
+        },
+        {
+          "name": "AgentStatus",
+          "bases": [
+            "Enum"
+          ],
+          "methods": [],
+          "decorators": [],
+          "docstring": null,
+          "line_number": 31
+        },
+        {
+          "name": "AgentMetrics",
+          "bases": [],
+          "methods": [],
+          "decorators": [
+            "dataclass"
+          ],
+          "docstring": "Metrics tracking for agent performance",
+          "line_number": 38
+        },
+        {
+          "name": "AgentAction",
+          "bases": [],
+          "methods": [],
+          "decorators": [
+            "dataclass"
+          ],
+          "docstring": "Represents an action taken by an agent",
+          "line_number": 48
+        },
+        {
+          "name": "BaseAgent",
+          "bases": [
+            "ABC"
+          ],
+          "methods": [
+            {
+              "name": "__init__",
+              "args": [
+                "self",
+                "agent_id",
+                "name",
+                "priority"
+              ],
+              "is_async": false,
+              "decorators": [],
+              "docstring": null,
+              "line_number": 60
+            }
+          ],
+          "decorators": [],
+          "docstring": "Base class for all intelligent agents",
+          "line_number": 57
+        },
+        {
+          "name": "WebsiteHealthAgent",
+          "bases": [
+            "BaseAgent"
+          ],
+          "methods": [
+            {
+              "name": "__init__",
+              "args": [
+                "self"
+              ],
+              "is_async": false,
+              "decorators": [],
+              "docstring": null,
+              "line_number": 103
+            }
+          ],
+          "decorators": [],
+          "docstring": "Monitors website health and performance",
+          "line_number": 100
+        },
+        {
+          "name": "SecurityAgent",
+          "bases": [
+            "BaseAgent"
+          ],
+          "methods": [
+            {
+              "name": "__init__",
+              "args": [
+                "self"
+              ],
+              "is_async": false,
+              "decorators": [],
+              "docstring": null,
+              "line_number": 178
+            }
+          ],
+          "decorators": [],
+          "docstring": "Monitors security vulnerabilities and threats",
+          "line_number": 175
+        },
+        {
+          "name": "PerformanceOptimizationAgent",
+          "bases": [
+            "BaseAgent"
+          ],
+          "methods": [
+            {
+              "name": "__init__",
+              "args": [
+                "self"
+              ],
+              "is_async": false,
+              "decorators": [],
+              "docstring": null,
+              "line_number": 303
+            }
+          ],
+          "decorators": [],
+          "docstring": "Optimizes website performance automatically",
+          "line_number": 300
+        },
+        {
+          "name": "UserExperienceAgent",
+          "bases": [
+            "BaseAgent"
+          ],
+          "methods": [
+            {
+              "name": "__init__",
+              "args": [
+                "self"
+              ],
+              "is_async": false,
+              "decorators": [],
+              "docstring": null,
+              "line_number": 459
+            }
+          ],
+          "decorators": [],
+          "docstring": "Monitors and improves user experience",
+          "line_number": 456
+        },
+        {
+          "name": "ContentManagementAgent",
+          "bases": [
+            "BaseAgent"
+          ],
+          "methods": [
+            {
+              "name": "__init__",
+              "args": [
+                "self"
+              ],
+              "is_async": false,
+              "decorators": [],
+              "docstring": null,
+              "line_number": 623
+            }
+          ],
+          "decorators": [],
+          "docstring": "Manages content quality and freshness",
+          "line_number": 620
+        },
+        {
+          "name": "MLModelAgent",
+          "bases": [
+            "BaseAgent"
+          ],
+          "methods": [
+            {
+              "name": "__init__",
+              "args": [
+                "self"
+              ],
+              "is_async": false,
+              "decorators": [],
+              "docstring": null,
+              "line_number": 770
+            }
+          ],
+          "decorators": [],
+          "docstring": "Manages ML model performance and optimization",
+          "line_number": 767
+        },
+        {
+          "name": "DeploymentAgent",
+          "bases": [
+            "BaseAgent"
+          ],
+          "methods": [
+            {
+              "name": "__init__",
+              "args": [
+                "self"
+              ],
+              "is_async": false,
+              "decorators": [],
+              "docstring": null,
+              "line_number": 922
+            }
+          ],
+          "decorators": [],
+          "docstring": "Manages deployment and infrastructure",
+          "line_number": 919
+        },
+        {
+          "name": "AgentOrchestrator",
+          "bases": [],
+          "methods": [
+            {
+              "name": "__init__",
+              "args": [
+                "self"
+              ],
+              "is_async": false,
+              "decorators": [],
+              "docstring": null,
+              "line_number": 1077
+            },
+            {
+              "name": "setup_database",
+              "args": [
+                "self"
+              ],
+              "is_async": false,
+              "decorators": [],
+              "docstring": "Setup SQLite database for agent data",
+              "line_number": 1084
+            },
+            {
+              "name": "register_agent",
+              "args": [
+                "self",
+                "agent"
+              ],
+              "is_async": false,
+              "decorators": [],
+              "docstring": "Register a new agent",
+              "line_number": 1116
+            },
+            {
+              "name": "store_action",
+              "args": [
+                "self",
+                "action"
+              ],
+              "is_async": false,
+              "decorators": [],
+              "docstring": "Store action in database",
+              "line_number": 1168
+            },
+            {
+              "name": "store_agent_metrics",
+              "args": [
+                "self",
+                "agent"
+              ],
+              "is_async": false,
+              "decorators": [],
+              "docstring": "Store agent metrics in database",
+              "line_number": 1192
+            },
+            {
+              "name": "get_system_status",
+              "args": [
+                "self"
+              ],
+              "is_async": false,
+              "decorators": [],
+              "docstring": "Get overall system status",
+              "line_number": 1217
+            }
+          ],
+          "decorators": [],
+          "docstring": "Orchestrates all agents and manages their execution",
+          "line_number": 1074
+        }
+      ],
+      "functions": [],
+      "imports": [
+        {
+          "module": "asyncio",
+          "alias": null,
+          "type": "import"
+        },
+        {
+          "module": "json",
+          "alias": null,
+          "type": "import"
+        },
+        {
+          "module": "logging",
+          "alias": null,
+          "type": "import"
+        },
+        {
+          "module": "time",
+          "alias": null,
+          "type": "import"
+        },
+        {
+          "module": "abc.ABC",
+          "alias": null,
+          "type": "from_import",
+          "from_module": "abc"
+        },
+        {
+          "module": "abc.abstractmethod",
+          "alias": null,
+          "type": "from_import",
+          "from_module": "abc"
+        },
+        {
+          "module": "dataclasses.dataclass",
+          "alias": null,
+          "type": "from_import",
+          "from_module": "dataclasses"
+        },
+        {
+          "module": "dataclasses.field",
+          "alias": null,
+          "type": "from_import",
+          "from_module": "dataclasses"
+        },
+        {
+          "module": "datetime.datetime",
+          "alias": null,
+          "type": "from_import",
+          "from_module": "datetime"
+        },
+        {
+          "module": "datetime.timedelta",
+          "alias": null,
+          "type": "from_import",
+          "from_module": "datetime"
+        },
+        {
+          "module": "enum.Enum",
+          "alias": null,
+          "type": "from_import",
+          "from_module": "enum"
+        },
+        {
+          "module": "typing.Dict",
+          "alias": null,
+          "type": "from_import",
+          "from_module": "typing"
+        },
+        {
+          "module": "typing.List",
+          "alias": null,
+          "type": "from_import",
+          "from_module": "typing"
+        },
+        {
+          "module": "typing.Optional",
+          "alias": null,
+          "type": "from_import",
+          "from_module": "typing"
+        },
+        {
+          "module": "typing.Any",
+          "alias": null,
+          "type": "from_import",
+          "from_module": "typing"
+        },
+        {
+          "module": "typing.Callable",
+          "alias": null,
+          "type": "from_import",
+          "from_module": "typing"
+        },
+        {
+          "module": "aiohttp",
+          "alias": null,
+          "type": "import"
+        },
+        {
+          "module": "subprocess",
+          "alias": null,
+          "type": "import"
+        },
+        {
+          "module": "psutil",
+          "alias": null,
+          "type": "import"
+        },
+        {
+          "module": "sqlite3",
+          "alias": null,
+          "type": "import"
+        },
+        {
+          "module": "pathlib.Path",
+          "alias": null,
+          "type": "from_import",
+          "from_module": "pathlib"
+        }
+      ],
+      "dependencies": [],
+      "code_quality": {
+        "total_lines": 1273,
+        "code_lines": 1062,
+        "comment_lines": 41,
+        "docstring_lines": 104,
+        "has_error_handling": true,
+        "error_handling_blocks": 29,
+        "has_logging": true,
+        "has_type_hints": true,
+        "has_dataclasses": true,
+        "has_async": true,
+        "todo_comments": 0,
+        "complexity_indicators": {
+          "nested_loops": 33,
+          "conditional_complexity": 39,
+          "function_count": 14
+        },
+        "quality_score": 90
+      },
+      "integration_status": {
+        "importable": true,
+        "uses_cost_tracker": false,
+        "uses_token_tracker": false,
+        "uses_manager_agent": false,
+        "uses_slack_notifier": false,
+        "uses_claude_api": false,
+        "uses_database": true,
+        "uses_config_files": true,
+        "has_health_endpoint": true,
+        "has_metrics": true,
+        "api_integrations": [
+          "HTTP_CLIENT"
+        ],
+        "external_dependencies": [
+          "time",
+          "abc",
+          "abc",
+          "dataclasses",
+          "dataclasses",
+          "enum",
+          "aiohttp",
+          "subprocess",
+          "psutil",
+          "sqlite3"
+        ]
+      },
+      "risk_assessment": {
+        "high_cost_risk": false,
+        "security_risks": [],
+        "infinite_loop_risk": false,
+        "file_system_risk": false,
+        "network_risk": false,
+        "privilege_escalation_risk": false,
+        "data_exposure_risk": false,
+        "circuit_breaker_missing": false
+      },
+      "devops_readiness": {
+        "has_health_check": true,
+        "has_metrics": true,
+        "has_logging": true,
+        "has_config_management": true,
+        "has_error_recovery": false,
+        "has_graceful_shutdown": false,
+        "containerizable": true,
+        "monitoring_ready": true,
+        "scalable": true
+      },
+      "agent_classes": [
+        {
+          "name": "AgentAction",
+          "instantiable": false,
+          "methods": [
+            "result"
+          ],
+          "has_health_check": false,
+          "has_execute": false,
+          "base_classes": [
+            "object"
+          ]
+        },
+        {
+          "name": "AgentMetrics",
+          "instantiable": true,
+          "methods": [
+            "average_response_time",
+            "errors_encountered",
+            "last_activity",
+            "performance_score",
+            "tasks_completed",
+            "uptime"
+          ],
+          "has_health_check": false,
+          "has_execute": false,
+          "base_classes": [
+            "object"
+          ]
+        },
+        {
+          "name": "AgentOrchestrator",
+          "instantiable": true,
+          "methods": [
+            "get_system_status",
+            "register_agent",
+            "run_agent_cycle",
+            "setup_database",
+            "start_continuous_monitoring",
+            "store_action",
+            "store_agent_metrics"
+          ],
+          "has_health_check": false,
+          "has_execute": false,
+          "base_classes": [
+            "object"
+          ]
+        },
+        {
+          "name": "AgentPriority",
+          "instantiable": false,
+          "methods": [
+            "CRITICAL",
+            "HIGH",
+            "LOW",
+            "MEDIUM"
+          ],
+          "has_health_check": false,
+          "has_execute": false,
+          "base_classes": [
+            "Enum"
+          ]
+        },
+        {
+          "name": "AgentStatus",
+          "instantiable": false,
+          "methods": [
+            "ACTIVE",
+            "ERROR",
+            "IDLE",
+            "MAINTENANCE"
+          ],
+          "has_health_check": false,
+          "has_execute": false,
+          "base_classes": [
+            "Enum"
+          ]
+        },
+        {
+          "name": "BaseAgent",
+          "instantiable": false,
+          "methods": [
+            "execute",
+            "health_check",
+            "update_metrics"
+          ],
+          "has_health_check": true,
+          "has_execute": true,
+          "base_classes": [
+            "ABC"
+          ]
+        },
+        {
+          "name": "ContentManagementAgent",
+          "instantiable": true,
+          "methods": [
+            "check_content_freshness",
+            "execute",
+            "health_check",
+            "optimize_seo",
+            "update_documentation",
+            "update_metrics",
+            "validate_content_quality"
+          ],
+          "has_health_check": true,
+          "has_execute": true,
+          "base_classes": [
+            "BaseAgent"
+          ]
+        },
+        {
+          "name": "DeploymentAgent",
+          "instantiable": true,
+          "methods": [
+            "check_deployment_health",
+            "execute",
+            "health_check",
+            "manage_auto_scaling",
+            "manage_backups",
+            "monitor_infrastructure",
+            "update_metrics"
+          ],
+          "has_health_check": true,
+          "has_execute": true,
+          "base_classes": [
+            "BaseAgent"
+          ]
+        },
+        {
+          "name": "MLModelAgent",
+          "instantiable": true,
+          "methods": [
+            "check_model_drift",
+            "execute",
+            "health_check",
+            "monitor_model_performance",
+            "optimize_model_selection",
+            "update_metrics",
+            "update_model_weights"
+          ],
+          "has_health_check": true,
+          "has_execute": true,
+          "base_classes": [
+            "BaseAgent"
+          ]
+        },
+        {
+          "name": "PerformanceOptimizationAgent",
+          "instantiable": true,
+          "methods": [
+            "execute",
+            "health_check",
+            "optimize_api",
+            "optimize_database",
+            "optimize_frontend",
+            "optimize_system_resources",
+            "update_metrics"
+          ],
+          "has_health_check": true,
+          "has_execute": true,
+          "base_classes": [
+            "BaseAgent"
+          ]
+        },
+        {
+          "name": "SecurityAgent",
+          "instantiable": true,
+          "methods": [
+            "check_api_security",
+            "check_data_exposure",
+            "check_dependency_vulnerabilities",
+            "check_ssl_certificates",
+            "check_unauthorized_access",
+            "execute",
+            "health_check",
+            "update_metrics"
+          ],
+          "has_health_check": true,
+          "has_execute": true,
+          "base_classes": [
+            "BaseAgent"
+          ]
+        },
+        {
+          "name": "UserExperienceAgent",
+          "instantiable": true,
+          "methods": [
+            "analyze_core_web_vitals",
+            "analyze_user_behavior",
+            "check_accessibility",
+            "execute",
+            "health_check",
+            "optimize_user_interface",
+            "update_metrics"
+          ],
+          "has_health_check": true,
+          "has_execute": true,
+          "base_classes": [
+            "BaseAgent"
+          ]
+        },
+        {
+          "name": "WebsiteHealthAgent",
+          "instantiable": true,
+          "methods": [
+            "execute",
+            "health_check",
+            "update_metrics"
+          ],
+          "has_health_check": true,
+          "has_execute": true,
+          "base_classes": [
+            "BaseAgent"
+          ]
+        }
+      ]
+    },
+    "agent_launcher": {
+      "file_path": "/Users/andrewnordstrom/Elk_Corgi/corgi-recommender-service/agents/agent_launcher.py",
+      "file_size": 12216,
+      "last_modified": "2025-06-09T19:38:17.212085",
+      "status": "analyzed",
+      "classes": [
+        {
+          "name": "AgentSystemLauncher",
+          "bases": [],
+          "methods": [
+            {
+              "name": "__init__",
+              "args": [
+                "self"
+              ],
+              "is_async": false,
+              "decorators": [],
+              "docstring": null,
+              "line_number": 33
+            },
+            {
+              "name": "setup_directories",
+              "args": [
+                "self"
+              ],
+              "is_async": false,
+              "decorators": [],
+              "docstring": "Setup necessary directories",
+              "line_number": 38
+            },
+            {
+              "name": "start_web_dashboard",
+              "args": [
+                "self"
+              ],
+              "is_async": false,
+              "decorators": [],
+              "docstring": "Start the web dashboard in a separate process",
+              "line_number": 43
+            },
+            {
+              "name": "start_agent_system",
+              "args": [
+                "self"
+              ],
+              "is_async": false,
+              "decorators": [],
+              "docstring": "Start the main agent system",
+              "line_number": 63
+            },
+            {
+              "name": "start_integration_bridge",
+              "args": [
+                "self"
+              ],
+              "is_async": false,
+              "decorators": [],
+              "docstring": "Start integration bridge with existing monitoring",
+              "line_number": 81
+            },
+            {
+              "name": "display_startup_banner",
+              "args": [
+                "self"
+              ],
+              "is_async": false,
+              "decorators": [],
+              "docstring": "Display startup banner",
+              "line_number": 116
+            },
+            {
+              "name": "start_all_components",
+              "args": [
+                "self"
+              ],
+              "is_async": false,
+              "decorators": [],
+              "docstring": "Start all system components",
+              "line_number": 159
+            },
+            {
+              "name": "stop_all_components",
+              "args": [
+                "self"
+              ],
+              "is_async": false,
+              "decorators": [],
+              "docstring": "Stop all system components",
+              "line_number": 219
+            },
+            {
+              "name": "run",
+              "args": [
+                "self"
+              ],
+              "is_async": false,
+              "decorators": [],
+              "docstring": "Main run method",
+              "line_number": 257
+            }
+          ],
+          "decorators": [],
+          "docstring": "Main launcher for the Corgi Agent System",
+          "line_number": 30
+        }
+      ],
+      "functions": [
+        {
+          "name": "main",
+          "args": [],
+          "is_async": false,
+          "decorators": [],
+          "docstring": "Main entry point",
+          "line_number": 289
+        },
+        {
+          "name": "signal_handler",
+          "args": [
+            "signum",
+            "frame"
+          ],
+          "is_async": false,
+          "decorators": [],
+          "docstring": null,
+          "line_number": 259
+        },
+        {
+          "name": "run_dashboard",
+          "args": [],
+          "is_async": false,
+          "decorators": [],
+          "docstring": null,
+          "line_number": 48
+        },
+        {
+          "name": "run_agents",
+          "args": [],
+          "is_async": false,
+          "decorators": [],
+          "docstring": null,
+          "line_number": 68
+        },
+        {
+          "name": "run_bridge",
+          "args": [],
+          "is_async": false,
+          "decorators": [],
+          "docstring": null,
+          "line_number": 86
+        }
+      ],
+      "imports": [
+        {
+          "module": "asyncio",
+          "alias": null,
+          "type": "import"
+        },
+        {
+          "module": "sys",
+          "alias": null,
+          "type": "import"
+        },
+        {
+          "module": "signal",
+          "alias": null,
+          "type": "import"
+        },
+        {
+          "module": "multiprocessing",
+          "alias": null,
+          "type": "import"
+        },
+        {
+          "module": "time",
+          "alias": null,
+          "type": "import"
+        },
+        {
+          "module": "pathlib.Path",
+          "alias": null,
+          "type": "from_import",
+          "from_module": "pathlib"
+        },
+        {
+          "module": "logging",
+          "alias": null,
+          "type": "import"
+        },
+        {
+          "module": "subprocess",
+          "alias": null,
+          "type": "import"
+        },
+        {
+          "module": "threading",
+          "alias": null,
+          "type": "import"
+        },
+        {
+          "module": "datetime.datetime",
+          "alias": null,
+          "type": "from_import",
+          "from_module": "datetime"
+        },
+        {
+          "module": "web_agent_dashboard.start_dashboard",
+          "alias": null,
+          "type": "from_import",
+          "from_module": "web_agent_dashboard"
+        },
+        {
+          "module": "core_agent_system.main",
+          "alias": null,
+          "type": "from_import",
+          "from_module": "core_agent_system"
+        }
+      ],
+      "dependencies": [],
+      "code_quality": {
+        "total_lines": 295,
+        "code_lines": 221,
+        "comment_lines": 13,
+        "docstring_lines": 28,
+        "has_error_handling": true,
+        "error_handling_blocks": 6,
+        "has_logging": true,
+        "has_type_hints": false,
+        "has_dataclasses": false,
+        "has_async": false,
+        "todo_comments": 0,
+        "complexity_indicators": {
+          "nested_loops": 24,
+          "conditional_complexity": 6,
+          "function_count": 14
+        },
+        "quality_score": 65
+      },
+      "integration_status": {
+        "importable": true,
+        "uses_cost_tracker": false,
+        "uses_token_tracker": false,
+        "uses_manager_agent": false,
+        "uses_slack_notifier": false,
+        "uses_claude_api": false,
+        "uses_database": true,
+        "uses_config_files": false,
+        "has_health_endpoint": false,
+        "has_metrics": true,
+        "api_integrations": [],
+        "external_dependencies": [
+          "signal",
+          "multiprocessing",
+          "time",
+          "subprocess",
+          "threading",
+          "web_agent_dashboard",
+          "core_agent_system"
+        ]
+      },
+      "risk_assessment": {
+        "high_cost_risk": false,
+        "security_risks": [],
+        "infinite_loop_risk": true,
+        "file_system_risk": false,
+        "network_risk": false,
+        "privilege_escalation_risk": false,
+        "data_exposure_risk": false,
+        "circuit_breaker_missing": false
+      },
+      "devops_readiness": {
+        "has_health_check": false,
+        "has_metrics": true,
+        "has_logging": true,
+        "has_config_management": false,
+        "has_error_recovery": false,
+        "has_graceful_shutdown": true,
+        "containerizable": true,
+        "monitoring_ready": false,
+        "scalable": false
+      },
+      "agent_classes": [
+        {
+          "name": "AgentSystemLauncher",
+          "instantiable": true,
+          "methods": [
+            "display_startup_banner",
+            "run",
+            "setup_directories",
+            "start_agent_system",
+            "start_all_components",
+            "start_integration_bridge",
+            "start_web_dashboard",
+            "stop_all_components"
+          ],
+          "has_health_check": false,
+          "has_execute": false,
+          "base_classes": [
+            "object"
+          ]
+        }
+      ]
+    }
+  },
+  "summary": {
+    "total_agents": 16,
+    "operational_agents": 11,
+    "broken_agents": 5,
+    "importable_agents": 10,
+    "agents_with_cost_tracking": 0,
+    "high_risk_agents": 9,
+    "production_ready_agents": 1,
+    "average_quality_score": 82.3,
+    "critical_issues_count": 9,
+    "system_health_score": 48.1
+  },
+  "critical_issues": [],
+  "recommendations": {
+    "CRITICAL": [
+      "Add cost controls to browser_agent - uses expensive models without budget limits",
+      "Fix broken agent: cost_tracker - argument of type 'Attribute' is not iterable",
+      "Fix broken agent: web_agent_dashboard - argument of type 'Call' is not iterable",
+      "Fix broken agent: user_profiles - argument of type 'Subscript' is not iterable",
+      "Add cost controls to token_tracker - uses expensive models without budget limits",
+      "Add cost controls to claude_interface - uses expensive models without budget limits",
+      "Fix broken agent: manager_agent - argument of type 'Constant' is not iterable",
+      "Fix broken agent: test_runner - argument of type 'BinOp' is not iterable",
+      "Add cost controls to test_all_features - uses expensive models without budget limits"
+    ],
+    "HIGH": [
+      "Add cost tracking to slack_notifier - makes API calls without monitoring",
+      "Add cost tracking to browser_agent - makes API calls without monitoring",
+      "Add circuit breaker to browser_agent - API calls without failure protection",
+      "Add error handling to cost_tracker",
+      "Add cost tracking to security_healing_agent - makes API calls without monitoring",
+      "Add error handling to web_agent_dashboard",
+      "Add error handling to interaction_logger",
+      "Add error handling to user_profiles",
+      "Add cost tracking to token_tracker - makes API calls without monitoring",
+      "Add error handling to token_tracker",
+      "Add cost tracking to claude_interface - makes API calls without monitoring",
+      "Add circuit breaker to claude_interface - API calls without failure protection",
+      "Add error handling to manager_agent",
+      "Add error handling to test_runner",
+      "Add cost tracking to test_all_features - makes API calls without monitoring"
+    ],
+    "MEDIUM": [
+      "Add health check endpoint to slack_notifier",
+      "Add health check endpoint to browser_agent",
+      "Add logging to cost_tracker",
+      "Add health check endpoint to cost_tracker",
+      "Improve code quality in cost_tracker (score: 0/100)",
+      "Add logging to web_agent_dashboard",
+      "Add health check endpoint to web_agent_dashboard",
+      "Improve code quality in web_agent_dashboard (score: 0/100)",
+      "Add health check endpoint to interaction_logger",
+      "Add logging to user_profiles",
+      "Add health check endpoint to user_profiles",
+      "Improve code quality in user_profiles (score: 0/100)",
+      "Add health check endpoint to token_tracker",
+      "Add logging to agent_config",
+      "Add health check endpoint to feedback_module",
+      "Add health check endpoint to claude_interface",
+      "Add logging to manager_agent",
+      "Add health check endpoint to manager_agent",
+      "Improve code quality in manager_agent (score: 0/100)",
+      "Add logging to test_runner",
+      "Add health check endpoint to test_runner",
+      "Improve code quality in test_runner (score: 0/100)",
+      "Add health check endpoint to test_all_features",
+      "Add health check endpoint to agent_launcher"
+    ],
+    "LOW": [
+      "Add type hints to cost_tracker",
+      "Add type hints to web_agent_dashboard",
+      "Add type hints to user_profiles",
+      "Add type hints to manager_agent",
+      "Add type hints to test_runner",
+      "Add type hints to agent_launcher"
+    ]
+  }
+}

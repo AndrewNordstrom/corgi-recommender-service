@@ -251,18 +251,6 @@ start_service() {
                     read -r confirm
                     if [ "$confirm" != "n" ] && [ "$confirm" != "N" ]; then
                         port=$new_port
-                        # Update command with new port if needed
-                        case "$name" in
-                            api)
-                                command="CORGI_API_HOST_PORT=$port python3 app.py"
-                                ;;
-                            proxy)
-                                command="CORGI_PROXY_PORT=$port python3 special_proxy.py"
-                                ;;
-                            frontend)
-                                command="cd frontend && PORT=$port npm run dev"
-                                ;;
-                        esac
                     else
                         return 0
                     fi
@@ -278,21 +266,40 @@ start_service() {
         esac
     fi
     
+    # Update command with the final port value, ensuring it's always passed
+    case "$name" in
+        api)
+            command="CORGI_PORT=$port python3 app.py"
+            ;;
+        proxy)
+            command="CORGI_PROXY_PORT=$port python3 special_proxy.py"
+            ;;
+        frontend)
+            # npm run dev uses the PORT env var by default
+            command="cd frontend && PORT=$port npm run dev"
+            ;;
+    esac
+
     # Start the service
     print_info "Starting $name on port $port..."
     print_info "Command: $command"
     
-    # Execute command in background
-    if eval "$command" >/dev/null 2>&1 & then
+    # Create logs directory if it doesn't exist
+    LOG_DIR="logs"
+    mkdir -p "$LOG_DIR"
+    LOG_FILE="$LOG_DIR/${name}.log"
+
+    # Execute command in background and redirect output to log file
+    if eval "$command" >"$LOG_FILE" 2>&1 & then
         new_pid=$!
         sleep 2  # Give service time to start
         
         # Check if service started successfully
         if kill -0 "$new_pid" 2>/dev/null; then
             print_success "$name started successfully (PID: $new_pid)"
-            printf "Service log: logs/${name}.log\n"
+            printf "Service log: %s\n" "$LOG_FILE"
         else
-            print_error "Service failed to start"
+            print_error "Service failed to start. Check log for details: $LOG_FILE"
             return 1
         fi
     else

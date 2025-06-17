@@ -8,6 +8,9 @@ It also includes SQLite schema for testing with an in-memory database.
 
 import logging
 import os
+import psycopg2
+import sqlite3
+from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
@@ -21,6 +24,7 @@ DROP TABLE IF EXISTS interactions;
 DROP TABLE IF EXISTS post_metadata;
 DROP TABLE IF EXISTS privacy_settings;
 DROP TABLE IF EXISTS user_identities;
+DROP TABLE IF EXISTS api_keys;
 """
 
 # Create table definitions
@@ -86,6 +90,8 @@ CREATE TABLE IF NOT EXISTS user_identities (
     access_token TEXT,
     refresh_token TEXT,
     token_scope TEXT,
+    token_expires_at TIMESTAMP,
+    is_active BOOLEAN DEFAULT true,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -99,6 +105,22 @@ CREATE TABLE IF NOT EXISTS ab_user_assignments (
     variant_id INTEGER NOT NULL,
     assigned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT unique_user_experiment UNIQUE (user_id, experiment_id)
+);
+
+-- Table: api_keys
+-- Stores API keys for secure authentication
+CREATE TABLE IF NOT EXISTS api_keys (
+    id SERIAL PRIMARY KEY,
+    api_key VARCHAR(255) UNIQUE NOT NULL,
+    user_id VARCHAR(255) NOT NULL,
+    role VARCHAR(50) NOT NULL DEFAULT 'user',
+    username VARCHAR(255) NOT NULL,
+    is_active BOOLEAN NOT NULL DEFAULT true,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    last_used_at TIMESTAMP,
+    expires_at TIMESTAMP,
+    description TEXT,
+    scopes TEXT[] DEFAULT ARRAY['read_content', 'create_interactions']
 );
 """
 
@@ -127,6 +149,10 @@ CREATE INDEX IF NOT EXISTS idx_post_rankings_user_score ON post_rankings(user_id
 CREATE INDEX IF NOT EXISTS idx_user_identities_user_id ON user_identities(user_id);
 CREATE INDEX IF NOT EXISTS idx_user_identities_access_token ON user_identities(access_token);
 CREATE INDEX IF NOT EXISTS idx_user_identities_mastodon_id ON user_identities(mastodon_id);
+
+-- Indexes for api_keys table
+CREATE INDEX IF NOT EXISTS idx_api_keys_key ON api_keys(api_key);
+CREATE INDEX IF NOT EXISTS idx_api_keys_user ON api_keys(user_id);
 """
 
 
@@ -270,6 +296,8 @@ CREATE TABLE IF NOT EXISTS user_identities (
     access_token TEXT,
     refresh_token TEXT,
     token_scope TEXT,
+    token_expires_at TIMESTAMP,
+    is_active BOOLEAN DEFAULT 1,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -313,6 +341,46 @@ def create_sqlite_tables(conn):
     # Commit changes
     conn.commit()
     logger.info("SQLite in-memory database schema created successfully")
+
+
+def create_api_keys_table(conn):
+    """Create the api_keys table for secure API key management."""
+    cursor = conn.cursor()
+    
+    try:
+        # Create API keys table for secure authentication
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS api_keys (
+                id SERIAL PRIMARY KEY,
+                api_key VARCHAR(255) UNIQUE NOT NULL,
+                user_id VARCHAR(255) NOT NULL,
+                role VARCHAR(50) NOT NULL DEFAULT 'user',
+                username VARCHAR(255) NOT NULL,
+                is_active BOOLEAN NOT NULL DEFAULT true,
+                created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                last_used_at TIMESTAMP,
+                expires_at TIMESTAMP,
+                description TEXT,
+                scopes TEXT[] DEFAULT ARRAY['read_content', 'create_interactions']
+            );
+        """)
+        
+        # Create index for fast lookups
+        cursor.execute("""
+            CREATE INDEX IF NOT EXISTS idx_api_keys_key ON api_keys(api_key);
+        """)
+        
+        cursor.execute("""
+            CREATE INDEX IF NOT EXISTS idx_api_keys_user ON api_keys(user_id);
+        """)
+        
+        conn.commit()
+        logger.info("API keys table created successfully")
+        
+    except Exception as e:
+        logger.error(f"Error creating API keys table: {e}")
+        conn.rollback()
+        raise
 
 
 def init_db(conn=None):

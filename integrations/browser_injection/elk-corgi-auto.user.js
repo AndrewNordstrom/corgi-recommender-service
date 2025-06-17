@@ -15,7 +15,7 @@
     
     console.log('🐕 ELK-Corgi Auto Integration Loading...');
     
-    const CORGI_API_URL = 'http://localhost:9999';
+    const CORGI_API_URL = 'http://localhost:5002';
     let injectionAttempts = 0;
     const MAX_ATTEMPTS = 10;
     

@@ -52,14 +52,14 @@ def test_token_tracking(logger):
     
     # Simulate a few token usage records
     token_tracker.record_usage(
-        model="claude-3-opus-20240229",
+        model="claude-sonnet-4-20250514",
         input_tokens=1000,
         output_tokens=500,
         request_duration=1.5
     )
     
     token_tracker.record_usage(
-        model="claude-3-sonnet-20240229",
+        model="claude-sonnet-4-20250514",
         input_tokens=800,
         output_tokens=300,
         request_duration=0.8

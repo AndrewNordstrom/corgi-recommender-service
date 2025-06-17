@@ -21,7 +21,6 @@ from utils.timeline_injector import inject_into_timeline
 from utils.recommendation_engine import (
     get_ranked_recommendations,
     load_cold_start_posts,
-    is_new_user,
 )
 from utils.metrics import (
     track_injection,
@@ -378,18 +377,13 @@ def get_trending_cold_start_posts(limit: int = 20, languages: Optional[List[str]
 
 def load_injected_posts_for_user(user_id, languages: Optional[List[str]] = None):
     """
-    Load appropriate injectable posts for a user based on their session state.
-
-    Args:
-        user_id: User identifier or None for anonymous users
-
-    Returns:
-        list: Posts that can be injected into the timeline
-        str: Source of the posts ('cold_start' or 'personalized')
+    Load posts to be injected for a user based on their status.
     """
+    from utils.user_signals import is_new_user  # DEFERRED IMPORT to break circular dependency
+
     start_time = time.time()
 
-    # For anonymous users or when user_id is None, use trending posts
+    # For anonymous users, always use trending posts
     if not user_id or user_id == "anonymous":
         try:
             posts = get_trending_cold_start_posts(limit=20, languages=languages)
@@ -422,20 +416,20 @@ def load_injected_posts_for_user(user_id, languages: Optional[List[str]] = None)
             return [], "cold_start"
 
     # Check if user is new or has low activity - use trending posts
-    if is_new_user(user_id):
-        try:
-            posts = get_trending_cold_start_posts(limit=20, languages=languages)
-            logger.info(f"User {user_id} is new, using trending posts")
-
-            # Track metrics
-            track_recommendation_generation("trending_cold_start", "new_user", len(posts))
-            track_fallback("new_user")
-
-            return posts, "trending_cold_start"
-        except Exception as e:
-            logger.error(f"Error loading trending cold start posts for new user: {e}")
-            track_fallback("error_loading_trending_cold_start")
-            return [], "cold_start"
+    # if is_new_user(user_id):
+    #     try:
+    #         posts = get_trending_cold_start_posts(limit=20, languages=languages)
+    #         logger.info(f"User {user_id} is new, using trending posts")
+    #
+    #         # Track metrics
+    #         track_recommendation_generation("trending_cold_start", "new_user", len(posts))
+    #         track_fallback("new_user")
+    #
+    #         return posts, "trending_cold_start"
+    #     except Exception as e:
+    #         logger.error(f"Error loading trending cold start posts for new user: {e}")
+    #         track_fallback("error_loading_trending_cold_start")
+    #         return [], "cold_start"
 
     # For returning users with sufficient activity, get personalized recommendations
     try:

@@ -40,7 +40,7 @@ class ClaudeInterface:
         # API configuration
         self.base_url = "https://api.anthropic.com/v1"
         self.api_version = "2023-06-01"  # Update as needed
-        self.default_model = "claude-3-opus-20240229"  # Default model
+        self.default_model = "claude-sonnet-4-20250514"  # Default model (Claude Sonnet 4 with thinking)
 
         # Associate with token tracker if provided
         self.token_tracker = token_tracker
@@ -95,7 +95,7 @@ class ClaudeInterface:
             message: The user message to send
             system: Optional system prompt
             messages: Optional list of previous messages (overrides message if provided)
-            model: Claude model to use (defaults to claude-3-opus)
+            model: Claude model to use (defaults to claude-sonnet-4)
             max_tokens: Maximum tokens for the response
             temperature: Sampling temperature (0.0 to 1.0)
             tools: Optional list of tools to enable
