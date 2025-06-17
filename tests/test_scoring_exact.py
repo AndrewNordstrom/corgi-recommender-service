@@ -57,11 +57,17 @@ def test_get_author_preference_score_exact(mock_get_cursor, mock_get_db):
         ("p3", "authorX"),
     ]
 
-    # get_cursor returns our cursor *as a context manager*
-    mock_get_cursor.side_effect = lambda conn: cursor
-
-    # get_db_connection yields a dummy connection that does nothing
-    mock_get_db.return_value = _DummyConnection()
+    # Set up context manager mock for get_cursor
+    mock_cursor_context = MagicMock()
+    mock_cursor_context.__enter__.return_value = cursor
+    mock_cursor_context.__exit__.return_value = None
+    mock_get_cursor.return_value = mock_cursor_context
+    
+    # Set up context manager mock for get_db_connection
+    mock_conn_context = MagicMock()
+    mock_conn_context.__enter__.return_value = _DummyConnection()
+    mock_conn_context.__exit__.return_value = None
+    mock_get_db.return_value = mock_conn_context
 
     # Three positive interactions for authorX, zero negatives
     interactions = [
@@ -101,6 +107,9 @@ def test_get_content_engagement_score_exact():
 
 def test_get_recency_score_exact():
     """Ensure recency score obeys exp(-age_days / decay_factor)."""
+    import sys
+    import os
+    sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
     from config import ALGORITHM_CONFIG
 
     decay_factor = ALGORITHM_CONFIG["time_decay_days"]

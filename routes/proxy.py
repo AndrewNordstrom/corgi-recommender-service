@@ -1724,7 +1724,7 @@ def generate_proxy_cache_key(endpoint, params, user_id, instance):
 
     # Join and hash for consistent key
     key_string = "|".join(key_parts)
-    return hashlib.sha256(key_string.encode()).hexdigest()
+    return hashlib.md5(key_string.encode()).hexdigest()
 
 
 def determine_proxy_cache_ttl(endpoint):

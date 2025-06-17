@@ -90,6 +90,43 @@ class ManagerAgent:
         
         # Load agent budgets
         self._load_agent_budgets()
+        
+        # Register new specialized agents
+        self._register_specialized_agents()
+    
+    def _register_specialized_agents(self):
+        """Register the new Profiler & Optimizer and Tester agents."""
+        try:
+            # Register Profiler & Optimizer Agent
+            profiler_budget = AgentBudget(
+                agent_id="profiler_optimizer",
+                hourly_limit_usd=2.0,  # Higher limit for analysis work
+                daily_limit_usd=20.0,
+                monthly_limit_usd=200.0,
+                hourly_token_limit=20000,
+                daily_token_limit=200000,
+                monthly_token_limit=2000000,
+                priority=2  # High priority for performance monitoring
+            )
+            self.cost_tracker.set_agent_budget("profiler_optimizer", profiler_budget)
+            
+            # Register Tester Agent
+            tester_budget = AgentBudget(
+                agent_id="tester",
+                hourly_limit_usd=1.5,  # Moderate limit for test generation
+                daily_limit_usd=15.0,
+                monthly_limit_usd=150.0,
+                hourly_token_limit=15000,
+                daily_token_limit=150000,
+                monthly_token_limit=1500000,
+                priority=2  # High priority for test suite maintenance
+            )
+            self.cost_tracker.set_agent_budget("tester", tester_budget)
+            
+            self.logger.info("Registered specialized agents: profiler_optimizer, tester")
+            
+        except Exception as e:
+            self.logger.error(f"Failed to register specialized agents: {e}")
     
     def _load_config(self) -> Dict[str, Any]:
         """Load configuration from YAML file"""

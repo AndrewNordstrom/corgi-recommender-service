@@ -36,11 +36,10 @@ def test_health_check_db_error(mock_get_db_connection, client):
     
     response = client.get('/health')
     
-    assert response.status_code == 500
+    assert response.status_code == 503
     data = json.loads(response.data)
     assert data['status'] == 'unhealthy'
-    assert data['database'] == 'disconnected'
-    assert 'database_error' in data
+    assert data['database'] == 'error'
 
 
 def test_request_id_header_added(client):

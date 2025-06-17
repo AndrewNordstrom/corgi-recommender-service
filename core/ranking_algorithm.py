@@ -17,7 +17,7 @@ import math
 from datetime import datetime, timedelta
 from typing import Dict, List, Tuple, Any, Optional
 
-from config import ALGORITHM_CONFIG
+from config import ALGORITHM_CONFIG, MIN_RANKING_SCORE
 from db.connection import get_db_connection, get_cursor, USE_IN_MEMORY_DB
 from utils.privacy import generate_user_alias
 
@@ -270,12 +270,25 @@ def get_candidate_posts(
             crawled_results = cur.fetchall()
             crawled_columns = [desc[0] for desc in cur.description]
             
-            # Combine results
+            # Combine results and deduplicate by post_id
             all_results = []
+            seen_post_ids = set()
+            
+            # Add posts from posts table first
             for row in posts_results:
-                all_results.append(dict(zip(posts_columns, row)))
+                post_dict = dict(zip(posts_columns, row))
+                post_id = post_dict.get('post_id')
+                if post_id and post_id not in seen_post_ids:
+                    all_results.append(post_dict)
+                    seen_post_ids.add(post_id)
+            
+            # Add posts from crawled_posts table, avoiding duplicates
             for row in crawled_results:
-                all_results.append(dict(zip(crawled_columns, row)))
+                post_dict = dict(zip(crawled_columns, row))
+                post_id = post_dict.get('post_id')
+                if post_id and post_id not in seen_post_ids:
+                    all_results.append(post_dict)
+                    seen_post_ids.add(post_id)
             
             # Sort by created_at and limit
             all_results.sort(key=lambda x: x.get('created_at', ''), reverse=True)
@@ -369,22 +382,10 @@ def get_author_preference_score(user_interactions: List[Dict], author_id: str) -
             elif action_type in negative_actions:
                 author_interactions["negative"] += 1
 
-    # If we still have no interactions linked to this author, fall back to the
-    # heuristic path described above.
+    # If we still have no interactions linked to this author, return baseline.
+    # This means the user has interactions with other authors, but not with this specific author.
     if author_interactions["total"] == 0:
-        total = len(user_interactions)
-        if total == 0:
-            return 0.1
-
-        positive = sum(
-            1
-            for i in user_interactions
-            if i.get("action_type") in positive_actions
-        )
-
-        positive_ratio = positive / total
-        preference_score = 1 / (1 + math.exp(-5 * (positive_ratio - 0.5)))
-        return max(preference_score, 0.1)
+        return 0.1
 
     # --------------------------------------------------------------
     # Standard path – we have at least one interaction for the target
@@ -546,8 +547,8 @@ def generate_specific_recommendation_reason_from_ranking(post: Dict, user_intera
     
     # Priority 2: Use user interaction patterns for personalized reasons
     if author_score > 0.6:
-        # Find specific author interaction
-        author_interactions = [i for i in user_interactions if i['post_author_id'] == post['author_id']]
+        # Find specific author interaction (safely check for post_author_id field)
+        author_interactions = [i for i in user_interactions if i.get('post_author_id') == post['author_id']]
         if author_interactions:
             return f"Because you liked a post by this author"
         
@@ -700,7 +701,6 @@ def generate_rankings_for_user(user_id: str, model_id: Optional[int] = None, lan
                 score, reason = calculate_ranking_score(post, user_interactions, algorithm_config)
 
                 # Include only posts with reasonable scores (configurable threshold)
-                from config import MIN_RANKING_SCORE
                 if score > MIN_RANKING_SCORE:
                     post["ranking_score"] = score
                     post["recommendation_reason"] = reason

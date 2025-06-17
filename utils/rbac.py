@@ -60,12 +60,23 @@ def validate_api_key_from_database(api_key: str) -> Optional[Dict[str, Any]]:
         
         with get_db_connection() as conn:
             cur = conn.cursor()
-            # Use parameterized query to prevent SQL injection
-            cur.execute("""
-                SELECT user_id, role, username, is_active 
-                FROM api_keys 
-                WHERE api_key = %s AND is_active = true
-            """, (api_key,))
+            # Detect database type for parameter style
+            is_sqlite = 'sqlite' in str(type(conn)).lower()
+            
+            if is_sqlite:
+                # Use parameterized query to prevent SQL injection (SQLite style)
+                cur.execute("""
+                    SELECT user_id, role, username, is_active 
+                    FROM api_keys 
+                    WHERE api_key = ? AND is_active = 1
+                """, (api_key,))
+            else:
+                # PostgreSQL style
+                cur.execute("""
+                    SELECT user_id, role, username, is_active 
+                    FROM api_keys 
+                    WHERE api_key = %s AND is_active = true
+                """, (api_key,))
             
             result = cur.fetchone()
             if result:

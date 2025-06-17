@@ -237,12 +237,39 @@ def check_schema_version(conn):
 
 # SQLite schema for in-memory testing mode
 CREATE_SQLITE_TABLES_SQL = """
--- Table: users
--- Stores basic user information for test data
-CREATE TABLE IF NOT EXISTS users (
-    user_id TEXT PRIMARY KEY,
-    username TEXT NOT NULL,
-    preferences TEXT DEFAULT '{}'
+-- Table: crawled_posts
+-- Stores crawled post data from external sources
+CREATE TABLE IF NOT EXISTS crawled_posts (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    post_id TEXT UNIQUE NOT NULL,
+    content TEXT NOT NULL,
+    author_id TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    source_url TEXT,
+    metadata TEXT DEFAULT '{}',
+    crawled_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    rich_content TEXT DEFAULT NULL,
+    media_urls TEXT DEFAULT NULL,
+    hashtags TEXT DEFAULT NULL,
+    mentions TEXT DEFAULT NULL,
+    language TEXT DEFAULT NULL,
+    engagement_score REAL DEFAULT 0.0
+);
+
+-- Table: post_metadata
+-- Stores additional metadata for posts
+CREATE TABLE IF NOT EXISTS post_metadata (
+    post_id TEXT PRIMARY KEY,
+    title TEXT,
+    summary TEXT,
+    tags TEXT,
+    category TEXT,
+    language TEXT,
+    reading_time INTEGER,
+    word_count INTEGER,
+    sentiment_score REAL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (post_id) REFERENCES posts(post_id)
 );
 
 -- Table: posts
@@ -252,7 +279,8 @@ CREATE TABLE IF NOT EXISTS posts (
     content TEXT NOT NULL,
     author_id TEXT NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    metadata TEXT DEFAULT '{}'
+    metadata TEXT DEFAULT '{}',
+    language TEXT DEFAULT 'en'
 );
 
 -- Table: interactions
@@ -302,6 +330,30 @@ CREATE TABLE IF NOT EXISTS user_identities (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Table: users
+-- Stores basic user information
+CREATE TABLE IF NOT EXISTS users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id TEXT UNIQUE NOT NULL,
+    username TEXT,
+    display_name TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Table: ab_experiments
+-- Stores A/B testing experiment definitions
+CREATE TABLE IF NOT EXISTS ab_experiments (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT UNIQUE NOT NULL,
+    description TEXT,
+    status TEXT DEFAULT 'draft',
+    start_date TIMESTAMP,
+    end_date TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Table: ab_user_assignments
 CREATE TABLE IF NOT EXISTS ab_user_assignments (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -310,6 +362,59 @@ CREATE TABLE IF NOT EXISTS ab_user_assignments (
     variant_id INTEGER NOT NULL,
     assigned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(user_id, experiment_id)
+);
+
+-- RBAC Tables
+-- Table: roles
+-- Stores role definitions
+CREATE TABLE IF NOT EXISTS roles (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name VARCHAR(50) UNIQUE NOT NULL,
+    display_name VARCHAR(100),
+    description TEXT,
+    is_system_role BOOLEAN DEFAULT 0,
+    is_active BOOLEAN DEFAULT 1,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Table: permissions
+-- Stores permission definitions
+CREATE TABLE IF NOT EXISTS permissions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name VARCHAR(100) UNIQUE NOT NULL,
+    display_name VARCHAR(150),
+    description TEXT,
+    resource VARCHAR(50),
+    action VARCHAR(50),
+    is_active BOOLEAN DEFAULT 1,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Table: role_permissions
+-- Associates roles with permissions
+CREATE TABLE IF NOT EXISTS role_permissions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    role_id INTEGER NOT NULL,
+    permission_id INTEGER NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (role_id) REFERENCES roles(id) ON DELETE CASCADE,
+    FOREIGN KEY (permission_id) REFERENCES permissions(id) ON DELETE CASCADE,
+    UNIQUE(role_id, permission_id)
+);
+
+-- Table: user_roles
+-- Associates users with roles
+CREATE TABLE IF NOT EXISTS user_roles (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id TEXT NOT NULL,
+    role_id INTEGER NOT NULL,
+    assigned_by TEXT,
+    assigned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    expires_at TIMESTAMP,
+    is_active BOOLEAN DEFAULT 1,
+    FOREIGN KEY (role_id) REFERENCES roles(id) ON DELETE CASCADE,
+    UNIQUE(user_id, role_id)
 );
 """
 

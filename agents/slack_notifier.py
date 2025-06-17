@@ -500,6 +500,27 @@ class SlackNotifier:
         
         return " | ".join(tldr_parts) if tldr_parts else "Multiple issues detected"
     
+    async def send_message(self, message: str, channel: str = None) -> bool:
+        """Send a simple message to Slack (compatibility method)"""
+        alert = SlackAlert(
+            severity='info',
+            title='Corgi Notification',
+            message=message,
+            timestamp=datetime.now()
+        )
+        
+        # Override channel if specified
+        if channel:
+            original_channel = self.channel
+            self.channel = channel
+            try:
+                result = await self.send_alert(alert)
+                return result
+            finally:
+                self.channel = original_channel
+        else:
+            return await self.send_alert(alert)
+    
     async def test_connection(self) -> bool:
         """Test Slack webhook connection"""
         test_alert = SlackAlert(

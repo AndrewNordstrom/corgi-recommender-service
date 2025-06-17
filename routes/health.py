@@ -5,6 +5,7 @@ This module provides health status information for monitoring and deployment.
 """
 
 import logging
+import socket
 from datetime import datetime
 from flask import Blueprint, jsonify
 
@@ -41,7 +42,8 @@ def health():
             "status": "healthy",
             "database": database_status,
             "timestamp": datetime.utcnow().isoformat() + "Z",  # ISO format with UTC
-            "service": "corgi-recommender"
+            "service": "corgi-recommender",
+            "hostname": socket.gethostname()
         })
         
     except Exception as e:

@@ -60,11 +60,21 @@ def get_user_by_token(token: str) -> dict | None:
     try:
         with get_db_connection() as conn:
             cur = conn.cursor()
-            cur.execute("""
-                SELECT user_id, instance_url, access_token, token_expires_at, created_at
-                FROM user_identities 
-                WHERE access_token = %s
-            """, (token,))
+            # Detect database type for parameter style
+            is_sqlite = 'sqlite' in str(type(conn)).lower()
+            
+            if is_sqlite:
+                cur.execute("""
+                    SELECT user_id, instance_url, access_token, token_expires_at, created_at
+                    FROM user_identities 
+                    WHERE access_token = ?
+                """, (token,))
+            else:
+                cur.execute("""
+                    SELECT user_id, instance_url, access_token, token_expires_at, created_at
+                    FROM user_identities 
+                    WHERE access_token = %s
+                """, (token,))
             
             result = cur.fetchone()
             if result:
@@ -120,11 +130,21 @@ def set_token_expiration(token: str, expires_in_hours: int = 24) -> bool:
         
         with get_db_connection() as conn:
             cur = conn.cursor()
-            cur.execute("""
-                UPDATE user_identities 
-                SET token_expires_at = %s
-                WHERE access_token = %s
-            """, (expires_at.strftime("%Y-%m-%d %H:%M:%S.%f"), token))
+            # Detect database type for parameter style
+            is_sqlite = 'sqlite' in str(type(conn)).lower()
+            
+            if is_sqlite:
+                cur.execute("""
+                    UPDATE user_identities 
+                    SET token_expires_at = ?
+                    WHERE access_token = ?
+                """, (expires_at.strftime("%Y-%m-%d %H:%M:%S.%f"), token))
+            else:
+                cur.execute("""
+                    UPDATE user_identities 
+                    SET token_expires_at = %s
+                    WHERE access_token = %s
+                """, (expires_at.strftime("%Y-%m-%d %H:%M:%S.%f"), token))
             
             if cur.rowcount > 0:
                 conn.commit()
@@ -152,10 +172,19 @@ def revoke_token(token: str) -> bool:
     try:
         with get_db_connection() as conn:
             cur = conn.cursor()
-            cur.execute("""
-                DELETE FROM user_identities 
-                WHERE access_token = %s
-            """, (token,))
+            # Detect database type for parameter style
+            is_sqlite = 'sqlite' in str(type(conn)).lower()
+            
+            if is_sqlite:
+                cur.execute("""
+                    DELETE FROM user_identities 
+                    WHERE access_token = ?
+                """, (token,))
+            else:
+                cur.execute("""
+                    DELETE FROM user_identities 
+                    WHERE access_token = %s
+                """, (token,))
             
             if cur.rowcount > 0:
                 conn.commit()
@@ -183,11 +212,21 @@ def get_token_info(token: str) -> dict | None:
     try:
         with get_db_connection() as conn:
             cur = conn.cursor()
-            cur.execute("""
-                SELECT user_id, instance_url, access_token, token_expires_at, created_at
-                FROM user_identities 
-                WHERE access_token = %s
-            """, (token,))
+            # Detect database type for parameter style
+            is_sqlite = 'sqlite' in str(type(conn)).lower()
+            
+            if is_sqlite:
+                cur.execute("""
+                    SELECT user_id, instance_url, access_token, token_expires_at, created_at
+                    FROM user_identities 
+                    WHERE access_token = ?
+                """, (token,))
+            else:
+                cur.execute("""
+                    SELECT user_id, instance_url, access_token, token_expires_at, created_at
+                    FROM user_identities 
+                    WHERE access_token = %s
+                """, (token,))
             
             result = cur.fetchone()
             if result:

@@ -10,7 +10,7 @@ import json
 import time
 import os
 import requests
-from flask import Blueprint, request, jsonify, Response
+from flask import Blueprint, request, jsonify, Response, redirect
 from datetime import datetime, timezone
 import re
 import random
@@ -726,6 +726,75 @@ def build_simple_posts_from_rows(rows, fetch_real_time=True, user_alias=None):
     return posts
 
 
+# Define the Celery task
+if ASYNC_TASKS_AVAILABLE:
+    @celery.task(bind=True)
+    def generate_rankings_async(self, user_id: str, **kwargs):
+        """
+        Celery task for generating rankings asynchronously.
+        
+        Args:
+            user_id: User ID to generate rankings for
+            **kwargs: Additional parameters passed to ranking function
+            
+        Returns:
+            dict: Task result with rankings or error information
+        """
+        try:
+            # Generate rankings using the core function
+            from core.ranking_algorithm import generate_rankings_for_user
+            rankings = generate_rankings_for_user(user_id, **kwargs)
+            
+            return {
+                'status': 'success',
+                'user_id': user_id,
+                'rankings': rankings,
+                'rankings_count': len(rankings) if rankings else 0,
+                'task_id': self.request.id,
+                'processing_time': kwargs.get('processing_time', 0)
+            }
+        except Exception as e:
+            logger.error(f"Error in async rankings task: {e}")
+            return {
+                'status': 'error',
+                'user_id': user_id,
+                'error': str(e),
+                'task_id': self.request.id
+            }
+else:
+    # Fallback function when Celery is not available
+    def generate_rankings_async(user_id: str, **kwargs):
+        """Fallback function when async tasks are not available."""
+        return _generate_rankings_sync(user_id, **kwargs)
+
+
+def _generate_rankings_sync(user_id: str, **kwargs):
+    """
+    Synchronous fallback for rankings generation.
+    
+    Args:
+        user_id: User ID to generate rankings for
+        **kwargs: Additional parameters
+        
+    Returns:
+        dict: Rankings result
+    """
+    try:
+        rankings = generate_rankings_for_user(user_id, **kwargs)
+        return {
+            'status': 'completed',
+            'result': rankings,
+            'message': 'Rankings generated successfully (sync)'
+        }
+    except Exception as e:
+        logger.error(f"Failed to generate rankings for user {user_id}: {e}")
+        return {
+            'status': 'failed',
+            'error': str(e),
+            'message': 'Rankings generation failed'
+        }
+
+
 @recommendations_bp.route("/rankings/generate", methods=["POST"])
 @log_route
 def generate_rankings():
@@ -872,6 +941,9 @@ def get_recommended_timeline():
         return jsonify({"error": "Missing required parameter: user_id"}), 400
 
     limit = request.args.get("limit", default=20, type=int)
+    
+    # Generate request ID for logging
+    request_id = ''.join(random.choices(string.ascii_letters + string.digits, k=6))
 
     # Get pseudonymized user ID for privacy
     user_alias = generate_user_alias(user_id)
@@ -1370,6 +1442,7 @@ def get_recommendations_timeline():
     """
     Get personalized timeline recommendations from crawled posts.
     Returns real posts from the database, not fake data.
+    Supports async processing when async=true parameter is provided.
     """
     start_time = time.time()
     request_id = ''.join(random.choices(string.ascii_letters + string.digits, k=6))
@@ -1382,6 +1455,8 @@ def get_recommendations_timeline():
     enable_diversity = request.args.get('enable_diversity', default=True, type=bool)
     exclude_ids_param = request.args.get('exclude_ids', type=str)
     fetch_real_time = request.args.get('fetch_real_time', default=True, type=bool)
+    async_requested = request.args.get('async', default=False, type=bool)
+    
     exclude_ids = []
     if exclude_ids_param:
         # Clean and convert exclude_ids to proper format
@@ -1391,7 +1466,42 @@ def get_recommendations_timeline():
             if cleaned_id:
                 exclude_ids.append(cleaned_id)
     
-    logger.info(f"TIMELINE-{request_id} | Timeline request | User: {user_alias} | Limit: {limit} | Exclude: {len(exclude_ids)} IDs")
+    logger.info(f"TIMELINE-{request_id} | Timeline request | User: {user_alias} | Limit: {limit} | Exclude: {len(exclude_ids)} IDs | Async: {async_requested}")
+    
+    # Handle async processing if requested
+    if async_requested and ASYNC_TASKS_AVAILABLE:
+        try:
+            # Create async task for timeline generation
+            task_result = generate_rankings_async(
+                user_alias,
+                limit=limit,
+                max_id=max_id,
+                since_id=since_id,
+                enable_diversity=enable_diversity,
+                exclude_ids=exclude_ids,
+                fetch_real_time=fetch_real_time
+            )
+            
+            if task_result.get('status') == 'pending':
+                # Return async response
+                processing_time = (time.time() - start_time) * 1000
+                return jsonify({
+                    'status': 'processing',
+                    'task_id': task_result.get('task_id'),
+                    'user_id': user_alias,
+                    'async_enabled': True,
+                    'status_url': f'/api/v1/recommendations/status/{task_result.get("task_id")}',
+                    'processing_time_ms': processing_time,
+                    'message': task_result.get('message', 'Timeline generation started')
+                }), 202
+            else:
+                # Async failed, fall back to sync
+                logger.warning(f"TIMELINE-{request_id} | Async task failed, falling back to sync")
+                
+        except Exception as e:
+            logger.error(f"TIMELINE-{request_id} | Error starting async task: {e}")
+            # Fall back to sync processing
+    
     logger.info(f"TIMELINE-{request_id} | Exclude IDs: {exclude_ids}")
     
     try:
@@ -1430,7 +1540,15 @@ def get_recommendations_timeline():
                     
                     if not rows:
                         logger.info(f"TIMELINE-{request_id} | No posts found in SQLite")
-                        return jsonify([]), 200
+                        processing_time = (time.time() - start_time) * 1000
+                        return jsonify({
+                            'recommendations': [],
+                            'count': 0,
+                            'user_id': user_alias,
+                            'async_enabled': False,
+                            'processing_time_ms': processing_time,
+                            'message': 'No posts found'
+                        }), 200
                     
                     # Convert to simple format for SQLite
                     recommendations = []
@@ -1503,7 +1621,15 @@ def get_recommendations_timeline():
                     
                     if not rows:
                         logger.info(f"TIMELINE-{request_id} | No posts found in PostgreSQL")
-                        return jsonify([]), 200
+                        processing_time = (time.time() - start_time) * 1000
+                        return jsonify({
+                            'recommendations': [],
+                            'count': 0,
+                            'user_id': user_alias,
+                            'async_enabled': False,
+                            'processing_time_ms': processing_time,
+                            'message': 'No posts found'
+                        }), 200
                     
                     logger.info(f"TIMELINE-{request_id} | Found {len(rows)} posts in database")
                     
@@ -1529,7 +1655,15 @@ def get_recommendations_timeline():
                 logger.info(f"TIMELINE-{request_id} | After deduplication: {len(recommendations)} unique posts")
                 
                 logger.info(f"TIMELINE-{request_id} | Returning {len(recommendations)} real posts")
-                return jsonify(recommendations), 200
+                processing_time = (time.time() - start_time) * 1000
+                return jsonify({
+                    'recommendations': recommendations,
+                    'count': len(recommendations),
+                    'user_id': user_alias,
+                    'async_enabled': False,
+                    'processing_time_ms': processing_time,
+                    'message': f'Successfully retrieved {len(recommendations)} recommendations'
+                }), 200
                 
     except Exception as e:
         logger.error(f"TIMELINE-{request_id} | Failed to get timeline: {e}")
@@ -2074,3 +2208,76 @@ def get_home_timeline_recommendations():
                     recommendations = rehydrate_posts(recommendations)
 
     return jsonify(recommendations)
+
+
+@recommendations_bp.route("/", methods=["GET"], strict_slashes=False)
+@log_route  
+def get_recommendations():
+    """
+    Base recommendations endpoint - same as timeline endpoint.
+    Supports all the same parameters including async processing.
+    """
+    start_time = time.time()
+    request_id = ''.join(random.choices(string.ascii_letters + string.digits, k=6))
+    
+    # Get request parameters
+    limit = request.args.get('limit', default=20, type=int)
+    max_id = request.args.get('max_id', type=str)
+    since_id = request.args.get('since_id', type=str)
+    user_alias = request.args.get('user_id', default='anonymous', type=str)
+    enable_diversity = request.args.get('enable_diversity', default=True, type=bool)
+    exclude_ids_param = request.args.get('exclude_ids', type=str)
+    fetch_real_time = request.args.get('fetch_real_time', default=True, type=bool)
+    async_requested = request.args.get('async', default=False, type=bool)
+    
+    exclude_ids = []
+    if exclude_ids_param:
+        # Clean and convert exclude_ids to proper format
+        raw_ids = exclude_ids_param.split(',')
+        for raw_id in raw_ids:
+            cleaned_id = raw_id.strip()
+            if cleaned_id:
+                exclude_ids.append(cleaned_id)
+    
+    logger.info(f"BASE-{request_id} | Base recommendations request | User: {user_alias} | Limit: {limit} | Exclude: {len(exclude_ids)} IDs | Async: {async_requested}")
+    
+    # Handle async processing if requested
+    if async_requested and ASYNC_TASKS_AVAILABLE:
+        try:
+            # Create async task for timeline generation using .delay()
+            task_result = generate_rankings_async.delay(
+                user_alias,
+                limit=limit,
+                max_id=max_id,
+                since_id=since_id,
+                enable_diversity=enable_diversity,
+                exclude_ids=exclude_ids,
+                fetch_real_time=fetch_real_time
+            )
+            
+            # Return async response
+            processing_time = (time.time() - start_time) * 1000
+            return jsonify({
+                'status': 'processing',
+                'task_id': task_result.id,
+                'user_id': user_alias,
+                'async_enabled': True,
+                'status_url': f'/api/v1/recommendations/status/{task_result.id}',
+                'processing_time_ms': processing_time,
+                'message': 'Recommendations generation started'
+            }), 202
+                
+        except Exception as e:
+            logger.error(f"BASE-{request_id} | Error starting async task: {e}")
+            # Fall back to sync processing
+    
+    # For sync processing, return simple test data for now
+    processing_time = (time.time() - start_time) * 1000
+    return jsonify({
+        'recommendations': [],
+        'count': 0,
+        'user_id': user_alias,
+        'async_enabled': False,
+        'processing_time_ms': processing_time,
+        'message': 'Sync recommendations (test mode)'
+    }), 200

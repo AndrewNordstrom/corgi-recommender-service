@@ -59,12 +59,26 @@ initialize_connection_pool()
 @atexit.register
 def close_pool():
     global pool, in_memory_conn
-    if pool:
-        pool.closeall()
-        logger.info("Database connection pool closed")
-    if in_memory_conn:
-        in_memory_conn.close()
-        logger.info("In-memory database connection closed")
+    try:
+        if pool:
+            pool.closeall()
+            # Only log if logger is still available
+            try:
+                logger.info("Database connection pool closed")
+            except (ValueError, OSError):
+                # Logger file handle may be closed during shutdown
+                pass
+        if in_memory_conn:
+            in_memory_conn.close()
+            # Only log if logger is still available
+            try:
+                logger.info("In-memory database connection closed")
+            except (ValueError, OSError):
+                # Logger file handle may be closed during shutdown
+                pass
+    except Exception:
+        # Silently ignore any errors during shutdown cleanup
+        pass
 
 
 @contextmanager

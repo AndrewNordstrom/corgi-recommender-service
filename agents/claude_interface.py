@@ -66,12 +66,25 @@ class ClaudeInterface:
             )
 
             # Check for successful response
-            if "Ready" in response.get("content", []):
-                self.logger.info("Claude API connection successful")
-                return True
+            content = response.get("content", [])
+            if content and isinstance(content, list) and len(content) > 0:
+                # Extract text from the content array
+                text_content = ""
+                for item in content:
+                    if isinstance(item, dict) and item.get("type") == "text":
+                        text_content += item.get("text", "")
+                
+                if "Ready" in text_content:
+                    self.logger.info("Claude API connection successful")
+                    return True
+                else:
+                    self.logger.warning(
+                        f"Claude API connection validation failed: unexpected response content: {text_content}"
+                    )
+                    return False
             else:
                 self.logger.warning(
-                    "Claude API connection validation failed: unexpected response"
+                    "Claude API connection validation failed: no content in response"
                 )
                 return False
 

@@ -1,0 +1,9 @@
+{
+  "is_paused": false,
+  "pause_reason": null,
+  "pause_timestamp": null,
+  "manual_override_active": true,
+  "last_warning_sent": null,
+  "weekly_limit_usd": 2.0,
+  "last_updated": "2025-06-16T23:04:35.779251"
+}

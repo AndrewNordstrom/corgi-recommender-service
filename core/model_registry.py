@@ -20,7 +20,7 @@ import logging
 import json
 import hashlib
 import time
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Dict, List, Optional, Any, Union, Callable, Tuple
 from dataclasses import dataclass, asdict
 from enum import Enum
@@ -144,65 +144,122 @@ class ModelRegistry:
         try:
             with get_db_connection() as conn:
                 with get_cursor(conn) as cur:
+                    # Detect database type
+                    is_sqlite = 'sqlite' in str(type(conn)).lower()
+                    
                     # Model metadata table
-                    cur.execute("""
-                        CREATE TABLE IF NOT EXISTS model_registry (
-                            id SERIAL PRIMARY KEY,
-                            name VARCHAR(100) NOT NULL,
-                            version VARCHAR(50) NOT NULL,
-                            model_type VARCHAR(50) NOT NULL,
-                            status VARCHAR(20) NOT NULL,
-                            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                            author VARCHAR(100),
-                            description TEXT,
-                            config JSONB,
-                            performance_metrics JSONB,
-                            training_data_hash VARCHAR(64),
-                            model_size_bytes BIGINT,
-                            inference_time_ms FLOAT,
-                            memory_usage_mb FLOAT,
-                            dependencies JSONB,
-                            tags JSONB,
-                            paper_reference TEXT,
-                            code_reference TEXT,
-                            UNIQUE(name, version)
-                        )
-                    """)
+                    if is_sqlite:
+                        cur.execute("""
+                            CREATE TABLE IF NOT EXISTS model_registry (
+                                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                                name VARCHAR(100) NOT NULL,
+                                version VARCHAR(50) NOT NULL,
+                                model_type VARCHAR(50) NOT NULL,
+                                status VARCHAR(20) NOT NULL,
+                                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                                author VARCHAR(100),
+                                description TEXT,
+                                config TEXT,
+                                performance_metrics TEXT,
+                                training_data_hash VARCHAR(64),
+                                model_size_bytes BIGINT,
+                                inference_time_ms REAL,
+                                memory_usage_mb REAL,
+                                dependencies TEXT,
+                                tags TEXT,
+                                paper_reference TEXT,
+                                code_reference TEXT,
+                                UNIQUE(name, version)
+                            )
+                        """)
+                    else:
+                        cur.execute("""
+                            CREATE TABLE IF NOT EXISTS model_registry (
+                                id SERIAL PRIMARY KEY,
+                                name VARCHAR(100) NOT NULL,
+                                version VARCHAR(50) NOT NULL,
+                                model_type VARCHAR(50) NOT NULL,
+                                status VARCHAR(20) NOT NULL,
+                                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                                author VARCHAR(100),
+                                description TEXT,
+                                config JSONB,
+                                performance_metrics JSONB,
+                                training_data_hash VARCHAR(64),
+                                model_size_bytes BIGINT,
+                                inference_time_ms FLOAT,
+                                memory_usage_mb FLOAT,
+                                dependencies JSONB,
+                                tags JSONB,
+                                paper_reference TEXT,
+                                code_reference TEXT,
+                                UNIQUE(name, version)
+                            )
+                        """)
                     
                     # Model performance tracking table
-                    cur.execute("""
-                        CREATE TABLE IF NOT EXISTS model_performance (
-                            id SERIAL PRIMARY KEY,
-                            model_name VARCHAR(100) NOT NULL,
-                            version VARCHAR(50) NOT NULL,
-                            timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                            metrics JSONB NOT NULL,
-                            user_segment VARCHAR(50),
-                            a_b_test_id VARCHAR(100),
-                            sample_size INTEGER
-                        )
-                    """)
+                    if is_sqlite:
+                        cur.execute("""
+                            CREATE TABLE IF NOT EXISTS model_performance (
+                                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                                model_name VARCHAR(100) NOT NULL,
+                                version VARCHAR(50) NOT NULL,
+                                timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                                metrics TEXT NOT NULL,
+                                user_segment VARCHAR(50),
+                                a_b_test_id VARCHAR(100),
+                                sample_size INTEGER
+                            )
+                        """)
+                    else:
+                        cur.execute("""
+                            CREATE TABLE IF NOT EXISTS model_performance (
+                                id SERIAL PRIMARY KEY,
+                                model_name VARCHAR(100) NOT NULL,
+                                version VARCHAR(50) NOT NULL,
+                                timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                                metrics JSONB NOT NULL,
+                                user_segment VARCHAR(50),
+                                a_b_test_id VARCHAR(100),
+                                sample_size INTEGER
+                            )
+                        """)
                     
-                    # Create index separately for PostgreSQL compatibility
+                    # Create index separately for both databases
                     cur.execute("""
                         CREATE INDEX IF NOT EXISTS model_performance_idx 
                         ON model_performance(model_name, version, timestamp)
                     """)
                     
                     # Traffic splitting configuration table
-                    cur.execute("""
-                        CREATE TABLE IF NOT EXISTS traffic_splits (
-                            id SERIAL PRIMARY KEY,
-                            experiment_id VARCHAR(100) UNIQUE NOT NULL,
-                            model_configs JSONB NOT NULL,
-                            user_segments JSONB,
-                            start_time TIMESTAMP,
-                            end_time TIMESTAMP,
-                            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                            is_active BOOLEAN DEFAULT TRUE
-                        )
-                    """)
+                    if is_sqlite:
+                        cur.execute("""
+                            CREATE TABLE IF NOT EXISTS traffic_splits (
+                                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                                experiment_id VARCHAR(100) UNIQUE NOT NULL,
+                                model_configs TEXT NOT NULL,
+                                user_segments TEXT,
+                                start_time TIMESTAMP,
+                                end_time TIMESTAMP,
+                                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                                is_active BOOLEAN DEFAULT 1
+                            )
+                        """)
+                    else:
+                        cur.execute("""
+                            CREATE TABLE IF NOT EXISTS traffic_splits (
+                                id SERIAL PRIMARY KEY,
+                                experiment_id VARCHAR(100) UNIQUE NOT NULL,
+                                model_configs JSONB NOT NULL,
+                                user_segments JSONB,
+                                start_time TIMESTAMP,
+                                end_time TIMESTAMP,
+                                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                                is_active BOOLEAN DEFAULT TRUE
+                            )
+                        """)
                     
                 conn.commit()
                 logger.info("Model registry database tables initialized")
@@ -322,7 +379,7 @@ class ModelRegistry:
                 logger.warning(f"Could not serialize model {name}:{version}: {e}")
             
             # Create metadata
-            now = datetime.utcnow()
+            now = datetime.now(timezone.utc)
             metadata = ModelMetadata(
                 name=name,
                 version=version,
@@ -370,32 +427,58 @@ class ModelRegistry:
         try:
             with get_db_connection() as conn:
                 with get_cursor(conn) as cur:
-                    cur.execute("""
-                        INSERT INTO model_registry (
-                            name, version, model_type, status, created_at, updated_at,
-                            author, description, config, performance_metrics,
-                            training_data_hash, model_size_bytes, inference_time_ms,
-                            memory_usage_mb, dependencies, tags, paper_reference, code_reference
-                        ) VALUES (
-                            %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
-                        )
-                        ON CONFLICT (name, version) DO UPDATE SET
-                            status = EXCLUDED.status,
-                            updated_at = EXCLUDED.updated_at,
-                            config = EXCLUDED.config,
-                            performance_metrics = EXCLUDED.performance_metrics,
-                            inference_time_ms = EXCLUDED.inference_time_ms,
-                            memory_usage_mb = EXCLUDED.memory_usage_mb
-                    """, (
-                        metadata.name, metadata.version, metadata.model_type.value,
-                        metadata.status.value, metadata.created_at, metadata.updated_at,
-                        metadata.author, metadata.description, 
-                        json.dumps(metadata.config), json.dumps(metadata.performance_metrics),
-                        metadata.training_data_hash, metadata.model_size_bytes,
-                        metadata.inference_time_ms, metadata.memory_usage_mb,
-                        json.dumps(metadata.dependencies), json.dumps(metadata.tags),
-                        metadata.paper_reference, metadata.code_reference
-                    ))
+                    # Detect database type for parameter style
+                    is_sqlite = 'sqlite' in str(type(conn)).lower()
+                    
+                    if is_sqlite:
+                        # SQLite version with ? placeholders and INSERT OR REPLACE
+                        cur.execute("""
+                            INSERT OR REPLACE INTO model_registry (
+                                name, version, model_type, status, created_at, updated_at,
+                                author, description, config, performance_metrics,
+                                training_data_hash, model_size_bytes, inference_time_ms,
+                                memory_usage_mb, dependencies, tags, paper_reference, code_reference
+                            ) VALUES (
+                                ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+                            )
+                        """, (
+                            metadata.name, metadata.version, metadata.model_type.value,
+                            metadata.status.value, metadata.created_at, metadata.updated_at,
+                            metadata.author, metadata.description, 
+                            json.dumps(metadata.config), json.dumps(metadata.performance_metrics),
+                            metadata.training_data_hash, metadata.model_size_bytes,
+                            metadata.inference_time_ms, metadata.memory_usage_mb,
+                            json.dumps(metadata.dependencies), json.dumps(metadata.tags),
+                            metadata.paper_reference, metadata.code_reference
+                        ))
+                    else:
+                        # PostgreSQL version with %s placeholders and ON CONFLICT
+                        cur.execute("""
+                            INSERT INTO model_registry (
+                                name, version, model_type, status, created_at, updated_at,
+                                author, description, config, performance_metrics,
+                                training_data_hash, model_size_bytes, inference_time_ms,
+                                memory_usage_mb, dependencies, tags, paper_reference, code_reference
+                            ) VALUES (
+                                %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
+                            )
+                            ON CONFLICT (name, version) DO UPDATE SET
+                                status = EXCLUDED.status,
+                                updated_at = EXCLUDED.updated_at,
+                                config = EXCLUDED.config,
+                                performance_metrics = EXCLUDED.performance_metrics,
+                                inference_time_ms = EXCLUDED.inference_time_ms,
+                                memory_usage_mb = EXCLUDED.memory_usage_mb
+                        """, (
+                            metadata.name, metadata.version, metadata.model_type.value,
+                            metadata.status.value, metadata.created_at, metadata.updated_at,
+                            metadata.author, metadata.description, 
+                            json.dumps(metadata.config), json.dumps(metadata.performance_metrics),
+                            metadata.training_data_hash, metadata.model_size_bytes,
+                            metadata.inference_time_ms, metadata.memory_usage_mb,
+                            json.dumps(metadata.dependencies), json.dumps(metadata.tags),
+                            metadata.paper_reference, metadata.code_reference
+                        ))
                 conn.commit()
                 
         except Exception as e:
